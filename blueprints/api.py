@@ -20,6 +20,7 @@ from config import (
     ALLOWED_PROXY_DOMAINS
 )
 import db
+from .ui import ensure_anime_data
 from adapters import anizle, animecix, tranime, turkanime
 
 api_bp = Blueprint('api', __name__)
