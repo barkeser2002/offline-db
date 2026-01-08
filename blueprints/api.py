@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template_string, redirect, url_for
+from flask import Blueprint, request, jsonify, render_template, redirect, url_for, Response
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Any, cast, Optional, List, Tuple
 from functools import partial
@@ -11,10 +11,13 @@ import subprocess
 import time
 import requests
 
+from urllib.parse import urlparse
+
 # Local Modules
 import main
 from config import (
-    JIKAN_API_BASE, JIKAN_RATE_LIMIT, API_HOST, API_PORT, MAX_WORKERS, ADAPTERS
+    JIKAN_API_BASE, JIKAN_RATE_LIMIT, API_HOST, API_PORT, MAX_WORKERS, ADAPTERS,
+    ALLOWED_PROXY_DOMAINS
 )
 import db
 from adapters import anizle, animecix, tranime, turkanime
@@ -64,7 +67,21 @@ def home():
 
     seasons = get_available_seasons()
 
-    return render_template_string(HOME_TEMPLATE, stats=stats, seasons=seasons)
+    # Jikan API'den dinamik içerik çek
+    top_anime = []
+    recommendations = []
+    try:
+        top_anime_res = requests.get(f"{JIKAN_API_BASE}/top/anime", params={"limit": 10})
+        if top_anime_res.status_code == 200:
+            top_anime = top_anime_res.json().get("data", [])
+
+        recommendations_res = requests.get(f"{JIKAN_API_BASE}/recommendations/anime", params={"limit": 10})
+        if recommendations_res.status_code == 200:
+            recommendations = recommendations_res.json().get("data", [])
+    except Exception as e:
+        print(f"Jikan API error: {e}")
+
+    return render_template("home.html", stats=stats, seasons=seasons, top_anime=top_anime, recommendations=recommendations)
 
 
 @api_bp.route("/player")
@@ -176,6 +193,26 @@ def serve_cover(filename):
     """Cover resimlerini sun."""
     from flask import send_from_directory
     return send_from_directory("covers", filename)
+
+
+@api_bp.route("/api/proxy")
+def proxy():
+    """HLS stream proxy to fix CORS issues."""
+    url = request.args.get("url")
+    if not url:
+        return "URL parameter is required", 400
+
+    # SSRF Koruması
+    try:
+        parsed_url = urlparse(url)
+        if not parsed_url.hostname or not any(parsed_url.hostname.endswith(domain) for domain in ALLOWED_PROXY_DOMAINS):
+            return "URL is not allowed", 403
+    except Exception:
+        return "Invalid URL", 400
+
+    headers = {"Referer": "https://anizmplayer.com/"}
+    req = requests.get(url, headers=headers, stream=True)
+    return Response(req.iter_content(chunk_size=1024), content_type=req.headers['content-type'])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

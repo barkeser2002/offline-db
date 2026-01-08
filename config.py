@@ -47,6 +47,13 @@ MAX_BATCH_SIZE = 200
 # HTTP Timeout
 HTTP_TIMEOUT = 30
 
+# Proxy Whitelist (SSRF Koruması)
+ALLOWED_PROXY_DOMAINS = [
+    "anizmplayer.com",
+    "cdn.bunny.sh",
+    "video.bunnycdn.com",
+]
+
 # Web API Ayarları
 API_HOST = "0.0.0.0"
 API_PORT = 8988
