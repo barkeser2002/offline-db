@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ year }} {{ season|capitalize }} - Anime Listesi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header h1 { color: #e94560; }
+        .back-btn {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            color: #fff;
+            text-decoration: none;
+        }
+        .back-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .sync-btn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .sync-btn:hover { background: #45a049; }
+        .sync-btn:disabled { background: #666; cursor: not-allowed; }
+
+        .anime-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .anime-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .anime-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.3);
+        }
+        .anime-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .anime-card .info {
+            padding: 10px;
+        }
+        .anime-card h3 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .anime-card p {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+        .anime-card .score {
+            color: #FFD700;
+        }
+
+        .in-db { border: 2px solid #4CAF50; }
+        .not-in-db { border: 2px solid rgba(255,255,255,0.1); }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status-bar span { color: rgba(255,255,255,0.7); }
+        .status-bar .green { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <a href="/" class="back-btn">← Ana Sayfa</a>
+                <h1 style="margin-top: 10px;">{{ year }} {{ season|capitalize }}</h1>
+            </div>
+            <button class="sync-btn" onclick="syncSeason()" id="syncBtn">
+                🔄 Tümünü Senkronize Et
+            </button>
+        </div>
+
+        <div class="status-bar">
+            <span>Toplam: <strong>{{ anime_list|length }}</strong></span>
+            <span class="green">Veritabanında: <strong id="inDbCount">{{ in_db_count }}</strong></span>
+        </div>
+
+        <div class="anime-grid">
+            {% for anime in anime_list %}
+            <div class="anime-card {{ 'in-db' if anime.in_db else 'not-in-db' }}"
+                 onclick="location.href='/player?mal_id={{ anime.mal_id }}'">
+                <img src="{{ anime.image }}" alt="{{ anime.title }}" loading="lazy">
+                <div class="info">
+                    <h3 title="{{ anime.title }}">{{ anime.title }}</h3>
+                    <p>
+                        <span class="score">⭐ {{ anime.score or '?' }}</span> |
+                        {{ anime.type or 'TV' }}
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function syncSeason() {
+            const btn = document.getElementById('syncBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Senkronize ediliyor...';
+
+            try {
+                const response = await fetch('/api/sync/season', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ year: {{ year }}, season: '{{ season }}' })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(`✅ ${data.synced} anime senkronize edildi!`);
+                    location.reload();
+                } else {
+                    alert('❌ Hata: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Bağlantı hatası');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Tümünü Senkronize Et';
+        }
+    </script>
+</body>
+</html>

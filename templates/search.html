@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arama: {{ query }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            color: #fff;
+            text-decoration: none;
+            margin-bottom: 20px;
+        }
+        h1 { color: #e94560; margin-bottom: 20px; }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .anime-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .anime-card:hover { transform: translateY(-5px); }
+        .anime-card img {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+        }
+        .anime-card .info { padding: 10px; }
+        .anime-card h3 { font-size: 14px; margin-bottom: 5px; }
+        .anime-card p { font-size: 12px; color: rgba(255,255,255,0.6); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← Ana Sayfa</a>
+        <h1>🔍 "{{ query }}" için sonuçlar</h1>
+
+        <div class="results">
+            {% for anime in results %}
+            <div class="anime-card" onclick="location.href='/player?mal_id={{ anime.mal_id }}'">
+                <img src="{{ anime.cover_url or anime.cover_local or '' }}" alt="{{ anime.title }}">
+                <div class="info">
+                    <h3>{{ anime.title }}</h3>
+                    <p>⭐ {{ anime.score or '?' }} | MAL: {{ anime.mal_id }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not results %}
+        <p style="text-align: center; color: rgba(255,255,255,0.5);">Sonuç bulunamadı.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
