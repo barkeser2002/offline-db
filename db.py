@@ -81,7 +81,7 @@ def init_database():
         INDEX idx_title (title(100)),
         INDEX idx_year (year),
         INDEX idx_score (score)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Alternatif isimler tablosu
@@ -94,7 +94,7 @@ def init_database():
         
         INDEX idx_anime_id (anime_id),
         INDEX idx_title (title(100))
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Türler tablosu
@@ -105,7 +105,7 @@ def init_database():
         name VARCHAR(100) NOT NULL UNIQUE,
         
         INDEX idx_name (name)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Anime-Tür ilişki tablosu
@@ -115,7 +115,7 @@ def init_database():
         genre_id INT NOT NULL,
         
         PRIMARY KEY (anime_id, genre_id)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Temalar tablosu
@@ -126,7 +126,7 @@ def init_database():
         name VARCHAR(100) NOT NULL UNIQUE,
         
         INDEX idx_name (name)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Anime-Tema ilişki tablosu
@@ -136,7 +136,7 @@ def init_database():
         theme_id INT NOT NULL,
         
         PRIMARY KEY (anime_id, theme_id)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Stüdyolar tablosu
@@ -147,7 +147,7 @@ def init_database():
         name VARCHAR(200) NOT NULL,
         
         INDEX idx_name (name)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Anime-Stüdyo ilişki tablosu
@@ -157,7 +157,7 @@ def init_database():
         studio_id INT NOT NULL,
         
         PRIMARY KEY (anime_id, studio_id)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Yapımcılar tablosu
@@ -168,7 +168,7 @@ def init_database():
         name VARCHAR(200) NOT NULL,
         
         INDEX idx_name (name)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Anime-Yapımcı ilişki tablosu
@@ -179,7 +179,7 @@ def init_database():
         producer_type VARCHAR(50),  -- producer, licensor
         
         PRIMARY KEY (anime_id, producer_id, producer_type)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Bölümler tablosu
@@ -192,7 +192,7 @@ def init_database():
         
         UNIQUE KEY unique_anime_episode (anime_id, episode_number),
         INDEX idx_anime_id (anime_id)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Kaynaklar/Adaptörler tablosu
@@ -204,7 +204,7 @@ def init_database():
         is_active BOOLEAN DEFAULT TRUE,
         
         INDEX idx_name (name)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Varsayılan kaynakları ekle
@@ -230,7 +230,7 @@ def init_database():
         UNIQUE KEY unique_anime_source (anime_id, source_id),
         INDEX idx_anime_id (anime_id),
         INDEX idx_source_id (source_id)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     # Video linkleri tablosu
@@ -252,14 +252,14 @@ def init_database():
         INDEX idx_episode_id (episode_id),
         INDEX idx_source_id (source_id),
         INDEX idx_fansub (fansub)
-    ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
     conn.commit()
     cursor.close()
     conn.close()
     
-    print("[DB] Tablolar başarıyla oluşturuldu (MyISAM).")
+    print("[DB] Tablolar başarıyla oluşturuldu (InnoDB).")
     return True
 
 
