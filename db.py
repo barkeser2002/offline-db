@@ -686,7 +686,7 @@ def insert_video_link(episode_id: int, source_id: int, fansub: str, quality: str
     conn.close()
 
 
-def delete_video_links_for_episode(episode_id: int, source_id: int = None):
+def delete_video_links_for_episode(anime_id: int, episode_number: int, source_id: int = None):
     """Bölümün video linklerini sil."""
     conn = get_connection()
     if not conn:
@@ -694,6 +694,13 @@ def delete_video_links_for_episode(episode_id: int, source_id: int = None):
     
     cursor = conn.cursor()
     
+    # Get episode_id from anime_id and episode_number
+    cursor.execute("SELECT id FROM episodes WHERE anime_id = %s AND episode_number = %s", (anime_id, episode_number))
+    episode = cursor.fetchone()
+    if not episode:
+        return
+    episode_id = episode[0]
+
     if source_id:
         cursor.execute("""
             DELETE FROM video_links WHERE episode_id = %s AND source_id = %s
