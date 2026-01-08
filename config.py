@@ -4,7 +4,7 @@ Yapılandırma dosyası
 
 # MySQL Veritabanı Ayarları
 DB_CONFIG = {
-    "host": "192.168.1.30",
+    "host": "ip.bariskeser.com",
     "user": "bariskeser",
     "password": "B@ris3422",
     "database": "anime-index",
