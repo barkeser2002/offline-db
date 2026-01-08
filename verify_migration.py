@@ -1,8 +1,12 @@
 import mysql.connector
+from mysql.connector import Error
 from config import DB_CONFIG
 
-def verify_migration():
-    """Verifies that the database tables have been migrated to InnoDB."""
+def verify_innodb_migration():
+    """
+    Tüm tabloların InnoDB'ye dönüştürüldüğünü doğrula.
+    """
+    all_innodb = True
     try:
         conn = mysql.connector.connect(
             host=DB_CONFIG["host"],
@@ -10,29 +14,32 @@ def verify_migration():
             password=DB_CONFIG["password"],
             database=DB_CONFIG["database"]
         )
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
 
-        cursor.execute(f"""
-            SELECT TABLE_NAME, ENGINE
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_SCHEMA = '{DB_CONFIG["database"]}'
-        """)
+        cursor.execute(f"SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{DB_CONFIG['database']}'")
 
-        all_innodb = True
-        for table_name, engine in cursor:
-            print(f"Table: {table_name}, Engine: {engine}")
-            if engine.lower() != 'innodb':
+        for table in cursor.fetchall():
+            if table['ENGINE'] != 'InnoDB':
+                print(f"[HATA] '{table['TABLE_NAME']}' tablosu hala {table['ENGINE']} kullanıyor.")
                 all_innodb = False
+            else:
+                print(f"'{table['TABLE_NAME']}' tablosu başarıyla InnoDB'ye dönüştürülmüş.")
 
         if all_innodb:
-            print("\nDatabase migration verified successfully. All tables are using InnoDB.")
+            print("\nTüm tablolar başarıyla InnoDB'ye dönüştürülmüş.")
         else:
-            print("\nDatabase migration verification failed. Some tables are not using InnoDB.")
+            print("\nBazı tablolar InnoDB'ye dönüştürülemedi.")
 
-        cursor.close()
-        conn.close()
-    except Exception as e:
-        print(f"Database verification failed: {e}")
+    except Error as e:
+        print(f"[DB] Hata: {e}")
+        all_innodb = False
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+    return all_innodb
 
 if __name__ == "__main__":
-    verify_migration()
+    if not verify_innodb_migration():
+        exit(1)

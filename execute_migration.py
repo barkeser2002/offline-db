@@ -1,8 +1,11 @@
 import mysql.connector
+from mysql.connector import Error
 from config import DB_CONFIG
 
-def execute_migration():
-    """Executes the database migration script."""
+def migrate_to_innodb():
+    """
+    Tüm MyISAM tablolarını InnoDB'ye dönüştür.
+    """
     try:
         conn = mysql.connector.connect(
             host=DB_CONFIG["host"],
@@ -11,23 +14,25 @@ def execute_migration():
             database=DB_CONFIG["database"]
         )
         cursor = conn.cursor()
-        with open("migrate_to_innodb.sql", "r") as f:
-            sql_script = f.read()
 
-        # Split the script into individual statements
-        sql_statements = sql_script.split(';')
+        # Tüm tabloları listele
+        cursor.execute("SHOW TABLES")
+        tables = [table[0] for table in cursor.fetchall()]
 
-        # Execute each statement
-        for statement in sql_statements:
-            if statement.strip():
-                cursor.execute(statement)
+        # Her tabloyu InnoDB'ye dönüştür
+        for table in tables:
+            print(f"'{table}' tablosu dönüştürülüyor...")
+            cursor.execute(f"ALTER TABLE {table} ENGINE=InnoDB")
+            print(f"'{table}' tablosu başarıyla InnoDB'ye dönüştürüldü.")
 
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("Database migration successful.")
-    except Exception as e:
-        print(f"Database migration failed: {e}")
+        print("\nTüm tablolar başarıyla InnoDB'ye dönüştürüldü.")
+
+    except Error as e:
+        print(f"[DB] Hata: {e}")
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
 
 if __name__ == "__main__":
-    execute_migration()
+    migrate_to_innodb()
