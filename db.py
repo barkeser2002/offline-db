@@ -278,33 +278,48 @@ def get_anime_by_mal_id(mal_id: int):
 
 
 def get_anime_by_title(title: str):
-    """Başlık ile anime'yi ara."""
+    """Başlık ile anime'yi ara (daha esnek)."""
     conn = get_connection()
     if not conn:
         return None
     
     cursor = conn.cursor(dictionary=True)
     
-    # Önce ana tabloda ara
-    cursor.execute("""
-        SELECT * FROM animes 
-        WHERE title LIKE %s 
-           OR title_english LIKE %s 
-           OR title_japanese LIKE %s
+    # Boşlukları ve tireleri normalleştirerek ara
+    search_term = f"%{title.replace('-', ' ')}%"
+
+    # Hem ana başlıkta hem de alternatif başlıklarda ara (tek sorgu)
+    query = """
+        SELECT a.*
+        FROM animes a
+        LEFT JOIN anime_titles at ON a.id = at.anime_id
+        WHERE
+            REPLACE(a.title, '-', ' ') LIKE %s OR
+            REPLACE(a.title_english, '-', ' ') LIKE %s OR
+            REPLACE(a.title_japanese, '-', ' ') LIKE %s OR
+            REPLACE(at.title, '-', ' ') LIKE %s
+        GROUP BY a.id
+        ORDER BY
+            CASE
+                WHEN REPLACE(a.title, '-', ' ') LIKE %s THEN 1
+                WHEN REPLACE(a.title_english, '-', ' ') LIKE %s THEN 2
+                ELSE 3
+            END,
+            a.popularity ASC
         LIMIT 10
-    """, (f"%{title}%", f"%{title}%", f"%{title}%"))
+    """
     
+    params = (
+        search_term,
+        search_term,
+        search_term,
+        search_term,
+        search_term,
+        search_term,
+    )
+    
+    cursor.execute(query, params)
     results = cursor.fetchall()
-    
-    # Alternatif isimlerde de ara
-    if not results:
-        cursor.execute("""
-            SELECT a.* FROM animes a
-            JOIN anime_titles at ON a.id = at.anime_id
-            WHERE at.title LIKE %s
-            LIMIT 10
-        """, (f"%{title}%",))
-        results = cursor.fetchall()
     
     cursor.close()
     conn.close()
