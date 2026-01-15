@@ -19,6 +19,8 @@ GitPython>=3.1.46
 flask>=3.1.2
 
 # Video işleme
+# NOTE: Pinned to 2024.07.25. `pip index versions` may report invalid, future-dated versions.
+# Do not upgrade without verifying the version on the official PyPI website.
 yt-dlp==2024.07.25
 # TurkAnime bypass için
 pycryptodome>=3.23.0
