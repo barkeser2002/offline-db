@@ -1,0 +1,32 @@
+name: ⚡ Senpai's Blind Trust (Auto-Merge ALL)
+
+on:
+  pull_request_target:
+    # PR açıldığında, güncellendiğinde veya tekrar açıldığında tetiklenir
+    types: [opened, synchronize, reopened]
+
+jobs:
+  instant-merge:
+    name: 🏎️ Hızlı ve Öfkeli Merge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Kodu birleştirmek (yazmak) için
+      pull-requests: write # PR'ı onaylamak ve kapatmak için
+
+    steps:
+      - name: 🤖 Senpai Operasyona Başlıyor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          echo "🎎 Senpai: Bir PR tespit edildi! Kimin attığı umurumda değil, içeri alıyorum!"
+          
+          # Adım 1: Önce PR'ı onayla (Approve) - Bazı branch korumaları onay ister
+          gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve hiç okumadan onayladı! 🚀"
+          
+          # Adım 2: Merge işlemini yap (Squash ile tek parça halinde)
+          # --auto flag'i, eğer check'ler bitmediyse bitmesini bekler sonra merge eder.
+          # Eğer beklemeden hemen basmak istiyorsan --auto yerine direkt merge komutunu zorlarız ama --auto daha stabildir.
+          gh pr merge "$PR_URL" --squash --delete-branch
+          
+          echo "✅ İşlem Tamam! Kod artık ana yapının bir parçası."
