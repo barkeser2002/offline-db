@@ -1,15 +1,19 @@
 """
 Yapılandırma dosyası
 """
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # MySQL Veritabanı Ayarları
 DB_CONFIG = {
-    "host": "ip.bariskeser.com",
-    "user": "bariskeser",
-    "password": "B@ris3422",
-    "database": "anime-index",
-    "charset": "utf8mb4",
-    "collation": "utf8mb4_unicode_ci"
+    "host": os.getenv("DB_HOST"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
+    "charset": os.getenv("DB_CHARSET"),
+    "collation": os.getenv("DB_COLLATION")
 }
 
 # Jikan API (MyAnimeList)
