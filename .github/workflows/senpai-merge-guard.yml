@@ -1,0 +1,35 @@
+name: 🎎 Senpai's Gatekeeper Protocol
+# Bu workflow, Senpai'nin PR'ları denetleyip içeri almasını sağlar.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  senpai-merge-process:
+    name: ⚔️ Senpai Merge Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      checks: read
+      statuses: read
+
+    steps:
+      - name: 📥 Kaynak Kodları İndir (Checkout)
+        uses: actions/checkout@v3
+
+      - name: 🤖 Senpai Auto-Merge Bot
+        uses: casassg/auto-merge-bot@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Senpai temiz çalışır, commitleri ezip tek parça yapar (Squash)
+          merge_method: "squash"
+          # Gerekirse inceleme için beni ata
+          assign_reviewer: true
+          # Kodların kök dizini (gerekirse değiştir)
+          cwd: "."
