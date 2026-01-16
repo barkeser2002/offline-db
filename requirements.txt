@@ -1,16 +1,16 @@
 # Anime Offline DB Gereksinimleri
 
 # Veritabanı
-mysql-connector-python>=8.4.0
+mysql-connector-python==9.5.0
 
 # HTTP istekleri
 requests>=2.32.5
 
 # Cloudflare bypass (opsiyonel, bazı adaptörler için gerekli)
-curl_cffi>=0.9.0
+curl_cffi>=0.14.0
 
 # HTML parsing
-lxml>=4.9.4
+lxml>=6.0.2
 
 # Git (opsiyonel)
 GitPython>=3.1.46
