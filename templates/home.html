@@ -1,93 +1,110 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .anime-card {
-            transition: transform 0.2s;
-        }
-        .anime-card:hover {
-            transform: translateY(-5px);
-        }
-    </style>
-</head>
-<body class="bg-gray-900 text-white">
+{% extends "base.html" %}
 
-    <div class="container mx-auto p-4">
-        <header class="flex justify-between items-center mb-6">
-            <h1 class="text-4xl font-bold">Anime Platform</h1>
-            <form action="/search" method="get" class="flex">
-                <input type="search" name="q" placeholder="Search anime..." class="bg-gray-800 border-2 border-gray-700 rounded-l-lg py-2 px-4 focus:outline-none focus:border-blue-500">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-2">Search</button>
-            </form>
-        </header>
-
-        <section class="bg-gray-800 p-6 rounded-lg mb-6">
-            <h2 class="text-2xl font-semibold mb-4">Database Stats</h2>
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <div>
-                    <p class="text-4xl font-bold text-blue-400">{{ stats.anime_count }}</p>
-                    <p class="text-gray-400">Animes</p>
-                </div>
-                <div>
-                    <p class="text-4xl font-bold text-green-400">{{ stats.episode_count }}</p>
-                    <p class="text-gray-400">Episodes</p>
-                </div>
-                <div>
-                    <p class="text-4xl font-bold text-purple-400">{{ stats.video_count }}</p>
-                    <p class="text-gray-400">Video Links</p>
-                </div>
+{% block content %}
+    <!-- Hero Section / Database Stats -->
+    <section class="bg-gray-800 p-6 rounded-lg mb-6 shadow-lg border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-4 text-blue-400">Database Stats</h2>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div class="p-4 bg-gray-900 rounded-lg">
+                <p class="text-4xl font-bold text-blue-500">{{ stats.anime_count }}</p>
+                <p class="text-gray-400 uppercase text-xs tracking-widest mt-1">Animes</p>
             </div>
-        </section>
-
-        <section class="bg-gray-800 p-6 rounded-lg mb-6">
-            <h2 class="text-2xl font-semibold mb-4">Browse by Season</h2>
-            <div class="flex flex-wrap gap-2">
-                {% for s in seasons[:20] %}
-                    <a href="/season/{{ s.year }}/{{ s.season }}" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
-                        {{ s.year }} {{ s.season.title() }}
-                    </a>
-                {% endfor %}
+            <div class="p-4 bg-gray-900 rounded-lg">
+                <p class="text-4xl font-bold text-green-500">{{ stats.episode_count }}</p>
+                <p class="text-gray-400 uppercase text-xs tracking-widest mt-1">Episodes</p>
             </div>
-        </section>
+            <div class="p-4 bg-gray-900 rounded-lg">
+                <p class="text-4xl font-bold text-purple-500">{{ stats.video_count }}</p>
+                <p class="text-gray-400 uppercase text-xs tracking-widest mt-1">Video Links</p>
+            </div>
+        </div>
+    </section>
 
-        <!-- Top Anime Section -->
-        <section class="mb-8">
-            <h2 class="text-2xl font-semibold mb-4 border-l-4 border-blue-500 pl-4">Top Anime</h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {% for anime in top_anime %}
-                <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl">
+    {% if session.user_id %}
+    <!-- Continue Watching Section -->
+    {% if user_history %}
+    <section class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-yellow-500 pl-4">Continue Watching</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {% for entry in user_history %}
+            <a href="/player?mal_id={{ entry.mal_id }}&ep={{ entry.episode_number }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                <div class="relative">
+                    <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover">
+                    <div class="absolute bottom-0 left-0 w-full bg-blue-600 h-1" style="width: {{ entry.progress_percent }}%"></div>
+                </div>
+                <div class="p-3">
+                    <h3 class="font-bold text-sm truncate">{{ entry.title }}</h3>
+                    <p class="text-gray-400 text-xs">Episode {{ entry.episode_number }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- My Watchlist Section -->
+    {% if user_watchlist %}
+    <section class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-blue-500 pl-4">My Watchlist</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {% for entry in user_watchlist %}
+            <a href="/player?mal_id={{ entry.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover">
+                <div class="p-3">
+                    <h3 class="font-bold text-sm truncate">{{ entry.title }}</h3>
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-xs text-blue-400 px-2 py-0.5 bg-blue-900/50 rounded">{{ entry.status.replace('-', ' ').title() }}</span>
+                        <span class="text-xs text-gray-400">⭐ {{ entry.score }}</span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+    {% endif %}
+
+    <section class="bg-gray-800 p-6 rounded-lg mb-8 shadow-lg border border-gray-700">
+        <h2 class="text-2xl font-semibold mb-4 text-green-400">Browse by Season</h2>
+        <div class="flex flex-wrap gap-2">
+            {% for s in seasons[:15] %}
+                <a href="/season/{{ s.year }}/{{ s.season }}" class="bg-gray-700 hover:bg-blue-600 text-white text-sm font-medium py-1.5 px-3 rounded transition">
+                    {{ s.year }} {{ s.season.title() }}
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Top Anime Section -->
+    <section class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-red-500 pl-4">Top Anime</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {% for anime in top_anime %}
+            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                <div class="p-4">
+                    <h3 class="font-bold text-lg truncate">{{ anime.title }}</h3>
+                    <p class="text-gray-400 text-sm">Score: {{ anime.score }}</p>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- Recent Recommendations Section -->
+    <section>
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-green-500 pl-4">Recent Recommendations</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {% for entry in recommendations %}
+                {% for anime in entry.entry %}
+                <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
                     <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
                     <div class="p-4">
                         <h3 class="font-bold text-lg truncate">{{ anime.title }}</h3>
-                        <p class="text-gray-400 text-sm">Score: {{ anime.score }}</p>
                     </div>
                 </a>
                 {% endfor %}
-            </div>
-        </section>
-
-        <!-- Recent Recommendations Section -->
-        <section>
-            <h2 class="text-2xl font-semibold mb-4 border-l-4 border-green-500 pl-4">Recent Recommendations</h2>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {% for entry in recommendations %}
-                    {% for anime in entry.entry %}
-                    <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-2xl">
-                        <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
-                        <div class="p-4">
-                            <h3 class="font-bold text-lg truncate">{{ anime.title }}</h3>
-                        </div>
-                    </a>
-                    {% endfor %}
-                {% endfor %}
-            </div>
-        </section>
-
-    </div>
-
-</body>
-</html>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

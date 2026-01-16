@@ -254,6 +254,51 @@ def init_database():
         INDEX idx_fansub (fansub)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
+
+    # Kullanıcılar tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        email VARCHAR(100) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_username (username)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
+
+    # İzleme Geçmişi tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watch_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        anime_id INT NOT NULL,
+        episode_number INT NOT NULL,
+        progress_percent FLOAT DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+        UNIQUE KEY unique_user_anime (user_id, anime_id),
+        INDEX idx_user_history (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
+
+    # İzleme Listesi tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS watchlists (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        anime_id INT NOT NULL,
+        status ENUM('watching', 'completed', 'on-hold', 'dropped', 'plan-to-watch') DEFAULT 'plan-to-watch',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        UNIQUE KEY unique_user_anime_watchlist (user_id, anime_id),
+        INDEX idx_user_watchlist (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
     
     conn.commit()
     cursor.close()
@@ -780,6 +825,113 @@ def get_all_mal_ids():
     cursor = conn.cursor()
     cursor.execute("SELECT mal_id FROM animes")
     results = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KULLANICI İŞLEMLERİ
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_user_by_username(username: str):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return user
+
+def get_user_by_id(user_id: int):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return user
+
+def create_user(username, email, password_hash):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
+            (username, email, password_hash)
+        )
+        conn.commit()
+        user_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        return user_id
+    except Error as e:
+        print(f"[DB] User creation error: {e}")
+        return None
+
+def update_watch_history(user_id: int, anime_id: int, episode_number: int, progress_percent: float):
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO watch_history (user_id, anime_id, episode_number, progress_percent)
+        VALUES (%s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            episode_number = VALUES(episode_number),
+            progress_percent = VALUES(progress_percent),
+            updated_at = CURRENT_TIMESTAMP
+    """, (user_id, anime_id, episode_number, progress_percent))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+def get_user_watch_history(user_id: int, limit: int = 10):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT wh.*, a.title, a.mal_id, a.cover_url, a.cover_local, a.episodes as total_episodes
+        FROM watch_history wh
+        JOIN animes a ON wh.anime_id = a.id
+        WHERE wh.user_id = %s
+        ORDER BY wh.updated_at DESC
+        LIMIT %s
+    """, (user_id, limit))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def update_watchlist(user_id: int, anime_id: int, status: str):
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO watchlists (user_id, anime_id, status)
+        VALUES (%s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            status = VALUES(status)
+    """, (user_id, anime_id, status))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
+
+def get_user_watchlist(user_id: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT wl.*, a.title, a.mal_id, a.cover_url, a.cover_local, a.score, a.type
+        FROM watchlists wl
+        JOIN animes a ON wl.anime_id = a.id
+        WHERE wl.user_id = %s
+        ORDER BY wl.created_at DESC
+    """, (user_id,))
+    results = cursor.fetchall()
     cursor.close()
     conn.close()
     return results

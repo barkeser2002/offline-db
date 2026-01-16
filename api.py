@@ -7,11 +7,14 @@ from flask import Flask
 from config import API_HOST, API_PORT
 from blueprints.ui import ui_bp
 from blueprints.api import api_bp
+from blueprints.user import user_bp
 
 app = Flask(__name__)
+app.secret_key = "senpai-v4-secret-key" # In production this should be in .env
 
 app.register_blueprint(ui_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(user_bp)
 
 if __name__ == "__main__":
     print(f"""
