@@ -300,6 +300,24 @@ def init_database():
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
     
+    # Yorumlar tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        anime_id INT NOT NULL,
+        episode_number INT NOT NULL,
+        content TEXT NOT NULL,
+        is_spoiler BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        INDEX idx_anime_episode (anime_id, episode_number),
+        INDEX idx_user_comments (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -935,6 +953,56 @@ def get_user_watchlist(user_id: int):
     cursor.close()
     conn.close()
     return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SOSYAL İŞLEMLER (YORUMLAR)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def add_comment(user_id: int, anime_id: int, episode_number: int, content: str, is_spoiler: bool = False):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO comments (user_id, anime_id, episode_number, content, is_spoiler)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (user_id, anime_id, episode_number, content, is_spoiler))
+        conn.commit()
+        comment_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
+        return comment_id
+    except Error as e:
+        print(f"[DB] Comment add error: {e}")
+        return None
+
+def get_episode_comments(anime_id: int, episode_number: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT c.*, u.username
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.anime_id = %s AND c.episode_number = %s
+        ORDER BY c.created_at DESC
+    """, (anime_id, episode_number))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def delete_comment(comment_id: int, user_id: int):
+    """Sadece yorumun sahibi silebilir."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM comments WHERE id = %s AND user_id = %s", (comment_id, user_id))
+    affected = cursor.rowcount
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return affected > 0
 
 
 if __name__ == "__main__":
