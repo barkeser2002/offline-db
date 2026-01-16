@@ -20,6 +20,7 @@ from config import (
     ALLOWED_PROXY_DOMAINS
 )
 import db
+from jikan_client import jikan
 from .ui import ensure_anime_data, get_available_seasons
 from adapters import anizle, animecix, tranime, turkanime
 
@@ -69,18 +70,8 @@ def home():
     seasons = get_available_seasons()
 
     # Jikan API'den dinamik içerik çek
-    top_anime = []
-    recommendations = []
-    try:
-        top_anime_res = requests.get(f"{JIKAN_API_BASE}/top/anime", params={"limit": 10})
-        if top_anime_res.status_code == 200:
-            top_anime = top_anime_res.json().get("data", [])
-
-        recommendations_res = requests.get(f"{JIKAN_API_BASE}/recommendations/anime", params={"limit": 10})
-        if recommendations_res.status_code == 200:
-            recommendations = recommendations_res.json().get("data", [])
-    except Exception as e:
-        print(f"Jikan API error: {e}")
+    top_anime = jikan.get_top_anime()
+    recommendations = jikan.get_recommendations()
 
     return render_template("home.html", stats=stats, seasons=seasons, top_anime=top_anime, recommendations=recommendations)
 
@@ -894,7 +885,7 @@ def api_sync_anime_info():
                 return {"mal_id": mal_id, "status": "skipped", "reason": "exists"}
 
             # Jikan'dan bilgi çek
-            jikan_data = main.fetch_anime_from_jikan(mal_id)
+            jikan_data = jikan.get_anime(mal_id)
             if not jikan_data:
                 return {"mal_id": mal_id, "status": "failed", "reason": "jikan_error"}
 
@@ -1239,7 +1230,7 @@ def api_sync_batch():
         try:
             # 1. Anime bilgisi
             if sync_info and mal_id not in existing_ids:
-                jikan_data = main.fetch_anime_from_jikan(mal_id)
+                jikan_data = jikan.get_anime(mal_id)
                 if jikan_data:
                     anime_data = main.parse_jikan_data(jikan_data)
                     if anime_data:

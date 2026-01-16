@@ -15,7 +15,6 @@ import argparse
 import json
 import os
 import sys
-import time
 import re
 import requests
 import threading
@@ -31,6 +30,7 @@ from config import (
     UPDATED_IDS_FILE, ADAPTERS, MAX_WORKERS, HTTP_TIMEOUT
 )
 import db
+from jikan_client import jikan
 
 # Adaptörler
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -108,139 +108,6 @@ def similarity_score(query: str, text: str) -> float:
         return 0.9
     
     return SequenceMatcher(None, query_lower, text_lower).ratio()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# JIKAN API (MyAnimeList) - RATE LIMIT: 3/saniye, 60/dakika
-# ─────────────────────────────────────────────────────────────────────────────
-
-# Rate limiter için global değişkenler
-_jikan_last_request = 0.0
-_jikan_request_lock = threading.Lock()
-
-def _jikan_rate_limit():
-    """Jikan API rate limit - saniyede max 3 istek."""
-    global _jikan_last_request
-    with _jikan_request_lock:
-        now = time.time()
-        elapsed = now - _jikan_last_request
-        if elapsed < 0.35:  # ~3 istek/saniye için 0.33s, güvenlik için 0.35s
-            time.sleep(0.35 - elapsed)
-        _jikan_last_request = time.time()
-
-
-def fetch_anime_episodes_from_jikan(mal_id: int, max_retries: int = 5) -> list:
-    """
-    Jikan API'den anime bölüm listesini çek.
-    Tüm sayfaları gezerek tüm bölümleri toplar.
-    """
-    all_episodes = []
-    page = 1
-    
-    while True:
-        for attempt in range(max_retries):
-            try:
-                _jikan_rate_limit()  # Rate limit uygula
-                
-                url = f"{JIKAN_API_BASE}/anime/{mal_id}/episodes"
-                response = requests.get(url, params={"page": page}, timeout=HTTP_TIMEOUT)
-                
-                # 429 Too Many Requests - bekle ve tekrar dene
-                if response.status_code == 429:
-                    retry_after = int(response.headers.get("Retry-After", 5))
-                    wait_time = max(retry_after, 2 ** attempt)
-                    print(f"[Jikan Episodes] Rate limit! {wait_time}s bekleniyor... (deneme {attempt+1}/{max_retries})")
-                    time.sleep(wait_time)
-                    continue
-                
-                response.raise_for_status()
-                data = response.json()
-                episodes = data.get("data", [])
-                pagination = data.get("pagination", {})
-                
-                if episodes:
-                    all_episodes.extend(episodes)
-                
-                # Son sayfa mı?
-                if not pagination.get("has_next_page", False):
-                    return all_episodes
-                
-                page += 1
-                break  # Sonraki sayfaya geç
-                
-            except requests.exceptions.HTTPError as e:
-                if e.response is not None and e.response.status_code == 429:
-                    wait_time = 2 ** attempt + 1
-                    print(f"[Jikan Episodes] Rate limit! {wait_time}s bekleniyor...")
-                    time.sleep(wait_time)
-                    continue
-                elif e.response is not None and e.response.status_code == 404:
-                    return all_episodes  # Bölüm yok
-                else:
-                    print(f"[HATA] Jikan Episodes API hatası ({mal_id}): {e}")
-                    return all_episodes
-            except Exception as e:
-                print(f"[HATA] Jikan Episodes API hatası ({mal_id}): {e}")
-                return all_episodes
-        else:
-            # max_retries aşıldı
-            print(f"[HATA] Jikan Episodes - max deneme aşıldı ({mal_id})")
-            return all_episodes
-    
-    return all_episodes
-
-
-def fetch_anime_from_jikan(mal_id: int, max_retries: int = 5) -> dict:
-    """
-    Jikan API'den anime bilgilerini çek.
-    429 (Too Many Requests) hatası aldığında bekleyip tekrar dener.
-    """
-    for attempt in range(max_retries):
-        try:
-            _jikan_rate_limit()  # Rate limit uygula
-            
-            url = f"{JIKAN_API_BASE}/anime/{mal_id}"
-            response = requests.get(url, timeout=HTTP_TIMEOUT)
-            
-            # 429 Too Many Requests - bekle ve tekrar dene
-            if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 5))
-                wait_time = max(retry_after, 2 ** attempt)  # Exponential backoff
-                print(f"[Jikan] Rate limit! {wait_time}s bekleniyor... (deneme {attempt+1}/{max_retries})")
-                time.sleep(wait_time)
-                continue
-            
-            response.raise_for_status()
-            data = response.json().get("data", {})
-            return data
-            
-        except requests.exceptions.HTTPError as e:
-            if e.response is not None and e.response.status_code == 429:
-                wait_time = 2 ** attempt + 1
-                print(f"[Jikan] Rate limit! {wait_time}s bekleniyor... (deneme {attempt+1}/{max_retries})")
-                time.sleep(wait_time)
-                continue
-            elif e.response is not None and e.response.status_code == 404:
-                print(f"[UYARI] MAL ID {mal_id} bulunamadı.")
-                return {}
-            else:
-                print(f"[HATA] Jikan API hatası ({mal_id}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
-                    continue
-                return {}
-        except requests.exceptions.Timeout:
-            print(f"[Jikan] Timeout ({mal_id}), tekrar deneniyor...")
-            if attempt < max_retries - 1:
-                time.sleep(2)
-                continue
-            return {}
-        except Exception as e:
-            print(f"[HATA] Jikan API hatası ({mal_id}): {e}")
-            return {}
-    
-    print(f"[HATA] Jikan API - max deneme aşıldı ({mal_id})")
-    return {}
 
 
 from typing import Optional, Dict, Any
@@ -596,8 +463,7 @@ def update_anime_by_mal_id(mal_id: int, extra_ids: Optional[Dict[str, Any]] = No
     print(f"\n[{mal_id}] Güncelleniyor...")
     
     # 1. Jikan API'den bilgileri çek
-    time.sleep(JIKAN_RATE_LIMIT)  # Rate limit
-    jikan_data = fetch_anime_from_jikan(mal_id)
+    jikan_data = jikan.get_anime(mal_id)
     
     if not jikan_data:
         print(f"[{mal_id}] Anime bulunamadı!")
@@ -661,7 +527,7 @@ def update_anime_by_mal_id(mal_id: int, extra_ids: Optional[Dict[str, Any]] = No
     # NOT: Devam eden seriler için episodes=null olabilir, yine de bölümleri çekmeye çalış
     total_episodes = jikan_data.get("episodes") or 0
     print(f"[{mal_id}] Bölümler çekiliyor...")
-    episodes = fetch_anime_episodes_from_jikan(mal_id)
+    episodes = jikan.get_anime_episodes(mal_id)
     
     if episodes:
         for ep in episodes:
@@ -711,10 +577,7 @@ def update_anime_by_title(title: str) -> bool:
     
     # Jikan'da ara
     try:
-        url = f"{JIKAN_API_BASE}/anime"
-        response = requests.get(url, params={"q": title, "limit": 5}, timeout=HTTP_TIMEOUT)
-        response.raise_for_status()
-        results = response.json().get("data", [])
+        results = jikan.search_anime(title)
         
         if not results:
             print(f"'{title}' bulunamadı!")
