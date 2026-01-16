@@ -43,9 +43,7 @@ def get_comments(mal_id, episode):
     comments = db.get_episode_comments(anime["id"], episode)
 
     # Format datetime for JSON
-    for c in comments:
-        if c.get("created_at"):
-            c["created_at"] = c["created_at"].isoformat()
+    comments = db.serialize_for_json(comments)
 
     return jsonify(comments)
 
@@ -60,3 +58,15 @@ def delete_comment(comment_id):
         return jsonify({"success": True})
 
     return jsonify({"error": "Failed to delete comment or unauthorized"}), 403
+
+@social_bp.route("/api/social/trending", methods=["GET"])
+def get_trending():
+    limit = request.args.get("limit", 10, type=int)
+    days = request.args.get("days", 7, type=int)
+
+    trending = db.get_trending_anime(limit, days)
+
+    # Format for JSON serialization
+    trending = db.serialize_for_json(trending)
+
+    return jsonify(trending)

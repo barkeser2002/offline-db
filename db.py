@@ -1004,6 +1004,44 @@ def delete_comment(comment_id: int, user_id: int):
     conn.close()
     return affected > 0
 
+def get_trending_anime(limit: int = 10, days: int = 7):
+    """Son X günde en çok izlenen anime'leri getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT a.*, COUNT(wh.id) as watch_count
+        FROM animes a
+        JOIN watch_history wh ON a.id = wh.anime_id
+        WHERE wh.updated_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+        GROUP BY a.id
+        ORDER BY watch_count DESC
+        LIMIT %s
+    """, (days, limit))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JSON SERİLEŞTİRME YARDIMCI FONKSİYONU
+# ─────────────────────────────────────────────────────────────────────────────
+
+def serialize_for_json(data):
+    """Datetime ve Decimal tiplerini JSON için string/float'a çevir."""
+    from decimal import Decimal
+    from datetime import datetime, date
+    if isinstance(data, list):
+        return [serialize_for_json(item) for item in data]
+    elif isinstance(data, dict):
+        return {k: serialize_for_json(v) for k, v in data.items()}
+    elif isinstance(data, (datetime, date)):
+        return data.isoformat()
+    elif isinstance(data, Decimal):
+        return float(data)
+    else:
+        return data
+
 
 if __name__ == "__main__":
     print("Veritabanı başlatılıyor...")
