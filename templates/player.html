@@ -44,6 +44,37 @@
 
             <p class="mt-4 text-gray-300 text-sm leading-relaxed">{{ anime.synopsis }}</p>
         </div>
+
+        <!-- Comments Section -->
+        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
+            <h3 class="text-xl font-bold mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                Comments
+            </h3>
+
+            {% if session.user_id %}
+            <div class="mb-6">
+                <textarea id="comment-content" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500 placeholder-gray-500" placeholder="Join the discussion..."></textarea>
+                <div class="mt-2 flex justify-between items-center">
+                    <label class="flex items-center text-sm text-gray-400 cursor-pointer">
+                        <input type="checkbox" id="comment-is-spoiler" class="mr-2 rounded border-gray-600 bg-gray-700 text-blue-500 focus:ring-blue-500">
+                        Contains spoilers?
+                    </label>
+                    <button onclick="postComment()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition">Post Comment</button>
+                </div>
+            </div>
+            {% else %}
+            <div class="mb-6 p-4 bg-gray-900/50 rounded-lg border border-dashed border-gray-700 text-center">
+                <p class="text-gray-400 text-sm">Please <a href="/login" class="text-blue-400 hover:underline">login</a> to post a comment.</p>
+            </div>
+            {% endif %}
+
+            <div id="comments-container" class="space-y-4">
+                <div class="text-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-500 mx-auto"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Episode List -->
@@ -157,6 +188,140 @@
         }
     }
 
+    async function loadComments() {
+        const container = document.getElementById('comments-container');
+        const currentUserId = {{ session.user_id or 0 }};
+        try {
+            const resp = await fetch(`/api/comments/${malId}/${currentEp}`);
+            const comments = await resp.json();
+
+            if (comments.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">No comments yet. Be the first to comment!</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            comments.forEach(c => {
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'bg-gray-900/30 p-4 rounded-lg border border-gray-700/50';
+
+                const header = document.createElement('div');
+                header.className = 'flex justify-between items-start mb-2';
+
+                const userPart = document.createElement('div');
+                userPart.className = 'flex items-center';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-xs font-bold mr-2';
+                avatar.textContent = c.username[0].toUpperCase();
+
+                const userInfo = document.createElement('div');
+                const usernameSpan = document.createElement('span');
+                usernameSpan.className = 'font-bold text-sm text-gray-200';
+                usernameSpan.textContent = c.username;
+
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'text-xs text-gray-500 ml-2';
+                dateSpan.textContent = new Date(c.created_at).toLocaleDateString();
+
+                userInfo.appendChild(usernameSpan);
+                userInfo.appendChild(dateSpan);
+                userPart.appendChild(avatar);
+                userPart.appendChild(userInfo);
+
+                const rightPart = document.createElement('div');
+                rightPart.className = 'flex items-center gap-2';
+
+                if (c.is_spoiler) {
+                    const spoilerBadge = document.createElement('span');
+                    spoilerBadge.className = 'text-[10px] bg-red-900/30 text-red-400 px-2 py-0.5 rounded border border-red-800/50';
+                    spoilerBadge.textContent = 'SPOILER';
+                    rightPart.appendChild(spoilerBadge);
+                }
+
+                if (currentUserId === c.user_id) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'text-gray-500 hover:text-red-500 transition';
+                    deleteBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>';
+                    deleteBtn.onclick = () => deleteComment(c.id);
+                    rightPart.appendChild(deleteBtn);
+                }
+
+                header.appendChild(userPart);
+                header.appendChild(rightPart);
+
+                const body = document.createElement('div');
+                body.className = 'text-gray-300 text-sm leading-relaxed';
+                if (c.is_spoiler) {
+                    body.classList.add('spoiler-text', 'blur-sm', 'hover:blur-none', 'transition-all', 'cursor-pointer');
+                    body.onclick = () => {
+                        body.classList.remove('blur-sm', 'cursor-pointer');
+                    };
+                }
+                body.textContent = c.content;
+                body.style.whiteSpace = 'pre-wrap';
+
+                commentDiv.appendChild(header);
+                commentDiv.appendChild(body);
+                container.appendChild(commentDiv);
+            });
+        } catch (e) {
+            container.innerHTML = `<p class="text-red-500 text-sm">Error loading comments.</p>`;
+        }
+    }
+
+    async function deleteComment(commentId) {
+        if (!confirm('Are you sure you want to delete this comment?')) return;
+
+        try {
+            const resp = await fetch(`/api/comments/${commentId}`, { method: 'DELETE' });
+            if (resp.ok) {
+                loadComments();
+            } else {
+                alert('Failed to delete comment');
+            }
+        } catch (e) {
+            alert('Error deleting comment');
+        }
+    }
+
+    async function postComment() {
+        const content = document.getElementById('comment-content').value;
+        const isSpoiler = document.getElementById('comment-is-spoiler').checked;
+
+        if (!content.trim()) return;
+
+        const resp = await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mal_id: malId,
+                episode: currentEp,
+                content: content,
+                is_spoiler: isSpoiler
+            })
+        });
+
+        if (resp.ok) {
+            document.getElementById('comment-content').value = '';
+            document.getElementById('comment-is-spoiler').checked = false;
+            loadComments();
+        } else {
+            const data = await resp.json();
+            alert(data.error || 'Failed to post comment');
+        }
+    }
+
     loadStreams();
+    loadComments();
 </script>
+
+<style>
+    .spoiler-text {
+        user-select: none;
+    }
+    .spoiler-text:not(.blur-sm) {
+        user-select: text;
+    }
+</style>
 {% endblock %}

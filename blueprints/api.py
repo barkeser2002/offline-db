@@ -735,6 +735,22 @@ def api_season_anime(year, season):
         "anime": result
     })
 
+@api_bp.route("/api/trending")
+def api_trending():
+    """Son 7 günün en çok izlenen anime'lerini getir."""
+    limit = request.args.get("limit", 10, type=int)
+    trending = db.get_trending_anime(limit=limit)
+
+    # URL'leri düzenle
+    host = request.host_url.rstrip('/')
+    for r in trending:
+        if r.get("cover_local"):
+            r["cover"] = f"{host}/covers/{r['mal_id']}.jpg"
+        else:
+            r["cover"] = r.get("cover_url")
+
+    return jsonify(trending)
+
 
 @api_bp.route("/api/sync/season", methods=["POST"])
 def api_sync_season():

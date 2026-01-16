@@ -20,6 +20,17 @@
         </div>
     </section>
 
+    <!-- Trending Section -->
+    <section class="mb-8" id="trending-section" style="display: none;">
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-orange-500 pl-4 flex items-center">
+            <svg class="w-6 h-6 mr-2 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1014 0c0-1.187-.249-2.315-.702-3.333a1 1 0 00-1.558-.285l-1.457 1.27a9.188 9.188 0 01-.312-3.67c.198-.81.498-1.582.76-2.108a1 1 0 00-.337-1.301z" clip-rule="evenodd"></path></svg>
+            Trending Now
+        </h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4" id="trending-container">
+            <!-- Loaded via JS -->
+        </div>
+    </section>
+
     {% if session.user_id %}
     <!-- Continue Watching Section -->
     {% if user_history %}
@@ -92,7 +103,7 @@
     </section>
 
     <!-- Recent Recommendations Section -->
-    <section>
+    <section class="mb-8">
         <h2 class="text-2xl font-semibold mb-4 border-l-4 border-green-500 pl-4">Recent Recommendations</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for entry in recommendations %}
@@ -107,4 +118,74 @@
             {% endfor %}
         </div>
     </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function loadTrending() {
+        const section = document.getElementById('trending-section');
+        const container = document.getElementById('trending-container');
+
+        try {
+            const resp = await fetch('/api/trending?limit=5');
+            const data = await resp.json();
+
+            if (data.length > 0) {
+                section.style.display = 'block';
+                container.innerHTML = '';
+                data.forEach(anime => {
+                    const card = document.createElement('a');
+                    card.href = `/player?mal_id=${anime.mal_id}`;
+                    card.className = 'anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group';
+
+                    const imgContainer = document.createElement('div');
+                    imgContainer.className = 'relative overflow-hidden';
+
+                    const img = document.createElement('img');
+                    img.src = anime.cover || '';
+                    img.alt = anime.title;
+                    img.className = 'w-full h-64 object-cover transform group-hover:scale-110 transition duration-500';
+
+                    const badge = document.createElement('div');
+                    badge.className = 'absolute top-2 right-2 bg-orange-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg';
+                    badge.textContent = 'TRENDING';
+
+                    imgContainer.appendChild(img);
+                    imgContainer.appendChild(badge);
+
+                    const info = document.createElement('div');
+                    info.className = 'p-4';
+
+                    const title = document.createElement('h3');
+                    title.className = 'font-bold text-lg truncate group-hover:text-orange-400 transition';
+                    title.textContent = anime.title;
+
+                    const meta = document.createElement('div');
+                    meta.className = 'flex justify-between items-center mt-1';
+
+                    const type = document.createElement('span');
+                    type.className = 'text-xs text-gray-400';
+                    type.textContent = anime.type || 'TV';
+
+                    const score = document.createElement('span');
+                    score.className = 'text-xs text-orange-400 font-bold';
+                    score.textContent = `⭐ ${anime.score || 'N/A'}`;
+
+                    meta.appendChild(type);
+                    meta.appendChild(score);
+                    info.appendChild(title);
+                    info.appendChild(meta);
+
+                    card.appendChild(imgContainer);
+                    card.appendChild(info);
+                    container.appendChild(card);
+                });
+            }
+        } catch (e) {
+            console.error("Failed to load trending:", e);
+        }
+    }
+
+    loadTrending();
+</script>
 {% endblock %}

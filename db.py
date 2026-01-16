@@ -299,6 +299,24 @@ def init_database():
         FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
+
+    # Yorumlar tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS comments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        anime_id INT NOT NULL,
+        episode_number INT NOT NULL,
+        content TEXT NOT NULL,
+        is_spoiler BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+        INDEX idx_anime_episode (anime_id, episode_number),
+        INDEX idx_user_id (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """)
     
     conn.commit()
     cursor.close()
@@ -931,6 +949,71 @@ def get_user_watchlist(user_id: int):
         WHERE wl.user_id = %s
         ORDER BY wl.created_at DESC
     """, (user_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SOCIAL & TRENDING
+# ─────────────────────────────────────────────────────────────────────────────
+
+def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO comments (user_id, anime_id, episode_number, content, is_spoiler)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (user_id, anime_id, episode_number, content, is_spoiler))
+    conn.commit()
+    comment_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+    return comment_id
+
+def get_comments_by_episode(anime_id, episode_number):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT c.*, u.username
+        FROM comments c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.anime_id = %s AND c.episode_number = %s
+        ORDER BY c.created_at DESC
+    """, (anime_id, episode_number))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def delete_comment(comment_id, user_id):
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM comments WHERE id = %s AND user_id = %s", (comment_id, user_id))
+    conn.commit()
+    success = cursor.rowcount > 0
+    cursor.close()
+    conn.close()
+    return success
+
+def get_trending_anime(limit=10):
+    """Son 7 gün içindeki izlenme sayılarına göre trending anime'leri getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT a.id, a.mal_id, a.title, a.cover_url, a.cover_local, a.score, a.type,
+               COUNT(wh.id) as view_count
+        FROM watch_history wh
+        JOIN animes a ON wh.anime_id = a.id
+        WHERE wh.updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY a.id
+        ORDER BY view_count DESC
+        LIMIT %s
+    """, (limit,))
     results = cursor.fetchall()
     cursor.close()
     conn.close()
