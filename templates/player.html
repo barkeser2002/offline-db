@@ -13,6 +13,36 @@
                     <p class="text-gray-400">Loading sources...</p>
                 </div>
             </div>
+
+            <!-- Player Overlays (Top-tier feel) -->
+            <div id="player-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0 transition-opacity duration-300">
+                <div class="bg-black/60 rounded-full p-6">
+                    <svg id="overlay-icon" class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M4.5 3.5v13L16.5 10 4.5 3.5z"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Controls -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4 bg-gray-800 p-4 rounded-lg border border-gray-700">
+            <div class="flex items-center space-x-2">
+                <button onclick="skipTime(-90)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm font-medium transition">
+                    -90s
+                </button>
+                <button onclick="skipTime(90)" class="bg-gray-700 hover:bg-gray-600 px-3 py-1.5 rounded text-sm font-medium transition">
+                    +90s (Skip Intro)
+                </button>
+                <button onclick="nextEpisode()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded text-sm font-medium transition flex items-center">
+                    Next Episode
+                    <svg class="w-4 h-4 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4.5 3.5v13L16.5 10 4.5 3.5z"/></svg>
+                </button>
+            </div>
+            <div class="flex items-center space-x-4">
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="auto-next" class="sr-only peer" checked>
+                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    <span class="ml-3 text-sm font-medium text-gray-300">Auto Next</span>
+                </label>
+            </div>
         </div>
 
         <!-- Anime Info & Watchlist -->
@@ -43,6 +73,42 @@
             </div>
 
             <p class="mt-4 text-gray-300 text-sm leading-relaxed">{{ anime.synopsis }}</p>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="mt-8 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <div class="p-4 bg-gray-700 font-bold border-b border-gray-600">
+                Comments
+            </div>
+            <div class="p-6">
+                {% if session.user_id %}
+                <div class="mb-6">
+                    <textarea id="comment-content" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500" placeholder="What did you think of this episode?"></textarea>
+                    <div class="mt-2 flex justify-between items-center">
+                        <label class="flex items-center text-sm text-gray-400 cursor-pointer">
+                            <input type="checkbox" id="is-spoiler" class="mr-2">
+                            Contains Spoilers
+                        </label>
+                        <button onclick="postComment()" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-bold transition">Post Comment</button>
+                    </div>
+                </div>
+                {% else %}
+                <div class="bg-gray-900/50 rounded-lg p-4 text-center mb-6 border border-gray-700 border-dashed">
+                    <p class="text-gray-400 text-sm">Please <a href="/login" class="text-blue-400 hover:underline">login</a> or <a href="/register" class="text-blue-400 hover:underline">register</a> to join the discussion.</p>
+                </div>
+                {% endif %}
+
+                <div id="comments-container" class="space-y-6">
+                    <!-- Comments will be loaded here -->
+                    <div class="flex animate-pulse">
+                        <div class="w-10 h-10 bg-gray-700 rounded-full mr-4"></div>
+                        <div class="flex-grow">
+                            <div class="h-4 bg-gray-700 rounded w-1/4 mb-2"></div>
+                            <div class="h-4 bg-gray-700 rounded w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -75,6 +141,7 @@
 <script>
     const malId = {{ anime.mal_id }};
     const currentEp = {{ current_ep }};
+    const totalEps = {{ anime.episodes or 0 }};
     let progressInterval;
 
     async function loadStreams() {
@@ -84,17 +151,17 @@
             const data = await resp.json();
 
             if (data.videos && data.videos.length > 0) {
-                const video = data.videos[0]; // Load the first (best quality) video
-                if (video.type === 'iframe' || video.video_url.includes('iframe') || video.stream_url.includes('iframe')) {
-                    container.innerHTML = `<iframe src="${video.stream_url}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
+                const videoData = data.videos[0];
+                if (videoData.type === 'iframe' || videoData.video_url.includes('iframe') || videoData.stream_url.includes('iframe')) {
+                    container.innerHTML = `<iframe src="${videoData.stream_url}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
                 } else {
                     container.innerHTML = `
                         <video id="main-player" class="w-full h-full" controls autoplay>
-                            <source src="${video.stream_url}" type="video/mp4">
+                            <source src="${videoData.stream_url}" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>`;
 
-                    setupProgressTracking();
+                    setupPlayerLogic();
                 }
             } else {
                 container.innerHTML = `
@@ -108,35 +175,211 @@
         }
     }
 
-    function setupProgressTracking() {
+    function setupPlayerLogic() {
         const video = document.getElementById('main-player');
         if (!video) return;
 
+        // Progress Tracking
         {% if session.user_id %}
         video.onplay = () => {
             progressInterval = setInterval(() => {
                 const progress = (video.currentTime / video.duration) * 100;
-                if (progress > 0) {
-                    updateHistory(progress);
-                }
-            }, 30000); // Update every 30 seconds
+                if (progress > 0) updateHistory(progress);
+            }, 30000);
+        };
+        video.onpause = () => clearInterval(progressInterval);
+        video.onended = () => {
+            updateHistory(100);
+            if (document.getElementById('auto-next').checked) {
+                setTimeout(nextEpisode, 2000);
+            }
+        };
+        {% else %}
+        video.onended = () => {
+            if (document.getElementById('auto-next').checked) {
+                setTimeout(nextEpisode, 2000);
+            }
+        };
+        {% endif %}
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    video.paused ? video.play() : video.pause();
+                    showOverlayIcon(video.paused ? 'pause' : 'play');
+                    break;
+                case 'ArrowRight':
+                    video.currentTime += 10;
+                    showOverlayIcon('forward');
+                    break;
+                case 'ArrowLeft':
+                    video.currentTime -= 10;
+                    showOverlayIcon('backward');
+                    break;
+                case 'KeyF':
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        container.requestFullscreen();
+                    }
+                    break;
+            }
+        });
+    }
+
+    function showOverlayIcon(type) {
+        const overlay = document.getElementById('player-overlay');
+        const icon = document.getElementById('overlay-icon');
+
+        const icons = {
+            play: '<path d="M4.5 3.5v13L16.5 10 4.5 3.5z"/>',
+            pause: '<path d="M5 4h3v12H5V4zm7 0h3v12h-3V4z"/>',
+            forward: '<path d="M4.5 3.5v13L16.5 10 4.5 3.5zM11 3.5v13L23 10 11 3.5z"/>',
+            backward: '<path d="M15.5 16.5v-13L3.5 10l12 6.5zM9 16.5v-13L-3 10l12 6.5z"/>'
         };
 
-        video.onpause = () => clearInterval(progressInterval);
-        video.onended = () => updateHistory(100);
-        {% endif %}
+        icon.innerHTML = icons[type] || icons.play;
+        overlay.classList.remove('opacity-0');
+        setTimeout(() => overlay.classList.add('opacity-0'), 500);
+    }
+
+    function skipTime(seconds) {
+        const video = document.getElementById('main-player');
+        if (video) video.currentTime += seconds;
+    }
+
+    function nextEpisode() {
+        if (totalEps > 0 && currentEp < totalEps) {
+            window.location.href = `/player?mal_id=${malId}&ep=${currentEp + 1}`;
+        } else {
+            // Check if there's a next episode in the list regardless of totalEps
+            const links = document.querySelectorAll('a[href*="ep="]');
+            let nextEpUrl = null;
+            for (let link of links) {
+                const url = new URL(link.href, window.location.origin);
+                const ep = parseInt(url.searchParams.get('ep'));
+                if (ep === currentEp + 1) {
+                    nextEpUrl = link.href;
+                    break;
+                }
+            }
+            if (nextEpUrl) window.location.href = nextEpUrl;
+        }
     }
 
     async function updateHistory(progress) {
         await fetch('/api/user/history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mal_id: malId, episode: currentEp, progress: progress })
+        });
+    }
+
+    // Comments Logic
+    async function loadComments() {
+        const container = document.getElementById('comments-container');
+        try {
+            const resp = await fetch(`/api/comments/${malId}/${currentEp}`);
+            const comments = await resp.json();
+
+            if (comments.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4 text-sm italic">No comments yet. Be the first to share your thoughts!</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            comments.forEach(c => {
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'flex';
+
+                const avatar = document.createElement('div');
+                avatar.className = 'w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center font-bold text-sm mr-4 shrink-0';
+                avatar.textContent = c.username[0].toUpperCase();
+
+                const contentBody = document.createElement('div');
+                contentBody.className = 'flex-grow';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center mb-1';
+
+                const userSpan = document.createElement('span');
+                userSpan.className = 'font-bold text-sm mr-2';
+                userSpan.textContent = c.username;
+
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'text-gray-500 text-xs';
+                dateSpan.textContent = new Date(c.created_at).toLocaleDateString();
+
+                header.appendChild(userSpan);
+                header.appendChild(dateSpan);
+
+                const textDiv = document.createElement('div');
+                textDiv.className = 'text-gray-300 text-sm leading-relaxed';
+
+                if (c.is_spoiler) {
+                    textDiv.classList.add('bg-gray-900', 'text-transparent', 'cursor-pointer', 'select-none', 'rounded', 'p-2', 'hover:bg-gray-700/50', 'transition');
+
+                    const spoilerLabel = document.createElement('span');
+                    spoilerLabel.className = 'text-red-500 font-bold mr-2 text-xs';
+                    spoilerLabel.textContent = '[SPOILER]';
+                    textDiv.appendChild(spoilerLabel);
+
+                    const contentSpan = document.createElement('span');
+                    contentSpan.textContent = ' ' + c.content;
+                    textDiv.appendChild(contentSpan);
+
+                    const hint = document.createElement('div');
+                    hint.className = 'text-xs text-gray-500 mt-1 pointer-events-none';
+                    hint.textContent = '(Click to reveal)';
+                    textDiv.appendChild(hint);
+
+                    textDiv.onclick = () => {
+                        textDiv.classList.remove('text-transparent', 'bg-gray-900', 'cursor-pointer', 'select-none');
+                        hint.remove();
+                    };
+                } else {
+                    textDiv.textContent = c.content;
+                }
+
+                contentBody.appendChild(header);
+                contentBody.appendChild(textDiv);
+                commentDiv.appendChild(avatar);
+                commentDiv.appendChild(contentBody);
+                container.appendChild(commentDiv);
+            });
+        } catch (e) {
+            container.innerHTML = '<p class="text-red-500 text-sm">Error loading comments.</p>';
+        }
+    }
+
+    async function postComment() {
+        const content = document.getElementById('comment-content').value;
+        const isSpoiler = document.getElementById('is-spoiler').checked;
+
+        if (!content.trim()) return;
+
+        const resp = await fetch('/api/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 mal_id: malId,
                 episode: currentEp,
-                progress: progress
+                content: content,
+                is_spoiler: isSpoiler
             })
         });
+
+        if (resp.ok) {
+            document.getElementById('comment-content').value = '';
+            document.getElementById('is-spoiler').checked = false;
+            loadComments();
+        } else {
+            alert('Failed to post comment.');
+        }
     }
 
     async function updateWatchlistStatus() {
@@ -146,17 +389,15 @@
         const resp = await fetch('/api/user/watchlist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mal_id: malId,
-                status: status
-            })
+            body: JSON.stringify({ mal_id: malId, status: status })
         });
-
-        if (resp.ok) {
-            alert('Watchlist updated!');
-        }
+        if (resp.ok) alert('Watchlist updated!');
     }
 
     loadStreams();
+    loadComments();
 </script>
+<style>
+    .text-transparent { color: transparent !important; }
+</style>
 {% endblock %}

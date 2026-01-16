@@ -152,6 +152,9 @@ def home():
         user_history = db.get_user_watch_history(session["user_id"], limit=5)
         user_watchlist = db.get_user_watchlist(session["user_id"])
 
+    # Yerel Trending
+    local_trending = db.get_trending_anime(limit=10)
+
     # Jikan API'den dinamik içerik çek
     top_anime = []
     recommendations = []
@@ -171,6 +174,7 @@ def home():
                          seasons=seasons,
                          top_anime=top_anime,
                          recommendations=recommendations,
+                         local_trending=local_trending,
                          user_history=user_history,
                          user_watchlist=user_watchlist)
 

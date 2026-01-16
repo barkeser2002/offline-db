@@ -707,6 +707,14 @@ def api_stream(mal_id, episode):
     })
 
 
+@api_bp.route("/api/trending")
+def api_trending():
+    """Platformda trend olan anime'leri döndür."""
+    limit = request.args.get("limit", 10, type=int)
+    trending = db.get_trending_anime(limit)
+    return jsonify(trending)
+
+
 @api_bp.route("/api/seasons")
 def api_seasons():
     """Mevcut sezonları listele."""
