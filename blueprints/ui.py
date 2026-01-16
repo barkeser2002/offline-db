@@ -122,48 +122,65 @@ def fetch_all_season_anime(year: int, season: str, save_to_db: bool = True) -> l
 @ui_bp.route("/")
 def home():
     """Ana sayfa."""
+    from flask import session
     # İstatistikleri çek
     conn = db.get_connection()
     stats = {"anime_count": 0, "episode_count": 0, "video_count": 0}
 
     if conn:
         cursor = conn.cursor(dictionary=True)
-
         cursor.execute("SELECT COUNT(*) as count FROM animes")
         res = cursor.fetchone()
-        if res:
-             stats["anime_count"] = int(cast(Dict[str, Any], res)["count"])
+        if res: stats["anime_count"] = int(cast(Dict[str, Any], res)["count"])
 
         cursor.execute("SELECT COUNT(*) as count FROM episodes")
         res = cursor.fetchone()
-        if res:
-             stats["episode_count"] = int(cast(Dict[str, Any], res)["count"])
+        if res: stats["episode_count"] = int(cast(Dict[str, Any], res)["count"])
 
         cursor.execute("SELECT COUNT(*) as count FROM video_links")
         res = cursor.fetchone()
-        if res:
-             stats["video_count"] = int(cast(Dict[str, Any], res)["count"])
-
+        if res: stats["video_count"] = int(cast(Dict[str, Any], res)["count"])
         cursor.close()
         conn.close()
 
     seasons = get_available_seasons()
 
+    # Kullanıcı geçmişi ve izleme listesi
+    user_history = []
+    user_watchlist = []
+    if "user_id" in session:
+        user_history = db.get_user_watch_history(session["user_id"], limit=5)
+        user_watchlist = db.get_user_watchlist(session["user_id"])
+
     # Jikan API'den dinamik içerik çek
     top_anime = []
     recommendations = []
     try:
-        top_anime_res = requests.get(f"{JIKAN_API_BASE}/top/anime", params={"limit": 10})
+        top_anime_res = requests.get(f"{JIKAN_API_BASE}/top/anime", params={"limit": 10}, timeout=5)
         if top_anime_res.status_code == 200:
             top_anime = top_anime_res.json().get("data", [])
 
-        recommendations_res = requests.get(f"{JIKAN_API_BASE}/recommendations/anime", params={"limit": 10})
+        recommendations_res = requests.get(f"{JIKAN_API_BASE}/recommendations/anime", params={"limit": 10}, timeout=5)
         if recommendations_res.status_code == 200:
             recommendations = recommendations_res.json().get("data", [])
     except Exception as e:
         print(f"Jikan API error: {e}")
 
-    return render_template("home.html", stats=stats, seasons=seasons, top_anime=top_anime, recommendations=recommendations)
+    return render_template("home.html",
+                         stats=stats,
+                         seasons=seasons,
+                         top_anime=top_anime,
+                         recommendations=recommendations,
+                         user_history=user_history,
+                         user_watchlist=user_watchlist)
+
+@ui_bp.route("/login")
+def login_page():
+    return render_template("login.html")
+
+@ui_bp.route("/register")
+def register_page():
+    return render_template("register.html")
 
 
 @ui_bp.route("/player")

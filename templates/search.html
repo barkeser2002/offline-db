@@ -1,72 +1,38 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arama: {{ query }}</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .back-btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            color: #fff;
-            text-decoration: none;
-            margin-bottom: 20px;
-        }
-        h1 { color: #e94560; margin-bottom: 20px; }
+{% extends "base.html" %}
 
-        .results {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-        }
-        .anime-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .anime-card:hover { transform: translateY(-5px); }
-        .anime-card img {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-        }
-        .anime-card .info { padding: 10px; }
-        .anime-card h3 { font-size: 14px; margin-bottom: 5px; }
-        .anime-card p { font-size: 12px; color: rgba(255,255,255,0.6); }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <a href="/" class="back-btn">← Ana Sayfa</a>
-        <h1>🔍 "{{ query }}" için sonuçlar</h1>
+{% block title %}Search: {{ query }} - Anime Platform{% endblock %}
 
-        <div class="results">
+{% block content %}
+    <h2 class="text-3xl font-bold mb-6">Search Results for: <span class="text-blue-500">{{ query }}</span></h2>
+
+    {% if results %}
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {% for anime in results %}
-            <div class="anime-card" onclick="location.href='/player?mal_id={{ anime.mal_id }}'">
-                <img src="{{ anime.cover_url or anime.cover_local or '' }}" alt="{{ anime.title }}">
-                <div class="info">
-                    <h3>{{ anime.title }}</h3>
-                    <p>⭐ {{ anime.score or '?' }} | MAL: {{ anime.mal_id }}</p>
+            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                <div class="relative">
+                    {% if anime.cover_local %}
+                        <img src="/covers/{{ anime.mal_id }}.jpg" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                    {% else %}
+                        <img src="{{ anime.cover_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                    {% endif %}
+                    <div class="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow">
+                        {{ anime.type }}
+                    </div>
                 </div>
-            </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-lg truncate" title="{{ anime.title }}">{{ anime.title }}</h3>
+                    <div class="flex justify-between items-center mt-2 text-sm text-gray-400">
+                        <span>{{ anime.year or 'N/A' }}</span>
+                        <span class="text-yellow-500 font-bold">⭐ {{ anime.score or 'N/A' }}</span>
+                    </div>
+                </div>
+            </a>
             {% endfor %}
         </div>
-
-        {% if not results %}
-        <p style="text-align: center; color: rgba(255,255,255,0.5);">Sonuç bulunamadı.</p>
-        {% endif %}
-    </div>
-</body>
-</html>
+    {% else %}
+        <div class="bg-gray-800 p-12 rounded-lg text-center shadow-inner border border-gray-700">
+            <p class="text-gray-400 text-xl">No results found in database.</p>
+            <p class="text-gray-500 mt-2">Try a different name or check the season list.</p>
+        </div>
+    {% endif %}
+{% endblock %}
