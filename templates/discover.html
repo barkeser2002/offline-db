@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Discover Anime - Advanced Filters{% endblock %}
+
+{% block content %}
+<div class="flex flex-col md:flex-row gap-8">
+    <!-- Sidebar Filters -->
+    <aside class="w-full md:w-64 flex-shrink-0">
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 sticky top-4">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clip-rule="evenodd" />
+                </svg>
+                Filters
+            </h2>
+
+            <form id="filter-form" class="space-y-6">
+                <!-- Sort -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Sort By</label>
+                    <select name="sort" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        <option value="popularity">Popularity</option>
+                        <option value="score">Top Rated</option>
+                        <option value="newest">Newest</option>
+                        <option value="title">A-Z</option>
+                    </select>
+                </div>
+
+                <!-- Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Type</label>
+                    <select name="type" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                        <option value="">All</option>
+                        <option value="TV">TV</option>
+                        <option value="Movie">Movie</option>
+                        <option value="OVA">OVA</option>
+                        <option value="Special">Special</option>
+                    </select>
+                </div>
+
+                <!-- Min Score -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Min Score: <span id="score-val">0</span></label>
+                    <input type="range" name="min_score" min="0" max="10" step="0.5" value="0" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('score-val').textContent = this.value">
+                </div>
+
+                <!-- Year Range -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">From Year</label>
+                        <input type="number" name="year_min" placeholder="2000" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">To Year</label>
+                        <input type="number" name="year_max" placeholder="2024" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <!-- Genres -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Genres</label>
+                    <div class="h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                        {% for genre in genres %}
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="genres" value="{{ genre.id }}" class="rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm text-gray-400 group-hover:text-white transition-colors">{{ genre.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="button" id="reset-filters" class="w-full text-xs text-gray-500 hover:text-blue-400 transition-colors py-2">Reset Filters</button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-grow">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold">Discover <span class="text-blue-500">Anime</span></h1>
+            <div id="results-count" class="text-sm text-gray-400 italic">Finding animes...</div>
+        </div>
+
+        <!-- Results Grid -->
+        <div id="anime-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Loading Skeletons -->
+            {% for i in range(10) %}
+            <div class="animate-pulse bg-gray-800 rounded-lg overflow-hidden border border-gray-700 h-80"></div>
+            {% endfor %}
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden bg-gray-800 p-16 rounded-xl text-center border border-gray-700">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-gray-700 rounded-full mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </div>
+            <h3 class="text-2xl font-bold mb-2">No Match Found</h3>
+            <p class="text-gray-400">Try adjusting your filters to find something else.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1f2937;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #374151;
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #4b5563;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const filterForm = document.getElementById('filter-form');
+    const animeGrid = document.getElementById('anime-grid');
+    const emptyState = document.getElementById('empty-state');
+    const resultsCount = document.getElementById('results-count');
+    const resetBtn = document.getElementById('reset-filters');
+
+    async function fetchAnimes() {
+        // Show loading skeletons
+        animeGrid.innerHTML = Array(10).fill('<div class="animate-pulse bg-gray-800 rounded-lg overflow-hidden border border-gray-700 h-80"></div>').join('');
+        emptyState.classList.add('hidden');
+        resultsCount.textContent = "Searching...";
+
+        const formData = new FormData(filterForm);
+        const params = new URLSearchParams();
+
+        // Handle multi-select checkboxes
+        const genres = [];
+        formData.getAll('genres').forEach(id => genres.push(id));
+
+        const filterObj = {
+            sort: formData.get('sort'),
+            type: formData.get('type'),
+            min_score: formData.get('min_score'),
+            year_min: formData.get('year_min'),
+            year_max: formData.get('year_max'),
+            genres: genres
+        };
+
+        // We use POST for cleaner genre handling in this complex filter
+        try {
+            const response = await fetch('/api/discover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(filterObj)
+            });
+            const data = await response.json();
+
+            if (data.success && data.animes.length > 0) {
+                renderAnimes(data.animes);
+                resultsCount.textContent = `Showing ${data.count} results`;
+            } else {
+                animeGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                resultsCount.textContent = '0 results found';
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            showNotification('Error loading animes', 'error');
+        }
+    }
+
+    function renderAnimes(animes) {
+        animeGrid.innerHTML = animes.map(anime => `
+            <a href="/player?mal_id=${anime.mal_id}" class="anime-card group bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 hover:border-blue-500/50 transition-all">
+                <div class="relative overflow-hidden">
+                    <img src="${anime.cover_local ? '/covers/' + anime.mal_id + '.jpg' : anime.cover_url}"
+                         alt="${anime.title}"
+                         class="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110">
+                    <div class="absolute top-2 right-2 bg-blue-600/90 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded shadow">
+                        ${anime.type}
+                    </div>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-sm truncate group-hover:text-blue-400 transition-colors" title="${anime.title}">${anime.title}</h3>
+                    <div class="flex justify-between items-center mt-2 text-xs text-gray-400">
+                        <span>${anime.year || 'N/A'}</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-yellow-500">★</span>
+                            <span class="font-bold text-gray-200">${anime.score || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        `).join('');
+    }
+
+    // Debounced fetch
+    let timeout = null;
+    filterForm.addEventListener('change', () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(fetchAnimes, 500);
+    });
+
+    filterForm.querySelectorAll('input[type="number"], input[type="range"]').forEach(input => {
+        input.addEventListener('keyup', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(fetchAnimes, 1000);
+        });
+    });
+
+    resetBtn.addEventListener('click', () => {
+        filterForm.reset();
+        document.getElementById('score-val').textContent = "0";
+        fetchAnimes();
+    });
+
+    // Initial load
+    fetchAnimes();
+</script>
+{% endblock %}

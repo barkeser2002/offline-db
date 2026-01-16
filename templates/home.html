@@ -64,6 +64,17 @@
     {% endif %}
     {% endif %}
 
+    <!-- Recommended for You Section -->
+    <section id="recommendations-section" class="mb-8 hidden">
+        <h2 class="text-2xl font-semibold mb-4 border-l-4 border-indigo-500 pl-4 flex items-center">
+            <span class="mr-2">Recommended for You</span>
+            <span class="bg-indigo-900/50 text-indigo-400 text-xs px-2 py-0.5 rounded font-bold uppercase tracking-widest">Personalized</span>
+        </h2>
+        <div id="recommendations-container" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <!-- Personalized recommendations will be loaded here -->
+        </div>
+    </section>
+
     <!-- Trending on Platform Section -->
     {% if local_trending %}
     <section class="mb-8">
@@ -177,6 +188,40 @@
             console.error('Error loading trending:', e);
         }
     }
+    async function loadPersonalizedRecommendations() {
+        const section = document.getElementById('recommendations-section');
+        const container = document.getElementById('recommendations-container');
+        try {
+            const resp = await fetch('/api/social/recommendations?limit=5');
+            const data = await resp.json();
+
+            if (data && data.success && data.recommendations.length > 0) {
+                section.classList.remove('hidden');
+                container.innerHTML = data.recommendations.map(anime => {
+                    const cover = anime.cover_local ? `/covers/${anime.mal_id}.jpg` : anime.cover_url;
+                    return `
+                        <a href="/player?mal_id=${anime.mal_id}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 transition transform hover:scale-105">
+                            <div class="relative">
+                                <img src="${cover}" alt="${anime.title}" class="w-full h-48 object-cover">
+                                ${anime.main_genre ? `<div class="absolute bottom-2 left-2 bg-indigo-600/80 backdrop-blur-sm text-[10px] text-white font-bold px-2 py-0.5 rounded uppercase">${anime.main_genre}</div>` : ''}
+                            </div>
+                            <div class="p-3">
+                                <h3 class="font-bold text-sm truncate text-white">${anime.title}</h3>
+                                <div class="flex justify-between items-center mt-1 text-xs">
+                                    <span class="text-gray-400">${anime.type || 'TV'}</span>
+                                    <span class="text-yellow-500 font-bold">⭐ ${anime.score || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+            }
+        } catch (e) {
+            console.error('Error loading recommendations:', e);
+        }
+    }
+
     loadTrending();
+    loadPersonalizedRecommendations();
 </script>
 {% endblock %}

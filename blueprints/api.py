@@ -715,6 +715,39 @@ def api_trending():
     return jsonify(trending)
 
 
+@api_bp.route("/api/discover", methods=["GET", "POST"])
+def api_discover():
+    """Gelişmiş filtreleme ile anime listesini döndür."""
+    if request.method == "POST":
+        filters = request.get_json() or {}
+    else:
+        # GET parametrelerini filtreye dönüştür
+        filters = {
+            "genres": request.args.getlist("genres", type=int),
+            "year_min": request.args.get("year_min", type=int),
+            "year_max": request.args.get("year_max", type=int),
+            "status": request.args.get("status"),
+            "type": request.args.get("type"),
+            "min_score": request.args.get("min_score", type=float),
+            "sort": request.args.get("sort", "popularity")
+        }
+
+    limit = request.args.get("limit", 24, type=int)
+    offset = request.args.get("offset", 0, type=int)
+
+    results = db.discover_animes(filters, limit, offset)
+
+    # JSON serileştirme (Decimal/Datetime için)
+    serialized_results = db.serialize_for_json(results)
+
+    return jsonify({
+        "success": True,
+        "count": len(results),
+        "filters": filters,
+        "animes": serialized_results
+    })
+
+
 @api_bp.route("/api/seasons")
 def api_seasons():
     """Mevcut sezonları listele."""

@@ -290,6 +290,12 @@ def search_page():
 
     return render_template("search.html", query=query, results=results)
 
+@ui_bp.route("/discover")
+def discover_page():
+    """Keşfet (Gelişmiş Filtreleme) sayfası."""
+    genres = db.get_genres()
+    return render_template("discover.html", genres=genres)
+
 
 @ui_bp.route("/covers/<filename>")
 def serve_cover(filename):

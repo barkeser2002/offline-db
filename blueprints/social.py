@@ -70,3 +70,24 @@ def get_trending():
     trending = db.serialize_for_json(trending)
 
     return jsonify(trending)
+
+@social_bp.route("/api/social/recommendations", methods=["GET"])
+def get_recommendations():
+    """Kullanıcıya özel öneriler getir."""
+    user_id = session.get("user_id")
+    limit = request.args.get("limit", 10, type=int)
+
+    if not user_id:
+        # Giriş yapmamış kullanıcıya genel trending öner
+        recommendations = db.get_trending_anime(limit)
+    else:
+        recommendations = db.get_personalized_recommendations(user_id, limit)
+
+    # Format for JSON serialization
+    recommendations = db.serialize_for_json(recommendations)
+
+    return jsonify({
+        "success": True,
+        "personalized": user_id is not None,
+        "recommendations": recommendations
+    })
