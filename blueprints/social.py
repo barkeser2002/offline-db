@@ -70,3 +70,16 @@ def get_trending():
     trending = db.serialize_for_json(trending)
 
     return jsonify(trending)
+
+@social_bp.route("/api/social/recommendations", methods=["GET"])
+def get_recommendations():
+    if "user_id" not in session:
+        return jsonify([])
+
+    limit = request.args.get("limit", 5, type=int)
+    recommendations = db.get_personalized_recommendations(session["user_id"], limit)
+
+    # Format for JSON serialization
+    recommendations = db.serialize_for_json(recommendations)
+
+    return jsonify(recommendations)
