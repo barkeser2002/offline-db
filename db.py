@@ -299,7 +299,7 @@ def init_database():
         FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
-
+    
     # Yorumlar tablosu
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS comments (
@@ -312,11 +312,12 @@ def init_database():
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
         INDEX idx_anime_episode (anime_id, episode_number),
+        INDEX idx_user_comments (user_id),
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """)
-    
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -954,12 +955,12 @@ def get_user_watchlist(user_id: int):
     return results
 
 # ─────────────────────────────────────────────────────────────────────────────
-# YORUM İŞLEMLERİ
+# SOSYAL İŞLEMLER (YORUMLAR)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def add_comment(user_id: int, anime_id: int, episode_number: int, content: str, is_spoiler: bool = False):
     conn = get_connection()
-    if not conn: return False
+    if not conn: return None
     cursor = conn.cursor()
     try:
         cursor.execute("""
@@ -967,14 +968,15 @@ def add_comment(user_id: int, anime_id: int, episode_number: int, content: str, 
             VALUES (%s, %s, %s, %s, %s)
         """, (user_id, anime_id, episode_number, content, is_spoiler))
         conn.commit()
+        comment_id = cursor.lastrowid
         cursor.close()
         conn.close()
-        return True
+        return comment_id
     except Error as e:
-        print(f"[DB] Comment addition error: {e}")
-        return False
+        print(f"[DB] Comment add error: {e}")
+        return None
 
-def get_comments(anime_id: int, episode_number: int):
+def get_episode_comments(anime_id: int, episode_number: int):
     conn = get_connection()
     if not conn: return []
     cursor = conn.cursor(dictionary=True)
@@ -990,29 +992,55 @@ def get_comments(anime_id: int, episode_number: int):
     conn.close()
     return results
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TRENDING VE ÖNERİLER
-# ─────────────────────────────────────────────────────────────────────────────
+def delete_comment(comment_id: int, user_id: int):
+    """Sadece yorumun sahibi silebilir."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM comments WHERE id = %s AND user_id = %s", (comment_id, user_id))
+    affected = cursor.rowcount
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return affected > 0
 
-def get_trending_anime(limit: int = 10):
-    """Platformda en çok izlenen anime'leri getir (son 7 gün)."""
+def get_trending_anime(limit: int = 10, days: int = 7):
+    """Son X günde en çok izlenen anime'leri getir."""
     conn = get_connection()
     if not conn: return []
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT a.id, a.mal_id, a.title, a.cover_url, a.cover_local, a.score, a.type,
-               COUNT(wh.id) as view_count
-        FROM watch_history wh
-        JOIN animes a ON wh.anime_id = a.id
-        WHERE wh.updated_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY a.id, a.mal_id, a.title, a.cover_url, a.cover_local, a.score, a.type
-        ORDER BY view_count DESC
+        SELECT a.*, COUNT(wh.id) as watch_count
+        FROM animes a
+        JOIN watch_history wh ON a.id = wh.anime_id
+        WHERE wh.updated_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
+        GROUP BY a.id
+        ORDER BY watch_count DESC
         LIMIT %s
-    """, (limit,))
+    """, (days, limit))
     results = cursor.fetchall()
     cursor.close()
     conn.close()
     return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JSON SERİLEŞTİRME YARDIMCI FONKSİYONU
+# ─────────────────────────────────────────────────────────────────────────────
+
+def serialize_for_json(data):
+    """Datetime ve Decimal tiplerini JSON için string/float'a çevir."""
+    from decimal import Decimal
+    from datetime import datetime, date
+    if isinstance(data, list):
+        return [serialize_for_json(item) for item in data]
+    elif isinstance(data, dict):
+        return {k: serialize_for_json(v) for k, v in data.items()}
+    elif isinstance(data, (datetime, date)):
+        return data.isoformat()
+    elif isinstance(data, Decimal):
+        return float(data)
+    else:
+        return data
 
 
 if __name__ == "__main__":
