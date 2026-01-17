@@ -157,16 +157,52 @@
             const data = await resp.json();
 
             if (data.stream_url) {
-                // Create blob URL for security
-                const blobUrl = await createBlobUrl(data.stream_url);
-                
-                container.innerHTML = `
-                    <video id="main-player" class="w-full h-full" controls autoplay>
-                        <source src="${blobUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>`;
+                // Determine video type based on URL
+                const videoType = getVideoType(data.stream_url);
 
-                setupProgressTracking();
+                container.innerHTML = `
+                    <video-js id="main-player" class="vjs-default-skin vjs-big-play-centered w-full h-full" controls preload="auto" autoplay>
+                        <source src="${data.stream_url}" type="${videoType}">
+                        <p class="vjs-no-js">
+                            To view this video please enable JavaScript, and consider upgrading to a web browser that
+                            <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                        </p>
+                    </video-js>`;
+
+                // Initialize Video.js player
+                const player = videojs('main-player', {
+                    html5: {
+                        hls: {
+                            overrideNative: !videojs.browser.IS_SAFARI
+                        },
+                        nativeAudioTracks: false,
+                        nativeVideoTracks: false
+                    },
+                    autoplay: true,
+                    controls: true,
+                    responsive: true,
+                    fluid: true
+                });
+
+                player.ready(function() {
+                    console.log('Player is ready');
+                    setupProgressTracking();
+                });
+
+                player.on('error', function() {
+                    console.error('Video.js error:', player.error());
+                    
+                    // Try with different MIME type if HLS fails
+                    const currentSrc = player.currentSource();
+                    if (currentSrc && currentSrc.type === 'application/x-mpegURL') {
+                        console.log('HLS failed, trying MP4 fallback...');
+                        player.src({
+                            src: currentSrc.src,
+                            type: 'video/mp4'
+                        });
+                    }
+                });
+
             } else {
                 container.innerHTML = `
                     <div class="text-center p-8">
@@ -179,34 +215,36 @@
         }
     }
 
-    async function createBlobUrl(videoUrl) {
-        try {
-            // Fetch video as blob
-            const response = await fetch(videoUrl);
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
-        } catch (e) {
-            console.error('Error creating blob URL:', e);
-            // Fallback to direct URL
-            return videoUrl;
+    function getVideoType(url) {
+        if (url.includes('.m3u8') || url.includes('m3u8')) {
+            return 'application/x-mpegURL';
+        } else if (url.includes('.mp4')) {
+            return 'video/mp4';
+        } else if (url.includes('.webm')) {
+            return 'video/webm';
+        } else if (url.includes('.ogg')) {
+            return 'video/ogg';
+        } else {
+            // Default to HLS for streaming URLs
+            return 'application/x-mpegURL';
         }
     }
 
     function setupProgressTracking() {
-        const video = document.getElementById('main-player');
-        if (!video) return;
+        const player = videojs('main-player');
+        if (!player) return;
 
         {% if session.user_id %}
-        video.onplay = () => {
+        player.on('play', () => {
             progressInterval = setInterval(() => {
-                const progress = (video.currentTime / video.duration) * 100;
+                const progress = (player.currentTime() / player.duration()) * 100;
                 if (progress > 0) {
                     updateHistory(progress);
                 }
             }, 30000); // Update every 30 seconds
-        };
+        });
 
-        video.onpause = () => clearInterval(progressInterval);
+        player.on('pause', () => clearInterval(progressInterval);
         video.onended = () => updateHistory(100);
         {% endif %}
     }

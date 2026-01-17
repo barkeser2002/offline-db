@@ -1997,19 +1997,45 @@ def get_episode_stream(mal_id: int, episode_number: int, source_name: str):
 
         adapter = adapter_map[source_name]
 
-        # Video linkini çek (örnek episode slug kullanarak)
-        episode_slug = f"{source_slug}-{episode_number}-bolum"  # Adaptöre göre ayarlanmalı
-        
+        # Video linkini çek (adaptöre göre farklı yöntemler)
         try:
-            streams = adapter.get_episode_streams(episode_slug)
-            if streams:
+            streams = None
+            
+            if source_name == "animecix":
+                # AnimeCiX için episode URL oluştur (anime adından slug yap)
+                anime_slug = source_slug.lower().replace(' ', '-').replace(':', '').replace('?', '').replace('/', '-')
+                episode_slug = f"{anime_slug}-{episode_number}-bolum"
+                episode_url = f"https://animecix.tv/watch/{episode_slug}"
+                streams = adapter.get_episode_streams(episode_url)
+            elif source_name == "anizle":
+                # Anizle için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
+            elif source_name == "tranime":
+                # TRAnime için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
+            elif source_name == "turkanime":
+                # TurkAnime için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
+            
+            if streams and len(streams) > 0:
                 # İlk stream'i döndür
                 stream = streams[0]
-                return jsonify({
-                    "stream_url": stream["url"],
-                    "quality": stream.get("quality", "default"),
-                    "fansub": stream.get("fansub", "Unknown")
-                })
+                stream_url = stream["url"]
+                
+                # Stream URL'sini validate et
+                if validate_stream_url(stream_url, source_name):
+                    return jsonify({
+                        "stream_url": stream_url,
+                        "quality": stream.get("quality", "default"),
+                        "fansub": stream.get("fansub", "Unknown"),
+                        "source": source_name,
+                        "referral_required": source_name in ["anizle", "turkanime"]  # Bazı kaynaklar referral header istiyor
+                    })
+                else:
+                    return jsonify({"error": "Stream URL validation failed"}), 404
             else:
                 return jsonify({"error": "Video linki bulunamadı"}), 404
         except Exception as e:
@@ -2017,3 +2043,29 @@ def get_episode_stream(mal_id: int, episode_number: int, source_name: str):
 
     except Exception as e:
         return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
+
+
+def validate_stream_url(url: str, source_name: str) -> bool:
+    """Stream URL'sinin geçerli olup olmadığını kontrol et."""
+    if not url:
+        return False
+    
+    # Temel URL validation
+    if not url.startswith(('http://', 'https://')):
+        return False
+    
+    # Kaynağa göre özel kontroller
+    if source_name == "anizle":
+        # Anizle URL'leri genellikle m3u8 formatında
+        return 'anizmplayer.com' in url or 'm3u8' in url
+    elif source_name == "animecix":
+        # AnimeCiX URL'leri çeşitli formatlarda olabilir
+        return True  # Şimdilik tüm URL'leri kabul et
+    elif source_name == "turkanime":
+        # TurkAnime URL'leri
+        return True
+    elif source_name == "tranime":
+        # TRAnime URL'leri
+        return True
+    
+    return True
