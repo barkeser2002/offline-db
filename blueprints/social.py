@@ -22,7 +22,10 @@ def add_comment():
     if not anime:
         return jsonify({"error": "Anime not found"}), 404
 
-    comment_id = db.add_comment(session["user_id"], anime["id"], episode, content, is_spoiler)
+    # Convert to dict if it's a Row object
+    anime = dict(anime)
+
+    comment_id = db.add_comment(session["user_id"], int(anime["id"]), int(episode), content, bool(is_spoiler))
 
     if comment_id:
         return jsonify({
@@ -70,3 +73,16 @@ def get_trending():
     trending = db.serialize_for_json(trending)
 
     return jsonify(trending)
+
+@social_bp.route("/api/social/recommendations", methods=["GET"])
+def get_recommendations():
+    if "user_id" not in session:
+        return jsonify([])
+
+    limit = request.args.get("limit", 5, type=int)
+    recommendations = db.get_personalized_recommendations(session["user_id"], limit)
+
+    # Format for JSON serialization
+    recommendations = db.serialize_for_json(recommendations)
+
+    return jsonify(recommendations)

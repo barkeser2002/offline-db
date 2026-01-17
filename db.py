@@ -322,7 +322,7 @@ def init_database():
     cursor.close()
     conn.close()
     
-    print("[DB] Tablolar başarıyla oluşturuldu (InnoDB).")
+    print("[DB] Database tables created successfully (InnoDB).")
     return True
 
 
@@ -730,7 +730,7 @@ def insert_or_update_episode(anime_id: int, episode_number: int, title: str = No
         cursor.execute("""
             INSERT INTO episodes (anime_id, episode_number, title)
             VALUES (%s, %s, %s)
-        """, (anime_id, episode_number, title or f"{episode_number}. Bölüm"))
+        """, (anime_id, episode_number, title or f"Episode {episode_number}"))
         episode_id = cursor.lastrowid
     
     conn.commit()
@@ -1047,7 +1047,7 @@ def add_comment(user_id: int, anime_id: int, episode_number: int, content: str, 
         print(f"[DB] Comment add error: {e}")
         return None
 
-def get_episode_comments(anime_id: int, episode_number: int):
+def get_comments(anime_id: int, episode_number: int):
     conn = get_connection()
     if not conn: return []
     cursor = conn.cursor(dictionary=True)
@@ -1062,6 +1062,104 @@ def get_episode_comments(anime_id: int, episode_number: int):
     cursor.close()
     conn.close()
     return results
+
+def get_episode_comments(anime_id: int, episode_number: int):
+    """Alias for get_comments to maintain compatibility."""
+    return get_comments(anime_id, episode_number)
+
+def get_anime_genres(anime_id: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT g.* FROM genres g
+        JOIN anime_genres ag ON g.id = ag.genre_id
+        WHERE ag.anime_id = %s
+    """, (anime_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_anime_studios(anime_id: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT s.* FROM studios s
+        JOIN anime_studios ast ON s.id = ast.studio_id
+        WHERE ast.anime_id = %s
+    """, (anime_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_anime_full_details(mal_id: int):
+    """Anime'nin tüm detaylarını (türler, stüdyolar, bölümler) getir."""
+    anime = get_anime_by_mal_id(mal_id)
+    if not anime:
+        return None
+
+    anime_id = anime["id"]
+    anime["genres"] = get_anime_genres(anime_id)
+    anime["studios"] = get_anime_studios(anime_id)
+
+    # Bölümleri getir
+    conn = get_connection()
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT e.*,
+                   (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id AND is_active = TRUE) as video_count
+            FROM episodes e
+            WHERE e.anime_id = %s
+            ORDER BY e.episode_number
+        """, (anime_id,))
+        anime["episodes_list"] = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    else:
+        anime["episodes_list"] = []
+
+    return anime
+
+def get_user_stats(user_id: int):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor(dictionary=True)
+
+    stats = {}
+
+    # Toplam izlenen bölüm sayısı
+    cursor.execute("SELECT COUNT(*) as total_watched FROM watch_history WHERE user_id = %s", (user_id,))
+    stats["total_watched"] = cursor.fetchone()["total_watched"]
+
+    # İzleme listesindeki durumlar
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM watchlists
+        WHERE user_id = %s
+        GROUP BY status
+    """, (user_id,))
+    stats["watchlist_counts"] = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+    # En çok izlenen türler
+    cursor.execute("""
+        SELECT g.name, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = %s
+        GROUP BY g.id
+        ORDER BY count DESC
+        LIMIT 5
+    """, (user_id,))
+    stats["favorite_genres"] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return stats
 
 def delete_comment(comment_id: int, user_id: int):
     """Sadece yorumun sahibi silebilir."""
@@ -1094,6 +1192,182 @@ def get_trending_anime(limit: int = 10, days: int = 7):
     conn.close()
     return results
 
+def get_personalized_recommendations(user_id: int, limit: int = 5):
+    """Kullanıcının izleme geçmişine göre tür bazlı öneriler getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+
+    # 1. Kullanıcının en çok izlediği 3 türü bul
+    cursor.execute("""
+        SELECT g.id, COUNT(*) as weight
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = %s
+        GROUP BY g.id
+        ORDER BY weight DESC
+        LIMIT 3
+    """, (user_id,))
+    top_genres = [row['id'] for row in cursor.fetchall()]
+
+    if not top_genres:
+        # Eğer geçmişi yoksa en popülerlerden öner
+        cursor.execute("SELECT * FROM animes ORDER BY popularity ASC LIMIT %s", (limit,))
+        results = cursor.fetchall()
+    else:
+        # 2. Bu türlerdeki, kullanıcının henüz izlemediği en iyi anime'leri bul
+        genre_placeholders = ",".join(["%s"] * len(top_genres))
+        query = f"""
+            SELECT a.*
+            FROM animes a
+            JOIN anime_genres ag ON a.id = ag.anime_id
+            WHERE ag.genre_id IN ({genre_placeholders})
+            AND a.id NOT IN (SELECT anime_id FROM watch_history WHERE user_id = %s)
+            GROUP BY a.id
+            ORDER BY a.score DESC
+            LIMIT %s
+        """
+        cursor.execute(query, (*top_genres, user_id, limit))
+        results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return results
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KEŞFET VE ÖNERİ SİSTEMİ
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_genres():
+    """Tüm türleri getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM genres ORDER BY name ASC")
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def discover_animes(filters: dict, limit: int = 24, offset: int = 0):
+    """
+    Gelişmiş filtreleme ile anime ara.
+    filters: {genres: [], year_min: int, year_max: int, status: str, type: str, min_score: float, sort: str}
+    """
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+
+    query = "SELECT a.* FROM animes a"
+    where_clauses = []
+    params = []
+
+    # Tür filtreleme (JOIN gerekli)
+    if filters.get("genres"):
+        genre_ids = filters["genres"]
+        placeholders = ",".join(["%s"] * len(genre_ids))
+        query += f" JOIN anime_genres ag ON a.id = ag.anime_id"
+        where_clauses.append(f"ag.genre_id IN ({placeholders})")
+        params.extend(genre_ids)
+
+    # Yıl filtreleme
+    if filters.get("year_min"):
+        where_clauses.append("a.year >= %s")
+        params.append(filters["year_min"])
+    if filters.get("year_max"):
+        where_clauses.append("a.year <= %s")
+        params.append(filters["year_max"])
+
+    # Durum (Status)
+    if filters.get("status"):
+        where_clauses.append("a.status = %s")
+        params.append(filters["status"])
+
+    # Tip (TV, Movie, vb.)
+    if filters.get("type"):
+        where_clauses.append("a.type = %s")
+        params.append(filters["type"])
+
+    # Minimum Puan
+    if filters.get("min_score"):
+        where_clauses.append("a.score >= %s")
+        params.append(filters["min_score"])
+
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+
+    # Gruplama (Tür filtresi varsa duplicate önlemek için)
+    if filters.get("genres"):
+        query += " GROUP BY a.id"
+        # Birden fazla tür seçildiyse "tümünü içeren" mantığı istenirse burası değişir.
+        # Şu an "herhangi birini içeren" mantığı var.
+
+    # Sıralama
+    sort = filters.get("sort", "popularity")
+    sort_map = {
+        "score": "a.score DESC",
+        "popularity": "a.popularity ASC",
+        "newest": "a.year DESC, a.aired_from DESC",
+        "title": "a.title ASC"
+    }
+    query += f" ORDER BY {sort_map.get(sort, 'a.popularity ASC')}"
+
+    # Limit & Offset
+    query += " LIMIT %s OFFSET %s"
+    params.extend([limit, offset])
+
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_personalized_recommendations(user_id: int, limit: int = 10):
+    """Kullanıcının izleme geçmişine göre tür bazlı öneriler sunar."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+
+    # 1. Kullanıcının en çok izlediği ilk 3 türü bul
+    cursor.execute("""
+        SELECT ag.genre_id, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        WHERE wh.user_id = %s
+        GROUP BY ag.genre_id
+        ORDER BY count DESC
+        LIMIT 3
+    """, (user_id,))
+    top_genres = [row["genre_id"] for row in cursor.fetchall()]
+
+    if not top_genres:
+        # Geçmiş yoksa genel trending/top anime döndür
+        cursor.close()
+        conn.close()
+        return get_trending_anime(limit)
+
+    # 2. Bu türlerdeki, kullanıcının henüz izlemediği yüksek puanlı anime'leri bul
+    placeholders = ",".join(["%s"] * len(top_genres))
+    query = f"""
+        SELECT a.*, g.name as main_genre
+        FROM animes a
+        JOIN anime_genres ag ON a.id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE ag.genre_id IN ({placeholders})
+        AND a.id NOT IN (SELECT anime_id FROM watch_history WHERE user_id = %s)
+        GROUP BY a.id
+        ORDER BY a.score DESC, a.popularity ASC
+        LIMIT %s
+    """
+    params = top_genres + [user_id, limit]
+
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON SERİLEŞTİRME YARDIMCI FONKSİYONU
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1115,5 +1389,5 @@ def serialize_for_json(data):
 
 
 if __name__ == "__main__":
-    print("Veritabanı başlatılıyor...")
+    print("Initializing database...")
     init_database()

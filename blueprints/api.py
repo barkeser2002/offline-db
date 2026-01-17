@@ -707,12 +707,76 @@ def api_stream(mal_id, episode):
     })
 
 
+@api_bp.route("/api/discover")
+def api_discover():
+    """Gelişmiş filtreleme API'si."""
+    genre_ids = request.args.getlist("genres[]", type=int)
+    if not genre_ids and request.args.get("genre"):
+        genre_ids = [request.args.get("genre", type=int)]
+
+    year = request.args.get("year", type=int)
+    score_min = request.args.get("score_min", type=float)
+    anime_type = request.args.get("type")
+    sort_by = request.args.get("sort", "popularity")
+    page = request.args.get("page", 1, type=int)
+    limit = 20
+    offset = (page - 1) * limit
+
+    results = db.discover_animes(
+        genre_ids=genre_ids,
+        year=year,
+        score_min=score_min,
+        anime_type=anime_type,
+        sort_by=sort_by,
+        limit=limit,
+        offset=offset
+    )
+
+    # JSON serileştirme (Decimal vs.)
+    results = db.serialize_for_json(results)
+
+    return jsonify(results)
+
+
 @api_bp.route("/api/trending")
 def api_trending():
     """Platformda trend olan anime'leri döndür."""
     limit = request.args.get("limit", 10, type=int)
     trending = db.get_trending_anime(limit)
     return jsonify(trending)
+
+
+@api_bp.route("/api/discover", methods=["GET", "POST"])
+def api_discover():
+    """Gelişmiş filtreleme ile anime listesini döndür."""
+    if request.method == "POST":
+        filters = request.get_json() or {}
+    else:
+        # GET parametrelerini filtreye dönüştür
+        filters = {
+            "genres": request.args.getlist("genres", type=int),
+            "year_min": request.args.get("year_min", type=int),
+            "year_max": request.args.get("year_max", type=int),
+            "status": request.args.get("status"),
+            "type": request.args.get("type"),
+            "min_score": request.args.get("min_score", type=float),
+            "sort": request.args.get("sort", "popularity")
+        }
+
+    limit = request.args.get("limit", 24, type=int)
+    offset = request.args.get("offset", 0, type=int)
+
+    results = db.discover_animes(filters, limit, offset)
+
+    # JSON serileştirme (Decimal/Datetime için)
+    serialized_results = db.serialize_for_json(results)
+
+    return jsonify({
+        "success": True,
+        "count": len(results),
+        "filters": filters,
+        "animes": serialized_results
+    })
 
 
 @api_bp.route("/api/seasons")
