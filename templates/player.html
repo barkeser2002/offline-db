@@ -3,109 +3,122 @@
 {% block title %}{{ anime.title }} - Episode {{ current_ep }} - Anime Platform{% endblock %}
 
 {% block content %}
-<div class="flex flex-col lg:flex-row gap-6">
+<div id="player-layout" class="flex flex-col lg:flex-row gap-6">
     <!-- Video Player Area -->
     <div id="video-area" class="lg:w-3/4 transition-all duration-500">
         <div id="player-wrapper" class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800">
-            <div id="player-container" class="w-full h-full flex items-center justify-center">
-                <div class="text-center">
+            <div id="player-container" class="w-full h-full flex items-center justify-center relative">
+                <div class="text-center" id="loading-overlay">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                    <p class="text-gray-400">Loading sources...</p>
+                    <p class="text-gray-400">Searching for sources...</p>
                 </div>
             </div>
-            <!-- Theater Mode Toggle -->
-            <button onclick="toggleTheaterMode()" class="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition z-10" title="Theater Mode">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-            </button>
+
+            <!-- Player Controls Overlay (Theater Mode) -->
+            <div class="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition z-10">
+                <button onclick="toggleAutoNext()" id="auto-next-btn" class="bg-black/50 hover:bg-black/80 text-white px-3 py-1 rounded-full text-[10px] font-bold border border-gray-700 transition" title="Auto-Play Next Episode">
+                    AUTO-NEXT: OFF
+                </button>
+                <button onclick="toggleTheaterMode()" class="bg-black/50 hover:bg-black/80 text-white p-2 rounded-full border border-gray-700 transition" title="Theater Mode (T)">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
-        <!-- Anime Info & Watchlist -->
-        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ anime.title }}</h1>
-                    <h2 class="text-xl text-gray-400">Episode {{ current_ep }}</h2>
+        <!-- Anime Info -->
+        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+                <div class="flex-grow">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h1 class="text-3xl font-bold text-white">{{ anime.title }}</h1>
+                        <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded">EP {{ current_ep }}</span>
+                    </div>
+                    <h2 class="text-lg text-gray-400 font-medium">{{ anime.title_english or '' }}</h2>
                 </div>
-                {% if session.user_id %}
-                <div class="flex space-x-2">
-                    <select id="watchlist-status" onchange="updateWatchlistStatus()" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500">
-                        <option value="">Add to List</option>
-                        <option value="watching">Watching</option>
-                        <option value="completed">Completed</option>
-                        <option value="on-hold">On Hold</option>
-                        <option value="dropped">Dropped</option>
-                        <option value="plan-to-watch">Plan to Watch</option>
+
+                <div class="flex items-center gap-2">
+                    {% if session.user_id %}
+                    <select id="watchlist-status" onchange="updateWatchlistStatus()" class="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-sm font-semibold text-gray-300 focus:outline-none focus:border-blue-500 transition">
+                        <option value="" disabled selected>Add to list...</option>
+                        <option value="watching" {% if user_status == 'watching' %}selected{% endif %}>Watching</option>
+                        <option value="completed" {% if user_status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="on-hold" {% if user_status == 'on-hold' %}selected{% endif %}>On Hold</option>
+                        <option value="dropped" {% if user_status == 'dropped' %}selected{% endif %}>Dropped</option>
+                        <option value="plan-to-watch" {% if user_status == 'plan-to-watch' %}selected{% endif %}>Plan to Watch</option>
                     </select>
+                    {% endif %}
+
+                    <div class="flex bg-gray-900 rounded-lg p-1 border border-gray-700">
+                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ current_ep - 1 }}" class="p-2 hover:bg-gray-800 rounded transition {% if current_ep <= 1 %}pointer-events-none opacity-30{% endif %}" title="Previous Episode">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M8.445 14.832A1 1 0 0010 14V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4zM16.445 14.832A1 1 0 0018 14V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" /></svg>
+                        </a>
+                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ current_ep + 1 }}" class="p-2 hover:bg-gray-800 rounded transition" title="Next Episode">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4zM11.555 5.168A1 1 0 0010 6v8a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4z" /></svg>
+                        </a>
+                    </div>
                 </div>
-                {% endif %}
             </div>
 
-            <div class="mt-4 flex flex-wrap gap-2">
-                <span class="bg-blue-900/50 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">{{ anime.type }}</span>
-                <span class="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-xs font-semibold">{{ anime.status }}</span>
-                <span class="bg-yellow-900/50 text-yellow-400 px-3 py-1 rounded-full text-xs font-semibold">⭐ {{ anime.score }}</span>
+            <div class="mt-6 flex flex-wrap gap-2">
+                {% for genre in anime.genres %}
+                <span class="bg-gray-700/50 hover:bg-blue-600/30 text-gray-400 hover:text-blue-400 px-3 py-1 rounded border border-gray-700 transition cursor-pointer text-xs">{{ genre }}</span>
+                {% endfor %}
             </div>
 
-            <p class="mt-4 text-gray-300 text-sm leading-relaxed">{{ anime.synopsis }}</p>
+            <p class="mt-6 text-gray-300 text-sm leading-relaxed border-t border-gray-700 pt-4">{{ anime.synopsis }}</p>
         </div>
 
         <!-- Comments Section -->
-        <div class="mt-8 bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <div class="mt-8 bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-lg">
             <h3 class="text-2xl font-bold mb-6 flex items-center">
-                <span class="mr-2">💬</span> Comments
+                <span class="mr-3">💬</span> Episode Discussion
             </h3>
 
             {% if session.user_id %}
             <div class="mb-8">
-                <textarea id="comment-input" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500" placeholder="Share your thoughts about this episode..."></textarea>
-                <div class="mt-2 flex justify-between items-center">
-                    <label class="flex items-center text-sm text-gray-400 cursor-pointer">
-                        <input type="checkbox" id="is-spoiler" class="mr-2">
+                <textarea id="comment-input" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-4 text-sm focus:outline-none focus:border-blue-500 transition" placeholder="What did you think of this episode?"></textarea>
+                <div class="mt-3 flex justify-between items-center">
+                    <label class="flex items-center text-sm text-gray-400 cursor-pointer hover:text-gray-200 transition">
+                        <input type="checkbox" id="is-spoiler" class="mr-2 rounded border-gray-700 bg-gray-900 text-blue-600 focus:ring-blue-500">
                         Contains spoilers?
                     </label>
-                    <button onclick="postComment()" id="post-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition text-sm">Post Comment</button>
+                    <button onclick="postComment()" id="post-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold transition shadow-lg text-sm">Post Comment</button>
                 </div>
             </div>
             {% else %}
-            <div class="bg-gray-900/50 p-4 rounded-lg text-center mb-8 border border-dashed border-gray-700">
-                <p class="text-gray-400">Please <a href="/login" class="text-blue-400 hover:underline">login</a> or <a href="/register" class="text-blue-400 hover:underline">register</a> to post a comment.</p>
+            <div class="bg-gray-900/50 p-6 rounded-lg text-center mb-8 border-2 border-dashed border-gray-700">
+                <p class="text-gray-400">Join the discussion! Please <a href="/login" class="text-blue-500 hover:underline font-bold">Login</a> or <a href="/register" class="text-blue-500 hover:underline font-bold">Register</a>.</p>
             </div>
             {% endif %}
 
             <div id="comments-container" class="space-y-6">
-                <!-- Comments will be loaded here -->
-                <div class="animate-pulse flex space-x-4">
-                    <div class="rounded-full bg-gray-700 h-10 w-10"></div>
-                    <div class="flex-1 space-y-4 py-1">
-                        <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-                        <div class="space-y-2">
-                            <div class="h-4 bg-gray-700 rounded"></div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Comments load here -->
             </div>
         </div>
     </div>
 
-    <!-- Episode List -->
+    <!-- Sidebar: Episode List -->
     <div class="lg:w-1/4">
-        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden sticky top-4">
-            <div class="p-4 bg-gray-700 font-bold border-b border-gray-600 flex justify-between items-center">
-                <span>Episodes</span>
-                <span class="text-xs text-gray-400">{{ episodes|length }} total</span>
+        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden sticky top-4 shadow-xl">
+            <div class="p-4 bg-gray-700/50 font-black text-xs uppercase tracking-widest border-b border-gray-600 flex justify-between items-center">
+                <span class="text-gray-300">Episodes</span>
+                <span class="bg-blue-600 text-[10px] px-2 py-0.5 rounded text-white">{{ episodes|length }}</span>
             </div>
-            <div class="max-h-[600px] overflow-y-auto">
+            <div class="max-h-[70vh] overflow-y-auto custom-scrollbar">
                 {% for ep in episodes %}
                 <a href="/player?mal_id={{ anime.mal_id }}&ep={{ ep.episode_number }}"
-                   class="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 transition {% if ep.episode_number == current_ep %}bg-blue-900/30 border-l-4 border-l-blue-500{% endif %}">
-                    <div class="w-8 h-8 rounded bg-gray-900 flex items-center justify-center text-xs font-bold mr-3 {% if ep.has_video %}text-green-500{% else %}text-gray-500{% endif %}">
+                   class="flex items-center p-3 hover:bg-gray-700/50 border-b border-gray-700/50 transition group {% if ep.episode_number == current_ep %}bg-blue-900/20 border-l-4 border-l-blue-500{% endif %}">
+                    <div class="w-10 h-10 rounded bg-gray-900 flex items-center justify-center text-xs font-black mr-3 transition group-hover:bg-blue-600/20 {% if ep.episode_number == current_ep %}text-blue-400{% else %}text-gray-600{% endif %}">
                         {{ ep.episode_number }}
                     </div>
-                    <div class="flex-grow">
-                        <h4 class="text-sm font-medium truncate {% if ep.episode_number == current_ep %}text-blue-400{% endif %}">{{ ep.title }}</h4>
+                    <div class="flex-grow min-w-0">
+                        <h4 class="text-sm font-bold truncate transition group-hover:text-blue-400 {% if ep.episode_number == current_ep %}text-blue-400{% else %}text-gray-300{% endif %}">{{ ep.title }}</h4>
+                        {% if ep.has_video %}
+                        <span class="text-[10px] text-green-500 font-bold uppercase tracking-tighter">● Available</span>
+                        {% endif %}
                     </div>
                 </a>
                 {% endfor %}
@@ -117,136 +130,156 @@
 
 {% block scripts %}
 <style>
-    .theater-mode {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-    .theater-mode #player-wrapper {
-        aspect-ratio: auto;
-        height: 80vh;
-    }
-    .theater-mode-bg {
-        background-color: #000 !important;
-    }
-    .spoiler-blur {
-        filter: blur(8px);
-        user-select: none;
-        transition: filter 0.3s;
-    }
-    .spoiler-blur:hover {
-        filter: blur(4px);
-    }
-    .unblurred {
-        filter: none !important;
-        user-select: text !important;
-    }
+    .theater-mode { width: 100% !important; max-width: 100% !important; padding: 0 !important; }
+    .theater-mode #player-wrapper { border-radius: 0; aspect-ratio: auto; height: 85vh; margin-top: -1rem; }
+    .theater-mode-bg { background-color: #050505 !important; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+    .spoiler-blur { filter: blur(8px); cursor: pointer; transition: filter 0.3s; user-select: none; }
+    .spoiler-blur:hover { filter: blur(4px); }
+    .unblurred { filter: none !important; user-select: text !important; }
 </style>
 
 <script>
     const malId = {{ anime.mal_id }};
     const currentEp = {{ current_ep }};
-    const urlParams = new URLSearchParams(window.location.search);
-    const sourceName = urlParams.get('source') || 'animecix'; // Default to animecix
-    let progressInterval;
+    const nextEp = {{ current_ep + 1 }};
+    const hasNextEp = {{ 1 if current_ep < (episodes|length) else 0 }};
+    let isAutoNext = localStorage.getItem('senpai_auto_next') === 'true';
+    let player;
 
+    // 1. STREAMS & PLAYER
     async function loadStreams() {
         const container = document.getElementById('player-container');
         try {
-            // Fetch real-time stream from source
-            const resp = await fetch(`/api/anime/${malId}/episode/${currentEp}/stream/${sourceName}`);
+            const resp = await fetch(`/api/stream/${malId}/${currentEp}`);
             const data = await resp.json();
 
-            if (data.stream_url) {
-                // Create blob URL for security
-                const blobUrl = await createBlobUrl(data.stream_url);
-                
+            if (data.videos && data.videos.length > 0) {
+                const video = data.videos[0];
                 container.innerHTML = `
-                    <video id="main-player" class="w-full h-full" controls autoplay>
-                        <source src="${blobUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>`;
-
-                setupProgressTracking();
+                    <video id="senpai-player" class="w-full h-full" controls autoplay>
+                        <source src="${video.url}" type="video/mp4">
+                    </video>
+                    <div class="absolute bottom-16 right-4 flex gap-2 pointer-events-none">
+                        <span class="bg-black/70 backdrop-blur-md text-[10px] px-2 py-1 rounded border border-gray-700 text-gray-300 font-bold">${video.quality}</span>
+                        ${video.fansub ? `<span class="bg-blue-600/70 backdrop-blur-md text-[10px] px-2 py-1 rounded text-white font-bold">${video.fansub}</span>` : ''}
+                    </div>
+                `;
+                player = document.getElementById('senpai-player');
+                setupPlayerEvents();
             } else {
                 container.innerHTML = `
-                    <div class="text-center p-8">
-                        <p class="text-red-500 mb-4">${data.error || 'No working video links found for this episode.'}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 px-4 py-2 rounded">Try Refresh</button>
+                    <div class="text-center p-12 bg-gray-900/50 w-full h-full flex flex-col items-center justify-center">
+                        <p class="text-orange-400 font-bold text-xl mb-4">Source Investigation in Progress...</p>
+                        <p class="text-gray-400 text-sm max-w-md mb-6">Our automated bots are crawling for working video links. This usually takes 10-30 seconds for new or uncached episodes.</p>
+                        <button onclick="location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-black transition transform hover:scale-105 active:scale-95 shadow-lg">RETRAY SYNC</button>
                     </div>`;
             }
         } catch (e) {
-            container.innerHTML = `<p class="text-red-500">Error loading stream: ${e.message}</p>`;
+            container.innerHTML = `<div class="text-center p-8"><p class="text-red-500 font-bold">STREAM ERROR</p><p class="text-xs text-gray-600 mt-2">${e.message}</p></div>`;
         }
     }
 
-    async function createBlobUrl(videoUrl) {
-        try {
-            // Fetch video as blob
-            const response = await fetch(videoUrl);
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
-        } catch (e) {
-            console.error('Error creating blob URL:', e);
-            // Fallback to direct URL
-            return videoUrl;
-        }
-    }
+    function setupPlayerEvents() {
+        if (!player) return;
 
-    function setupProgressTracking() {
-        const video = document.getElementById('main-player');
-        if (!video) return;
-
-        {% if session.user_id %}
-        video.onplay = () => {
-            progressInterval = setInterval(() => {
-                const progress = (video.currentTime / video.duration) * 100;
-                if (progress > 0) {
-                    updateHistory(progress);
-                }
-            }, 30000); // Update every 30 seconds
+        // Auto-Next Logic
+        player.onended = () => {
+            if (isAutoNext && hasNextEp) {
+                showNotification('Auto-playing next episode in 3 seconds...', 'success');
+                setTimeout(() => {
+                    window.location.href = `/player?mal_id=${malId}&ep=${nextEp}`;
+                }, 3000);
+            }
+            updateHistory(100);
         };
 
-        video.onpause = () => clearInterval(progressInterval);
-        video.onended = () => updateHistory(100);
-        {% endif %}
+        // Progress Tracking
+        let lastUpdate = 0;
+        player.ontimeupdate = () => {
+            const now = Date.now();
+            if (now - lastUpdate > 30000) { // Every 30s
+                const progress = (player.currentTime / player.duration) * 100;
+                updateHistory(progress);
+                lastUpdate = now;
+            }
+        };
+
+        // Keyboard Shortcuts
+        window.onkeydown = (e) => {
+            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+
+            switch(e.code) {
+                case 'Space': e.preventDefault(); player.paused ? player.play() : player.pause(); break;
+                case 'ArrowRight': player.currentTime += 5; break;
+                case 'ArrowLeft': player.currentTime -= 5; break;
+                case 'KeyF': if (player.requestFullscreen) player.requestFullscreen(); break;
+                case 'KeyT': toggleTheaterMode(); break;
+            }
+        };
     }
 
     async function updateHistory(progress) {
-        await fetch('/api/user/history', {
+        {% if session.user_id %}
+        fetch('/api/user/history', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mal_id: malId,
-                episode: currentEp,
-                progress: progress
-            })
+            body: JSON.stringify({ mal_id: malId, episode: currentEp, progress: Math.floor(progress) })
         });
+        {% endif %}
     }
 
-    async function updateWatchlistStatus() {
-        const status = document.getElementById('watchlist-status').value;
-        if (!status) return;
+    // 2. UI CONTROLS
+    function toggleAutoNext() {
+        isAutoNext = !isAutoNext;
+        localStorage.setItem('senpai_auto_next', isAutoNext);
+        updateAutoNextUI();
+    }
 
-        const resp = await fetch('/api/user/watchlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mal_id: malId,
-                status: status
-            })
-        });
-
-        if (resp.ok) {
-            showNotification('Watchlist updated!', 'success');
+    function updateAutoNextUI() {
+        const btn = document.getElementById('auto-next-btn');
+        if (isAutoNext) {
+            btn.innerText = 'AUTO-NEXT: ON';
+            btn.classList.replace('bg-black/50', 'bg-green-600/50');
+            btn.classList.replace('border-gray-700', 'border-green-500');
         } else {
-            showNotification('Failed to update watchlist', 'error');
+            btn.innerText = 'AUTO-NEXT: OFF';
+            btn.classList.replace('bg-green-600/50', 'bg-black/50');
+            btn.classList.replace('border-green-500', 'border-gray-700');
         }
     }
 
-    function escapeHTML(str) {
-        const p = document.createElement('p');
-        p.textContent = str;
-        return p.innerHTML;
+    function toggleTheaterMode() {
+        const videoArea = document.getElementById('video-area');
+        const sidebar = document.querySelector('.lg\\:w-1\\/4');
+        const isTheater = videoArea.classList.toggle('theater-mode');
+
+        if (isTheater) {
+            sidebar.classList.add('hidden');
+            document.body.classList.add('theater-mode-bg');
+            document.querySelector('nav').classList.add('hidden');
+            document.querySelector('footer').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            sidebar.classList.remove('hidden');
+            document.body.classList.remove('theater-mode-bg');
+            document.querySelector('nav').classList.remove('hidden');
+            document.querySelector('footer').classList.remove('hidden');
+        }
+    }
+
+    // 3. WATCHLIST & COMMENTS
+    async function updateWatchlistStatus() {
+        const status = document.getElementById('watchlist-status').value;
+        const resp = await fetch('/api/user/watchlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mal_id: malId, status: status })
+        });
+        if (resp.ok) showNotification('Watchlist Updated', 'success');
     }
 
     async function loadComments() {
@@ -255,126 +288,53 @@
             const resp = await fetch(`/api/social/comments/${malId}/${currentEp}`);
             const comments = await resp.json();
 
-            if (comments.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 py-8">No comments yet. Be the first to share your thoughts!</p>`;
+            if (!comments || comments.length === 0) {
+                container.innerHTML = '<div class="text-center py-12 text-gray-600 font-bold italic">Silence is golden. Be the first to break it.</div>';
                 return;
             }
 
-            container.innerHTML = ''; // Clear pulse
-            comments.forEach(c => {
-                const commentEl = document.createElement('div');
-                commentEl.className = "bg-gray-900/30 p-4 rounded-lg border border-gray-800 relative group";
-
-                const safeUsername = escapeHTML(c.username);
-                const safeContent = escapeHTML(c.content).replace(/\n/g, '<br>');
-                const isMyComment = c.user_id === {{ session.user_id if session.user_id else 0 }};
-
-                commentEl.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
+            container.innerHTML = comments.map(c => `
+                <div class="bg-gray-900/40 p-5 rounded-xl border border-gray-800 transition hover:border-gray-700">
+                    <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs mr-3">
-                                ${safeUsername.charAt(0).toUpperCase()}
-                            </div>
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=${c.username}" class="w-8 h-8 rounded bg-gray-800 mr-3 border border-gray-700">
                             <div>
-                                <span class="font-bold text-sm">${safeUsername}</span>
-                                <span class="text-xs text-gray-500 ml-2">${new Date(c.created_at).toLocaleDateString()}</span>
-                                ${c.is_spoiler ? '<span class="ml-2 px-1.5 py-0.5 bg-red-900/30 text-red-500 text-[10px] font-bold rounded uppercase tracking-wider border border-red-900/50">Spoiler</span>' : ''}
+                                <h5 class="text-sm font-black text-blue-400">${c.username}</h5>
+                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">${new Date(c.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
-                        ${isMyComment ? `
-                            <button onclick="deleteComment(${c.id})" class="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        ` : ''}
                     </div>
-                    <div class="comment-text text-sm leading-relaxed text-gray-300 ${c.is_spoiler ? 'spoiler-blur cursor-pointer' : ''}"
-                         ${c.is_spoiler ? 'onclick="this.classList.toggle(\'unblurred\')"' : ''}>
-                        ${safeContent}
+                    <div class="text-sm text-gray-300 leading-relaxed ${c.is_spoiler ? 'spoiler-blur' : ''}" onclick="this.classList.toggle('unblurred')">
+                        ${c.content.replace(/\n/g, '<br>')}
                     </div>
-                `;
-                container.appendChild(commentEl);
-            });
-        } catch (e) {
-            container.innerHTML = `<p class="text-red-500 text-sm">Failed to load comments.</p>`;
-        }
+                </div>
+            `).join('');
+        } catch (e) { console.error(e); }
     }
 
     async function postComment() {
         const input = document.getElementById('comment-input');
         const spoiler = document.getElementById('is-spoiler');
-        const btn = document.getElementById('post-btn');
         const content = input.value.trim();
-
         if (!content) return;
 
-        btn.disabled = true;
-        btn.innerText = 'Posting...';
+        const resp = await fetch('/api/social/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mal_id: malId, episode: currentEp, content: content, is_spoiler: spoiler.checked })
+        });
 
-        try {
-            const resp = await fetch('/api/social/comments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    mal_id: malId,
-                    episode: currentEp,
-                    content: content,
-                    is_spoiler: spoiler.checked
-                })
-            });
-
-            if (resp.ok) {
-                input.value = '';
-                spoiler.checked = false;
-                loadComments();
-                showNotification('Comment posted successfully!', 'success');
-            } else {
-                const err = await resp.json();
-                showNotification(err.error || 'Failed to post comment', 'error');
-            }
-        } catch (e) {
-            showNotification('An error occurred while posting comment', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'Post Comment';
+        if (resp.ok) {
+            input.value = '';
+            spoiler.checked = false;
+            loadComments();
+            showNotification('Discussion added!', 'success');
         }
     }
 
-    async function deleteComment(id) {
-        if (!confirm('Are you sure you want to delete this comment?')) return;
-
-        try {
-            const resp = await fetch(`/api/social/comments/${id}`, { method: 'DELETE' });
-            if (resp.ok) {
-                loadComments();
-                showNotification('Comment deleted', 'info');
-            } else {
-                showNotification('Failed to delete comment', 'error');
-            }
-        } catch (e) {
-            showNotification('An error occurred while deleting comment', 'error');
-        }
-    }
-
-    function toggleTheaterMode() {
-        const videoArea = document.getElementById('video-area');
-        const isTheater = videoArea.classList.toggle('theater-mode');
-
-        // Hide/Show sidebar
-        const sidebar = document.querySelector('.lg\\:w-1\\/4');
-        if (isTheater) {
-            sidebar.classList.add('hidden');
-            document.body.classList.add('theater-mode-bg');
-            // Scroll to player
-            videoArea.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            sidebar.classList.remove('hidden');
-            document.body.classList.remove('theater-mode-bg');
-        }
-    }
-
+    // Init
     loadStreams();
     loadComments();
+    updateAutoNextUI();
 </script>
 {% endblock %}
