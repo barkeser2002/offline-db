@@ -536,22 +536,6 @@ def link_anime_genre(anime_id, genre_id):
         cursor.execute("INSERT INTO anime_genres (anime_id, genre_id) VALUES (?, ?)", (anime_id, genre_id))
         conn.commit()
 
-def link_anime_genre(anime_id, genre_id):
-    """Anime ve tür arasında ilişki oluştur."""
-    conn = get_connection()
-    if not conn:
-        return False
-
-    cursor = conn.cursor()
-
-    # Önce mevcut ilişkiyi kontrol et
-    cursor.execute("SELECT 1 FROM anime_genres WHERE anime_id = ? AND genre_id = ?", (anime_id, genre_id))
-    existing = cursor.fetchone()
-
-    if not existing:
-        cursor.execute("INSERT INTO anime_genres (anime_id, genre_id) VALUES (?, ?)", (anime_id, genre_id))
-        conn.commit()
-
     cursor.close()
     conn.close()
     return True
@@ -667,22 +651,6 @@ def insert_or_get_producer(mal_id, name):
     cursor.close()
     conn.close()
     return producer_id
-
-def link_anime_producer(anime_id, producer_id, role):
-    """Anime ve yapımcı arasında ilişki oluştur."""
-    conn = get_connection()
-    if not conn:
-        return False
-
-    cursor = conn.cursor()
-
-    # Önce mevcut ilişkiyi kontrol et
-    cursor.execute("SELECT 1 FROM anime_producers WHERE anime_id = ? AND producer_id = ? AND role = ?", (anime_id, producer_id, role))
-    existing = cursor.fetchone()
-
-    if not existing:
-        cursor.execute("INSERT INTO anime_producers (anime_id, producer_id, role) VALUES (?, ?, ?)", (anime_id, producer_id, role))
-        conn.commit()
 
 def link_anime_producer(anime_id, producer_id, role):
     """Anime ve yapımcı arasında ilişki oluştur."""
@@ -833,6 +801,38 @@ def get_anime_by_title(title_query, limit=50):
         ORDER BY score DESC
         LIMIT ?
     """, (f"%{title_query}%", f"%{title_query}%", limit))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_video_links(anime_id: int, episode_number: int = None):
+    """Anime'nin video linklerini getir. Episode number verilirse sadece o bölümün linklerini döndür."""
+    conn = get_connection()
+    if not conn:
+        return []
+
+    cursor = conn.cursor()
+    
+    if episode_number:
+        # Belirli bölümün video linkleri
+        cursor.execute("""
+            SELECT vl.*, e.episode_number, e.title as episode_title
+            FROM video_links vl
+            JOIN episodes e ON vl.episode_id = e.id
+            WHERE e.anime_id = ? AND e.episode_number = ?
+            ORDER BY vl.quality, vl.fansub
+        """, (anime_id, episode_number))
+    else:
+        # Tüm video linkleri
+        cursor.execute("""
+            SELECT vl.*, e.episode_number, e.title as episode_title
+            FROM video_links vl
+            JOIN episodes e ON vl.episode_id = e.id
+            WHERE e.anime_id = ?
+            ORDER BY e.episode_number, vl.quality, vl.fansub
+        """, (anime_id,))
+
     results = cursor.fetchall()
     cursor.close()
     conn.close()
