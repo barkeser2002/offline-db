@@ -239,12 +239,12 @@ def search_in_adapters(title: Optional[str], title_english: Optional[str] = None
     # Anizle
     match = search_in_single_adapter(lambda term: anizle.search_anizle(term, limit=10, timeout=10), "anizle", search_terms)
     if match:
-        results["anizle"] = (None, match[0], match[1])
+        results["anizle"] = (match[0], match[0], match[1])  # slug'i source_anime_id olarak kullan
 
     # TRAnime
     match = search_in_single_adapter(lambda term: tranime.search_tranime(term, limit=10), "tranime", search_terms)
     if match:
-        results["tranime"] = (None, match[0], match[1])
+        results["tranime"] = (match[0], match[0], match[1])  # slug'i source_anime_id olarak kullan
 
     # TurkAnime
     if ADAPTERS.get("turkanime"):
