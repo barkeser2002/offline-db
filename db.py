@@ -33,13 +33,23 @@ def init_database():
         mal_id INTEGER UNIQUE NOT NULL,
         title TEXT NOT NULL,
         title_english TEXT,
+        title_japanese TEXT,
         type TEXT,
         episodes INTEGER DEFAULT 0,
         status TEXT,
         score REAL,
+        rating TEXT,
+        popularity INTEGER,
+        members INTEGER,
+        favorites INTEGER,
         synopsis TEXT,
+        background TEXT,
         year INTEGER,
         season TEXT,
+        aired_from DATE,
+        aired_to DATE,
+        duration TEXT,
+        broadcast TEXT,
         cover_url TEXT,
         cover_local TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -576,23 +586,94 @@ def get_personalized_recommendations(user_id, limit=5):
     return results
 
 def discover_animes(filters, limit=24, offset=0):
-    """Anime keşfet."""
+    """Anime keşfet (Gelişmiş Filtreleme)."""
     conn = get_connection()
     if not conn:
         return []
     cursor = conn.cursor()
-    query = "SELECT * FROM animes"
+
+    query = "SELECT DISTINCT a.* FROM animes a"
     params = []
+    where_clauses = []
 
+    # Filter: Genres (AND Logic)
     if filters.get("genres"):
-        # Basitleştirilmiş - genre filtresi yok
-        pass
+        # Convert to list of ints
+        try:
+            genre_ids = [int(g) for g in filters["genres"] if g]
+            if genre_ids:
+                placeholders = ",".join(["?"] * len(genre_ids))
+                # Subquery to ensure anime has ALL selected genres
+                where_clauses.append(f"""
+                    (SELECT COUNT(*) FROM anime_genres ag
+                     WHERE ag.anime_id = a.id AND ag.genre_id IN ({placeholders})) = ?
+                """)
+                params.extend(genre_ids)
+                params.append(len(genre_ids))
+        except ValueError:
+            pass
 
-    query += " ORDER BY score DESC LIMIT ? OFFSET ?"
+    # Filter: Type
+    if filters.get("type"):
+        where_clauses.append("a.type = ?")
+        params.append(filters["type"])
+
+    # Filter: Status
+    if filters.get("status"):
+        where_clauses.append("a.status = ?")
+        params.append(filters["status"])
+
+    # Filter: Year
+    if filters.get("year"):
+        # Exact year
+        try:
+            where_clauses.append("a.year = ?")
+            params.append(int(filters["year"]))
+        except ValueError:
+            pass
+    elif filters.get("year_min") or filters.get("year_max"):
+        # Range
+        if filters.get("year_min"):
+            where_clauses.append("a.year >= ?")
+            params.append(int(filters["year_min"]))
+        if filters.get("year_max"):
+            where_clauses.append("a.year <= ?")
+            params.append(int(filters["year_max"]))
+
+    # Filter: Score
+    if filters.get("min_score"):
+        where_clauses.append("a.score >= ?")
+        params.append(float(filters["min_score"]))
+
+    # Construct WHERE
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+
+    # Sort
+    sort = filters.get("sort", "popularity")
+    if sort == "popularity":
+        # Popularity (Rank) should be ASC, but Members should be DESC.
+        # Let's use members count as it's more direct for "Most Popular".
+        query += " ORDER BY a.members DESC NULLS LAST, a.popularity ASC NULLS LAST"
+    elif sort == "score":
+        query += " ORDER BY a.score DESC NULLS LAST"
+    elif sort == "newest":
+        query += " ORDER BY a.id DESC"
+    elif sort == "title":
+        query += " ORDER BY a.title ASC"
+    else:
+        query += " ORDER BY a.score DESC NULLS LAST"
+
+    query += " LIMIT ? OFFSET ?"
     params.extend([limit, offset])
 
-    cursor.execute(query, params)
-    results = cursor.fetchall()
+    try:
+        cursor.execute(query, params)
+        results = cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"[DB] Discover Error: {e}")
+        results = []
+
     cursor.close()
     conn.close()
     return results
@@ -921,32 +1002,44 @@ def insert_or_update_anime(anime_data):
         # Güncelle
         cursor.execute("""
             UPDATE animes SET
-                title = ?, title_english = ?, type = ?, episodes = ?,
-                status = ?, score = ?, synopsis = ?, year = ?, season = ?,
+                title = ?, title_english = ?, title_japanese = ?,
+                type = ?, episodes = ?, status = ?, score = ?,
+                rating = ?, popularity = ?, members = ?, favorites = ?,
+                synopsis = ?, background = ?,
+                year = ?, season = ?, aired_from = ?, aired_to = ?,
+                duration = ?, broadcast = ?,
                 cover_url = ?, cover_local = ?, updated_at = CURRENT_TIMESTAMP
             WHERE mal_id = ?
         """, (
-            anime_data.get("title"), anime_data.get("title_english"),
-            anime_data.get("type"), anime_data.get("episodes", 0),
-            anime_data.get("status"), anime_data.get("score"),
-            anime_data.get("synopsis"), anime_data.get("year"),
-            anime_data.get("season"), anime_data.get("cover_url"),
-            anime_data.get("cover_local"), anime_data["mal_id"]
+            anime_data.get("title"), anime_data.get("title_english"), anime_data.get("title_japanese"),
+            anime_data.get("type"), anime_data.get("episodes", 0), anime_data.get("status"), anime_data.get("score"),
+            anime_data.get("rating"), anime_data.get("popularity"), anime_data.get("members"), anime_data.get("favorites"),
+            anime_data.get("synopsis"), anime_data.get("background"),
+            anime_data.get("year"), anime_data.get("season"), anime_data.get("aired_from"), anime_data.get("aired_to"),
+            anime_data.get("duration"), anime_data.get("broadcast"),
+            anime_data.get("cover_url"), anime_data.get("cover_local"),
+            anime_data["mal_id"]
         ))
         anime_id = existing["id"]
     else:
         # Yeni ekle
         cursor.execute("""
             INSERT INTO animes (
-                mal_id, title, title_english, type, episodes, status,
-                score, synopsis, year, season, cover_url, cover_local
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                mal_id, title, title_english, title_japanese,
+                type, episodes, status, score,
+                rating, popularity, members, favorites,
+                synopsis, background,
+                year, season, aired_from, aired_to,
+                duration, broadcast,
+                cover_url, cover_local
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            anime_data["mal_id"], anime_data.get("title"),
-            anime_data.get("title_english"), anime_data.get("type"),
-            anime_data.get("episodes", 0), anime_data.get("status"),
-            anime_data.get("score"), anime_data.get("synopsis"),
-            anime_data.get("year"), anime_data.get("season"),
+            anime_data["mal_id"], anime_data.get("title"), anime_data.get("title_english"), anime_data.get("title_japanese"),
+            anime_data.get("type"), anime_data.get("episodes", 0), anime_data.get("status"), anime_data.get("score"),
+            anime_data.get("rating"), anime_data.get("popularity"), anime_data.get("members"), anime_data.get("favorites"),
+            anime_data.get("synopsis"), anime_data.get("background"),
+            anime_data.get("year"), anime_data.get("season"), anime_data.get("aired_from"), anime_data.get("aired_to"),
+            anime_data.get("duration"), anime_data.get("broadcast"),
             anime_data.get("cover_url"), anime_data.get("cover_local")
         ))
         anime_id = cursor.lastrowid

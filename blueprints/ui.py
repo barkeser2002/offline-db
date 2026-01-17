@@ -429,7 +429,11 @@ def discover_page():
         "min_score": request.args.get("min_score", ""),
         "year": request.args.get("year", "")
     }
-    return render_template("discover.html", genres=genres, current_filters=current_filters)
+
+    # Initial fetch
+    results = db.discover_animes(current_filters)
+
+    return render_template("discover.html", genres=genres, current_filters=current_filters, results=results)
 
 @ui_bp.route("/schedule")
 def schedule_page():
