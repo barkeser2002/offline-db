@@ -104,3 +104,11 @@ def watchlist():
     else:
         watchlist_data = db.get_user_watchlist(user_id)
         return jsonify(watchlist_data)
+
+@user_bp.route("/api/user/stats", methods=["GET"])
+def user_stats():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    stats = db.get_user_stats(session["user_id"])
+    return jsonify(db.serialize_for_json(stats))

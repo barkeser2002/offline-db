@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}{{ anime.title }} - Anime Detail{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Top Section: Header & Quick Info -->
+    <div class="flex flex-col md:flex-row gap-8 mb-8">
+        <!-- Cover Image -->
+        <div class="w-full md:w-1/3 lg:w-1/4">
+            <div class="sticky top-4">
+                <img src="{{ anime.cover_local or anime.cover_url }}" alt="{{ anime.title }}" class="w-full rounded-lg shadow-2xl border border-gray-700">
+
+                <div class="mt-4 grid grid-cols-2 gap-2">
+                    <button onclick="updateWatchlist('watching')" class="bg-blue-600 hover:bg-blue-700 py-2 rounded text-sm font-bold transition">Watching</button>
+                    <button onclick="updateWatchlist('plan-to-watch')" class="bg-gray-700 hover:bg-gray-600 py-2 rounded text-sm font-bold transition">Plan to Watch</button>
+                </div>
+
+                <div class="mt-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Information</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-400">Type:</span> <span>{{ anime.type }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Episodes:</span> <span>{{ anime.episodes or '?' }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Status:</span> <span>{{ anime.status }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Aired:</span> <span>{{ anime.year }} {{ anime.season }}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Score:</span> <span class="text-yellow-500 font-bold">⭐ {{ anime.score }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details -->
+        <div class="w-full md:w-2/3 lg:w-3/4">
+            <h1 class="text-4xl font-bold mb-2">{{ anime.title }}</h1>
+            {% if anime.title_english and anime.title_english != anime.title %}
+                <h2 class="text-xl text-gray-400 mb-4">{{ anime.title_english }}</h2>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-2 mb-6">
+                {% for genre in anime.genres %}
+                        <a href="/discover?genre={{ genre.id }}" class="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold hover:bg-blue-600 hover:text-white transition-colors">
+                        {{ genre.name }}
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-lg mb-8 border border-gray-700">
+                <h3 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Synopsis</h3>
+                <p class="text-gray-300 leading-relaxed">{{ anime.synopsis or 'No synopsis available.' }}</p>
+            </div>
+
+            <!-- Episodes List -->
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-bold">Episodes</h3>
+                    <span class="text-sm text-gray-400">{{ anime.episodes_list|length }} episodes available</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {% for ep in anime.episodes_list %}
+                    <a href="/player?mal_id={{ anime.mal_id }}&ep={{ ep.episode_number }}"
+                       class="flex items-center justify-between p-3 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 transition group">
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 flex items-center justify-center bg-gray-900 rounded-full text-sm font-bold mr-3 group-hover:bg-blue-600 transition">{{ ep.episode_number }}</span>
+                            <span class="text-sm font-medium truncate max-w-[200px]">{{ ep.title or 'Episode ' ~ ep.episode_number }}</span>
+                        </div>
+                        {% if ep.video_count > 0 %}
+                            <span class="text-[10px] bg-green-900/50 text-green-400 px-2 py-0.5 rounded border border-green-800/50">AVAILABLE</span>
+                        {% else %}
+                            <span class="text-[10px] bg-red-900/50 text-red-400 px-2 py-0.5 rounded border border-red-800/50">FETCHING...</span>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Similar Anime -->
+            {% if similar_anime %}
+            <div class="mb-8">
+                <h3 class="text-2xl font-bold mb-4">You might also like</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {% for sa in similar_anime %}
+                    <a href="/anime/{{ sa.mal_id }}" class="anime-card group">
+                        <img src="{{ sa.cover_local or sa.cover_url }}" class="w-full h-48 object-cover rounded-lg mb-2 border border-gray-700 group-hover:border-blue-500 transition">
+                        <h4 class="text-sm font-bold truncate">{{ sa.title }}</h4>
+                        <p class="text-xs text-gray-500">{{ sa.year }} • ⭐ {{ sa.score }}</p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function updateWatchlist(status) {
+        const mal_id = {{ anime.mal_id }};
+        try {
+            const resp = await fetch('/api/user/watchlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mal_id, status })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                showNotification(`Added to ${status.replace('-', ' ')} list`, 'success');
+            } else {
+                showNotification(data.error || 'Login required', 'error');
+            }
+        } catch (e) {
+            showNotification('An error occurred', 'error');
+        }
+    }
+</script>
+{% endblock %}

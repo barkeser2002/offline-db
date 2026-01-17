@@ -1,65 +1,88 @@
 from flask import Blueprint, request, jsonify, session
 import db
-from datetime import datetime
 
 social_bp = Blueprint('social', __name__)
 
-@social_bp.route("/api/comments/<int:mal_id>/<int:ep>")
-def get_comments(mal_id, ep):
-    """Bölüm yorumlarını getir."""
-    anime = db.get_anime_by_mal_id(mal_id)
-    if not anime:
-        return jsonify([])
-
-    comments = db.get_comments_by_episode(anime['id'], ep)
-
-    # JSON serileştirme için datetime'ları string'e çevir
-    for c in comments:
-        if isinstance(c['created_at'], datetime):
-            c['created_at'] = c['created_at'].isoformat()
-
-    return jsonify(comments)
-
-@social_bp.route("/api/comments", methods=["POST"])
-def post_comment():
-    """Yeni yorum yap."""
+@social_bp.route("/api/social/comments", methods=["POST"])
+def add_comment():
     if "user_id" not in session:
-        return jsonify({"error": "Lütfen önce giriş yapın"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
     mal_id = data.get("mal_id")
-    ep = data.get("episode")
+    episode = data.get("episode")
     content = data.get("content")
     is_spoiler = data.get("is_spoiler", False)
 
-    if not content or len(content.strip()) < 2:
-        return jsonify({"error": "Yorum çok kısa"}), 400
+    if not mal_id or not episode or not content:
+        return jsonify({"error": "Missing fields"}), 400
 
+    # Get internal anime ID
     anime = db.get_anime_by_mal_id(mal_id)
     if not anime:
-        return jsonify({"error": "Anime bulunamadı"}), 404
+        return jsonify({"error": "Anime not found"}), 404
 
-    comment_id = db.add_comment(
-        user_id=session["user_id"],
-        anime_id=anime['id'],
-        episode_number=ep,
-        content=content,
-        is_spoiler=is_spoiler
-    )
+    # Convert to dict if it's a Row object
+    anime = dict(anime)
+
+    comment_id = db.add_comment(session["user_id"], int(anime["id"]), int(episode), content, bool(is_spoiler))
 
     if comment_id:
-        return jsonify({"success": True, "comment_id": comment_id})
-    else:
-        return jsonify({"error": "Yorum eklenemedi"}), 500
+        return jsonify({
+            "success": True,
+            "comment_id": comment_id,
+            "username": session["username"]
+        })
 
-@social_bp.route("/api/comments/<int:comment_id>", methods=["DELETE"])
+    return jsonify({"error": "Failed to add comment"}), 500
+
+@social_bp.route("/api/social/comments/<int:mal_id>/<int:episode>", methods=["GET"])
+def get_comments(mal_id, episode):
+    # Get internal anime ID
+    anime = db.get_anime_by_mal_id(mal_id)
+    if not anime:
+        return jsonify({"error": "Anime not found"}), 404
+
+    comments = db.get_episode_comments(anime["id"], episode)
+
+    # Format datetime for JSON
+    comments = db.serialize_for_json(comments)
+
+    return jsonify(comments)
+
+@social_bp.route("/api/social/comments/<int:comment_id>", methods=["DELETE"])
 def delete_comment(comment_id):
-    """Yorumu sil."""
     if "user_id" not in session:
-        return jsonify({"error": "Yetkisiz işlem"}), 401
+        return jsonify({"error": "Unauthorized"}), 401
 
     success = db.delete_comment(comment_id, session["user_id"])
+
     if success:
         return jsonify({"success": True})
-    else:
-        return jsonify({"error": "Yorum silinemedi veya yetkiniz yok"}), 403
+
+    return jsonify({"error": "Failed to delete comment or unauthorized"}), 403
+
+@social_bp.route("/api/social/trending", methods=["GET"])
+def get_trending():
+    limit = request.args.get("limit", 10, type=int)
+    days = request.args.get("days", 7, type=int)
+
+    trending = db.get_trending_anime(limit, days)
+
+    # Format for JSON serialization
+    trending = db.serialize_for_json(trending)
+
+    return jsonify(trending)
+
+@social_bp.route("/api/social/recommendations", methods=["GET"])
+def get_recommendations():
+    if "user_id" not in session:
+        return jsonify([])
+
+    limit = request.args.get("limit", 5, type=int)
+    recommendations = db.get_personalized_recommendations(session["user_id"], limit)
+
+    # Format for JSON serialization
+    recommendations = db.serialize_for_json(recommendations)
+
+    return jsonify(recommendations)
