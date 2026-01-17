@@ -13,6 +13,7 @@ def add_comment():
     episode = data.get("episode")
     content = data.get("content")
     is_spoiler = data.get("is_spoiler", False)
+    parent_id = data.get("parent_id")
 
     if not mal_id or not episode or not content:
         return jsonify({"error": "Missing fields"}), 400
@@ -25,7 +26,14 @@ def add_comment():
     # Convert to dict if it's a Row object
     anime = dict(anime)
 
-    comment_id = db.add_comment(session["user_id"], int(anime["id"]), int(episode), content, bool(is_spoiler))
+    comment_id = db.add_comment(
+        session["user_id"],
+        int(anime["id"]),
+        int(episode),
+        content,
+        bool(is_spoiler),
+        parent_id
+    )
 
     if comment_id:
         return jsonify({
@@ -43,7 +51,8 @@ def get_comments(mal_id, episode):
     if not anime:
         return jsonify({"error": "Anime not found"}), 404
 
-    comments = db.get_episode_comments(anime["id"], episode)
+    # Use db.get_comments for threaded structure
+    comments = db.get_comments(anime["id"], episode)
 
     # Format datetime for JSON
     comments = db.serialize_for_json(comments)

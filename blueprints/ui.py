@@ -159,6 +159,9 @@ def profile_page():
     stats = db.get_user_stats(session["user_id"])
     watch_history = db.get_user_watch_history(session["user_id"], limit=50)
     watchlist = db.get_user_watchlist(session["user_id"])
+    favorites = db.get_user_favorites(session["user_id"])
+    activity = db.get_user_activity(session["user_id"], limit=20)
+    social_feed = db.get_social_feed(session["user_id"], limit=20)
 
     # Categorize watchlist
     categorized_watchlist = {
@@ -177,7 +180,50 @@ def profile_page():
                          user=user,
                          stats=stats,
                          watch_history=watch_history,
-                         watchlist=categorized_watchlist)
+                         watchlist=categorized_watchlist,
+                         favorites=favorites,
+                         activity=activity,
+                         social_feed=social_feed)
+
+@ui_bp.route("/user/<username>")
+def public_profile(username):
+    """Genel kullanıcı profili."""
+    from flask import session
+    user_raw = db.get_user_by_username(username)
+    if not user_raw:
+        return "User not found", 404
+
+    # Sanitize user data
+    user = {
+        "id": user_raw["id"],
+        "username": user_raw["username"],
+        "created_at": user_raw["created_at"]
+    }
+
+    is_own_profile = session.get("user_id") == user["id"]
+    is_following = False
+    if "user_id" in session:
+        is_following = db.is_following(session["user_id"], user["id"])
+
+    stats = db.get_user_stats(user["id"])
+    favorites = db.get_user_favorites(user["id"])
+    activity = db.get_user_activity(user["id"], limit=20)
+    watchlist = db.get_user_watchlist(user["id"])
+
+    categorized_watchlist = {
+        "watching": [i for i in watchlist if i["status"] == "watching"],
+        "completed": [i for i in watchlist if i["status"] == "completed"],
+        "plan-to-watch": [i for i in watchlist if i["status"] == "plan-to-watch"]
+    }
+
+    return render_template("public_profile.html",
+                         user=user,
+                         stats=stats,
+                         favorites=favorites,
+                         activity=activity,
+                         watchlist=categorized_watchlist,
+                         is_own_profile=is_own_profile,
+                         is_following=is_following)
 
 @ui_bp.route("/")
 def home():
@@ -363,6 +409,12 @@ def search_page():
     results = db.get_anime_by_title(query) or []
 
     return render_template("search.html", query=query, results=results)
+
+@ui_bp.route("/community")
+def community_page():
+    """Topluluk ve Leaderboard sayfası."""
+    leaderboard = db.get_top_watchers(limit=20)
+    return render_template("community.html", leaderboard=leaderboard)
 
 @ui_bp.route("/discover")
 def discover_page():

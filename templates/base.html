@@ -23,20 +23,51 @@
                     </svg>
                     Discovery
                 </a>
+                <a href="/community" class="text-gray-300 hover:text-white flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    Community
+                </a>
             </div>
 
-            <form action="/search" method="get" class="hidden md:flex flex-grow max-w-md mx-4">
-                <input type="search" name="q" placeholder="Search anime..." class="w-full bg-gray-700 border border-gray-600 rounded-l-lg py-1 px-4 focus:outline-none focus:border-blue-500 text-sm">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-1 text-sm">Search</button>
-            </form>
+            <div class="hidden md:flex flex-grow max-w-md mx-4 relative group">
+                <form action="/search" method="get" class="w-full flex">
+                    <input type="search" name="q" id="search-input" placeholder="Search anime..." class="w-full bg-gray-700 border border-gray-600 rounded-l-lg py-1 px-4 focus:outline-none focus:border-blue-500 text-sm" autocomplete="off">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-1 text-sm">Search</button>
+                </form>
+                <!-- Live Search Results -->
+                <div id="search-results" class="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl hidden z-50 overflow-hidden">
+                    <div id="search-results-list" class="flex flex-col"></div>
+                </div>
+            </div>
 
             <div class="flex items-center space-x-4">
                 {% if session.user_id %}
+                    <!-- Notifications -->
+                    <div class="relative group" id="notification-bell">
+                        <button class="text-gray-300 hover:text-white relative p-2 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <span id="notif-count" class="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+                        </button>
+                        <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl hidden z-50 overflow-hidden">
+                            <div class="p-3 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                                <span class="font-bold text-sm">Notifications</span>
+                                <button onclick="markAllRead()" class="text-xs text-blue-400 hover:text-blue-300">Mark all as read</button>
+                            </div>
+                            <div id="notif-list" class="max-h-96 overflow-y-auto">
+                                <div class="p-8 text-center text-gray-500 text-sm">No new notifications</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <a href="/profile" class="flex items-center space-x-2 group">
                         <div class="w-8 h-8 rounded bg-blue-600 overflow-hidden border-2 border-gray-700 group-hover:border-blue-400 transition">
                             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ session.username }}" alt="Avatar" class="w-full h-full">
                         </div>
-                        <span class="text-gray-300 group-hover:text-blue-400 font-semibold transition">{{ session.username }}</span>
+                        <span class="text-gray-300 group-hover:text-blue-400 font-semibold transition hidden lg:inline">{{ session.username }}</span>
                     </a>
                     <button onclick="logout()" class="text-sm bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-1 rounded border border-red-500/50 transition">Logout</button>
                 {% else %}
@@ -66,6 +97,13 @@
             if (resp.ok) window.location.href = '/';
         }
 
+        function escapeHTML(str) {
+            if (!str) return "";
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        }
+
         function showNotification(message, type = 'info') {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
@@ -78,10 +116,18 @@
             };
 
             toast.className = `${bgColors[type] || 'bg-gray-700'} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-10 opacity-0 flex items-center`;
-            toast.innerHTML = `
-                <span class="text-sm font-semibold">${message}</span>
-                <button class="ml-4 hover:text-gray-200" onclick="this.parentElement.remove()">&times;</button>
-            `;
+
+            const span = document.createElement('span');
+            span.className = 'text-sm font-semibold';
+            span.textContent = message;
+
+            const btn = document.createElement('button');
+            btn.className = 'ml-4 hover:text-gray-200';
+            btn.innerHTML = '&times;';
+            btn.onclick = () => toast.remove();
+
+            toast.appendChild(span);
+            toast.appendChild(btn);
 
             container.appendChild(toast);
 
@@ -95,6 +141,122 @@
                 toast.classList.add('translate-y-10', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 5000);
+        }
+
+        // --- Live Search ---
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        const searchResultsList = document.getElementById('search-results-list');
+        let searchTimeout;
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+
+                if (query.length < 2) {
+                    searchResults.classList.add('hidden');
+                    return;
+                }
+
+                searchTimeout = setTimeout(async () => {
+                    const resp = await fetch(`/api/search/live?q=${encodeURIComponent(query)}`);
+                    const data = await resp.json();
+
+                    if (data.results && data.results.length > 0) {
+                        searchResultsList.innerHTML = data.results.map(anime => {
+                            const safeTitle = escapeHTML(anime.title);
+                            return `
+                                <a href="/anime/${anime.mal_id}" class="flex items-center gap-3 p-2 hover:bg-gray-700 transition border-b border-gray-700/50 last:border-0">
+                                    <img src="${anime.cover_local || anime.cover_url}" class="w-10 h-14 object-cover rounded shadow" alt="">
+                                    <div class="overflow-hidden">
+                                        <div class="text-sm font-bold text-white truncate">${safeTitle}</div>
+                                        <div class="text-xs text-gray-400">${anime.year || '?'} • ${anime.type || 'TV'} • ⭐ ${anime.score || 'N/A'}</div>
+                                    </div>
+                                </a>
+                            `;
+                        }).join('');
+                        searchResults.classList.remove('hidden');
+                    } else {
+                        searchResults.classList.add('hidden');
+                    }
+                }, 300);
+            });
+
+            // Close search results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.classList.add('hidden');
+                }
+            });
+        }
+
+        // --- Notifications ---
+        const bell = document.getElementById('notification-bell');
+        const notifDropdown = document.getElementById('notification-dropdown');
+        const notifList = document.getElementById('notif-list');
+        const notifCount = document.getElementById('notif-count');
+
+        if (bell) {
+            bell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', () => {
+                notifDropdown.classList.add('hidden');
+            });
+
+            notifDropdown.addEventListener('click', (e) => e.stopPropagation());
+
+            async function checkNotifications() {
+                try {
+                    const resp = await fetch('/api/notifications');
+                    const data = await resp.json();
+
+                    if (data.notifications) {
+                        if (data.unread_count > 0) {
+                            notifCount.textContent = data.unread_count;
+                            notifCount.classList.remove('hidden');
+
+                            notifList.innerHTML = data.notifications.map(n => {
+                                const safeMsg = escapeHTML(n.message);
+                                return `
+                                    <a href="${n.link || '#'}" class="block p-4 hover:bg-gray-700 transition border-b border-gray-700/50 last:border-0" onclick="markRead(${n.id})">
+                                        <div class="text-sm text-gray-200">${safeMsg}</div>
+                                        <div class="text-[10px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</div>
+                                    </a>
+                                `;
+                            }).join('');
+                        } else {
+                            notifCount.classList.add('hidden');
+                            notifList.innerHTML = '<div class="p-8 text-center text-gray-500 text-sm">No new notifications</div>';
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            async function markRead(id) {
+                await fetch('/api/notifications/read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({notification_ids: [id]})
+                });
+                checkNotifications();
+            }
+
+            async function markAllRead() {
+                await fetch('/api/notifications/read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+                checkNotifications();
+            }
+
+            // Initial check and interval
+            checkNotifications();
+            setInterval(checkNotifications, 30000); // Every 30 seconds
         }
     </script>
     {% block scripts %}{% endblock %}
