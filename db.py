@@ -943,7 +943,7 @@ def get_user_watchlist(user_id: int):
     if not conn: return []
     cursor = conn.cursor(dictionary=True)
     cursor.execute("""
-        SELECT wl.*, a.title, a.mal_id, a.cover_url, a.cover_local, a.score, a.type
+        SELECT wl.*, a.title, a.mal_id, a.cover_url, a.cover_local, a.score, a.type, a.episodes as total_episodes
         FROM watchlists wl
         JOIN animes a ON wl.anime_id = a.id
         WHERE wl.user_id = %s
@@ -953,6 +953,77 @@ def get_user_watchlist(user_id: int):
     cursor.close()
     conn.close()
     return results
+
+def get_user_stats(user_id: int):
+    """Kullanıcı izleme istatistiklerini hesapla."""
+    import re
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor(dictionary=True)
+
+    # 1. Toplam izlenen bölüm sayısı (Benzersiz her anime için ulaşılan en yüksek bölüm numarasını topla)
+    # NOT: Eğer watch_history her bölüm için ayrı satır tutsaydı COUNT(*) olurdu.
+    # Ancak mevcut tablo yapısı (UNIQUE user_id, anime_id) ulaşılan son bölümü tutuyor gibi görünüyor.
+    cursor.execute("SELECT SUM(episode_number) as total_episodes FROM watch_history WHERE user_id = %s", (user_id,))
+    res_eps = cursor.fetchone()
+    total_episodes = int(res_eps["total_episodes"] or 0)
+
+    # 2. Toplam izleme süresi tahmini (dakika)
+    cursor.execute("""
+        SELECT wh.episode_number, a.duration
+        FROM watch_history wh
+        JOIN animes a ON wh.anime_id = a.id
+        WHERE wh.user_id = %s
+    """, (user_id,))
+    watches = cursor.fetchall()
+
+    total_minutes = 0
+    for watch in watches:
+        duration_str = watch["duration"] or "24 min"
+        mins_per_ep = 0
+        hr_match = re.search(r'(\d+)\s*hr', duration_str)
+        if hr_match:
+            mins_per_ep += int(hr_match.group(1)) * 60
+        min_match = re.search(r'(\d+)\s*min', duration_str)
+        if min_match:
+            mins_per_ep += int(min_match.group(1))
+
+        if mins_per_ep == 0: mins_per_ep = 24 # Varsayılan
+
+        # episode_number o anime'de kaçıncı bölüme gelindiğini gösteriyor.
+        total_minutes += mins_per_ep * watch["episode_number"]
+
+    # 3. Tür dağılımı
+    cursor.execute("""
+        SELECT g.name, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = %s
+        GROUP BY g.name
+        ORDER BY count DESC
+        LIMIT 5
+    """, (user_id,))
+    genres = cursor.fetchall()
+
+    # 4. İzleme listesi durumları
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM watchlists
+        WHERE user_id = %s
+        GROUP BY status
+    """, (user_id,))
+    watchlist_stats = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return {
+        "total_episodes": total_episodes,
+        "total_minutes": total_minutes,
+        "genres": genres,
+        "watchlist": watchlist_stats
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SOSYAL İŞLEMLER (YORUMLAR)

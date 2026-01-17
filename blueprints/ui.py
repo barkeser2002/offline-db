@@ -278,6 +278,29 @@ def season_page(year, season):
                                   in_db_count=in_db_count)
 
 
+@ui_bp.route("/profile")
+def profile_page():
+    """Kullanıcı profil sayfası."""
+    from flask import session
+    if "user_id" not in session:
+        return redirect(url_for("ui.login_page"))
+
+    user = db.get_user_by_id(session["user_id"])
+    stats = db.get_user_stats(session["user_id"])
+
+    return render_template("profile.html", user=user, stats=stats)
+
+@ui_bp.route("/watchlist")
+def watchlist_page():
+    """İzleme listesi sayfası."""
+    from flask import session
+    if "user_id" not in session:
+        return redirect(url_for("ui.login_page"))
+
+    watchlist = db.get_user_watchlist(session["user_id"])
+
+    return render_template("watchlist.html", watchlist=watchlist)
+
 @ui_bp.route("/search")
 def search_page():
     """Arama sayfası."""
