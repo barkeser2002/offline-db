@@ -321,6 +321,37 @@ def init_database():
     )
     """)
 
+    # İncelemeler (Reviews) tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        anime_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        title TEXT,
+        content TEXT NOT NULL,
+        is_spoiler BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        UNIQUE(user_id, anime_id)
+    )
+    """)
+
+    # İnceleme Oyları (Review Votes)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS review_votes (
+        review_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        vote INTEGER NOT NULL, -- 1: Faydalı, -1: Faydalı Değil
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (review_id, user_id),
+        FOREIGN KEY (review_id) REFERENCES reviews(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -1392,6 +1423,108 @@ def get_episode_by_number(anime_id: int, episode_number: int):
     conn.close()
     
     return dict(episode) if episode else None
+
+def add_review(user_id, anime_id, score, title, content, is_spoiler=False):
+    """Add or update a user review for an anime."""
+    conn = get_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO reviews (user_id, anime_id, score, title, content, is_spoiler)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(user_id, anime_id) DO UPDATE SET
+                score = excluded.score,
+                title = excluded.title,
+                content = excluded.content,
+                is_spoiler = excluded.is_spoiler,
+                updated_at = CURRENT_TIMESTAMP
+        """, (user_id, anime_id, score, title, content, int(is_spoiler)))
+        conn.commit()
+        return cursor.lastrowid or True
+    except sqlite3.Error as e:
+        print(f"[DB] add_review error: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_reviews_by_anime(anime_id, current_user_id=None):
+    """Get all reviews for an anime with user info and vote counts."""
+    conn = get_connection()
+    if not conn:
+        return []
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            r.*,
+            u.username,
+            (SELECT COUNT(*) FROM review_votes WHERE review_id = r.id AND vote = 1) as helpful_count,
+            (SELECT COUNT(*) FROM review_votes WHERE review_id = r.id AND vote = -1) as unhelpful_count
+    """
+
+    if current_user_id:
+        query += ", (SELECT vote FROM review_votes WHERE review_id = r.id AND user_id = ?) as user_vote "
+        params = (current_user_id, anime_id)
+    else:
+        params = (anime_id,)
+
+    query += """
+        FROM reviews r
+        JOIN users u ON r.user_id = u.id
+        WHERE r.anime_id = ?
+        ORDER BY helpful_count DESC, r.created_at DESC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
+
+def vote_review(review_id, user_id, vote):
+    """Vote (helpful/unhelpful) on a review."""
+    conn = get_connection()
+    if not conn:
+        return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO review_votes (review_id, user_id, vote)
+            VALUES (?, ?, ?)
+            ON CONFLICT(review_id, user_id) DO UPDATE SET
+                vote = excluded.vote
+        """, (review_id, user_id, vote))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"[DB] vote_review error: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def delete_review(review_id, user_id):
+    """Delete a review if it belongs to the user."""
+    conn = get_connection()
+    if not conn:
+        return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM reviews WHERE id = ? AND user_id = ?", (review_id, user_id))
+        if cursor.rowcount > 0:
+            cursor.execute("DELETE FROM review_votes WHERE review_id = ?", (review_id,))
+            conn.commit()
+            return True
+        return False
+    except sqlite3.Error as e:
+        print(f"[DB] delete_review error: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == "__main__":
     print("Initializing database...")
