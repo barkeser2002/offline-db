@@ -30,6 +30,15 @@ jobs:
         run: |
           echo "🎎 Senpai: Bir PR tespit edildi! Conflict kontrolü yapıyorum..."
           
+          # Adım 0: PR'ın draft olup olmadığını kontrol et
+          IS_DRAFT=$(gh pr view "$PR_NUMBER" --json isDraft -q .isDraft)
+          
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "📝 PR taslak durumda! Merge edilmiyor..."
+            gh pr comment "$PR_URL" --body "📝 Bu PR taslak durumda. Ready for review yaptıktan sonra merge edeceğim!"
+            exit 0
+          fi
+          
           # Adım 1: PR'ın mergeable durumunu kontrol et
           MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
           
