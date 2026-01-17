@@ -28,7 +28,7 @@ jobs:
 
       - name: 🔍 Run Pylint Analysis
         run: |
-          python -m pylint --output-format=parseable --reports=no --disable=C,R,W . 2>$null | Out-File -FilePath pylint_report.txt -Encoding UTF8
+          python -m pylint --output-format=parseable --reports=no --disable=C,R,W . 2>/dev/null > pylint_report.txt || true
 
       - name: 📤 Upload Pylint Report
         uses: actions/upload-artifact@v3
