@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="relative mb-8">
+    <!-- Backdrop Banner -->
+    <div class="absolute inset-0 h-64 md:h-96 overflow-hidden rounded-xl opacity-30">
+        <img src="{{ anime.cover_local or anime.cover_url }}" class="w-full h-full object-cover filter blur-xl scale-110" alt="Banner">
+        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="relative pt-10 md:pt-20 px-4 md:px-8 flex flex-col md:flex-row gap-8">
+        <!-- Cover Art -->
+        <div class="flex-shrink-0 mx-auto md:mx-0">
+            <div class="w-56 md:w-64 rounded-xl shadow-2xl overflow-hidden border-4 border-gray-800 bg-gray-800">
+                <img src="{{ anime.cover_local or anime.cover_url }}" class="w-full h-auto" alt="{{ anime.title }}">
+            </div>
+            <div class="mt-4 flex flex-col gap-2">
+                {% if user_status %}
+                <button class="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    {{ user_status.replace('-', ' ').title() }}
+                </button>
+                {% else %}
+                <button onclick="addToWatchlist({{ anime.mal_id }})" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                    </svg>
+                    Add to Watchlist
+                </button>
+                {% endif %}
+                <a href="/player?mal_id={{ anime.mal_id }}&ep=1" class="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition shadow-lg flex items-center justify-center gap-2 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                    </svg>
+                    Watch Now
+                </a>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="flex-grow">
+            <h1 class="text-3xl md:text-5xl font-black mb-2 text-white leading-tight">{{ anime.title }}</h1>
+            <h2 class="text-xl text-gray-400 mb-6 italic">{{ anime.title_japanese }}</h2>
+
+            <div class="flex flex-wrap gap-3 mb-6">
+                {% for genre in anime.genres %}
+                <span class="px-3 py-1 bg-gray-800 text-blue-400 rounded-full text-sm font-semibold border border-gray-700 hover:bg-blue-900/30 transition cursor-default">
+                    {{ genre.name }}
+                </span>
+                {% endfor %}
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Score</p>
+                    <p class="text-2xl font-bold text-yellow-500">⭐ {{ anime.score or 'N/A' }}</p>
+                </div>
+                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Rank</p>
+                    <p class="text-2xl font-bold text-blue-400">#{{ anime.rank or 'N/A' }}</p>
+                </div>
+                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Episodes</p>
+                    <p class="text-2xl font-bold text-green-400">{{ anime.episodes or '?' }}</p>
+                </div>
+                <div class="bg-gray-800/50 p-3 rounded-lg border border-gray-700">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Type</p>
+                    <p class="text-2xl font-bold text-purple-400">{{ anime.type or 'TV' }}</p>
+                </div>
+            </div>
+
+            <div class="prose prose-invert max-w-none mb-8">
+                <h3 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Synopsis</h3>
+                <p class="text-gray-300 leading-relaxed text-lg">
+                    {{ anime.synopsis or 'No synopsis available for this anime.' }}
+                </p>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-8">
+                <div>
+                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Studios</h4>
+                    <div class="flex gap-2">
+                        {% for studio in anime.studios %}
+                        <span class="text-white font-medium">{{ studio.name }}{% if not loop.last %}, {% endif %}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Status</h4>
+                    <span class="text-white font-medium">{{ anime.status }}</span>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Aired</h4>
+                    <span class="text-white font-medium">{{ anime.aired_from }} to {{ anime.aired_to or 'Present' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Episodes Section -->
+<section class="mt-12 px-4 md:px-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl md:text-3xl font-black text-white border-l-4 border-red-600 pl-4 uppercase tracking-tighter">Episodes</h2>
+        <div class="text-sm text-gray-400">
+            Total: {{ anime.episodes_list|length }} Episodes
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {% for ep in anime.episodes_list %}
+        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ ep.episode_number }}"
+           class="group relative bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-red-600 transition-all duration-300 transform hover:-translate-y-1">
+            <div class="aspect-video relative overflow-hidden bg-gray-900">
+                <div class="absolute inset-0 flex items-center justify-center opacity-50 group-hover:opacity-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <!-- Placeholder for Thumbnail -->
+                <div class="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-gray-700 font-bold text-4xl">
+                    {{ ep.episode_number }}
+                </div>
+                {% if ep.video_count > 0 %}
+                <div class="absolute top-2 right-2 bg-green-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded uppercase shadow-lg">
+                    HD
+                </div>
+                {% endif %}
+            </div>
+            <div class="p-4">
+                <div class="flex justify-between items-start">
+                    <h3 class="font-bold text-white group-hover:text-red-500 transition line-clamp-1">
+                        {{ ep.title or 'Episode ' ~ ep.episode_number }}
+                    </h3>
+                </div>
+                <div class="mt-2 flex items-center text-xs text-gray-500 gap-2">
+                    <span class="font-bold">EP {{ ep.episode_number }}</span>
+                    <span>•</span>
+                    <span>Japanese Audio</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function addToWatchlist(malId) {
+        try {
+            const resp = await fetch('/api/user/watchlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mal_id: malId, status: 'plan-to-watch' })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                showNotification('Added to your watchlist!', 'success');
+                location.reload();
+            } else {
+                showNotification(data.error || 'Failed to add', 'error');
+            }
+        } catch (e) {
+            showNotification('Login required!', 'error');
+        }
+    }
+</script>
+{% endblock %}

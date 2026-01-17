@@ -322,7 +322,7 @@ def init_database():
     cursor.close()
     conn.close()
     
-    print("[DB] Tablolar başarıyla oluşturuldu (InnoDB).")
+    print("[DB] Database tables created successfully (InnoDB).")
     return True
 
 
@@ -730,7 +730,7 @@ def insert_or_update_episode(anime_id: int, episode_number: int, title: str = No
         cursor.execute("""
             INSERT INTO episodes (anime_id, episode_number, title)
             VALUES (%s, %s, %s)
-        """, (anime_id, episode_number, title or f"{episode_number}. Bölüm"))
+        """, (anime_id, episode_number, title or f"Episode {episode_number}"))
         episode_id = cursor.lastrowid
     
     conn.commit()
@@ -976,7 +976,7 @@ def add_comment(user_id: int, anime_id: int, episode_number: int, content: str, 
         print(f"[DB] Comment add error: {e}")
         return None
 
-def get_episode_comments(anime_id: int, episode_number: int):
+def get_comments(anime_id: int, episode_number: int):
     conn = get_connection()
     if not conn: return []
     cursor = conn.cursor(dictionary=True)
@@ -991,6 +991,104 @@ def get_episode_comments(anime_id: int, episode_number: int):
     cursor.close()
     conn.close()
     return results
+
+def get_episode_comments(anime_id: int, episode_number: int):
+    """Alias for get_comments to maintain compatibility."""
+    return get_comments(anime_id, episode_number)
+
+def get_anime_genres(anime_id: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT g.* FROM genres g
+        JOIN anime_genres ag ON g.id = ag.genre_id
+        WHERE ag.anime_id = %s
+    """, (anime_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_anime_studios(anime_id: int):
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT s.* FROM studios s
+        JOIN anime_studios ast ON s.id = ast.studio_id
+        WHERE ast.anime_id = %s
+    """, (anime_id,))
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+def get_anime_full_details(mal_id: int):
+    """Anime'nin tüm detaylarını (türler, stüdyolar, bölümler) getir."""
+    anime = get_anime_by_mal_id(mal_id)
+    if not anime:
+        return None
+
+    anime_id = anime["id"]
+    anime["genres"] = get_anime_genres(anime_id)
+    anime["studios"] = get_anime_studios(anime_id)
+
+    # Bölümleri getir
+    conn = get_connection()
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT e.*,
+                   (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id AND is_active = TRUE) as video_count
+            FROM episodes e
+            WHERE e.anime_id = %s
+            ORDER BY e.episode_number
+        """, (anime_id,))
+        anime["episodes_list"] = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    else:
+        anime["episodes_list"] = []
+
+    return anime
+
+def get_user_stats(user_id: int):
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor(dictionary=True)
+
+    stats = {}
+
+    # Toplam izlenen bölüm sayısı
+    cursor.execute("SELECT COUNT(*) as total_watched FROM watch_history WHERE user_id = %s", (user_id,))
+    stats["total_watched"] = cursor.fetchone()["total_watched"]
+
+    # İzleme listesindeki durumlar
+    cursor.execute("""
+        SELECT status, COUNT(*) as count
+        FROM watchlists
+        WHERE user_id = %s
+        GROUP BY status
+    """, (user_id,))
+    stats["watchlist_counts"] = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+    # En çok izlenen türler
+    cursor.execute("""
+        SELECT g.name, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = %s
+        GROUP BY g.id
+        ORDER BY count DESC
+        LIMIT 5
+    """, (user_id,))
+    stats["favorite_genres"] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return stats
 
 def delete_comment(comment_id: int, user_id: int):
     """Sadece yorumun sahibi silebilir."""
@@ -1044,5 +1142,5 @@ def serialize_for_json(data):
 
 
 if __name__ == "__main__":
-    print("Veritabanı başlatılıyor...")
+    print("Initializing database...")
     init_database()

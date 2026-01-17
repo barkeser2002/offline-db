@@ -119,6 +119,66 @@ def fetch_all_season_anime(year: int, season: str, save_to_db: bool = True) -> l
 
     return all_anime
 
+@ui_bp.route("/anime/<int:mal_id>")
+def anime_details(mal_id):
+    """Anime detay sayfası."""
+    from flask import session
+    anime = db.get_anime_full_details(mal_id)
+
+    if not anime:
+        from main import update_anime_by_mal_id
+        update_anime_by_mal_id(mal_id)
+        anime = db.get_anime_full_details(mal_id)
+
+    if not anime:
+        return "Anime not found", 404
+
+    # Kullanıcı durumu (İzleme listesinde mi?)
+    user_status = None
+    if "user_id" in session:
+        watchlist = db.get_user_watchlist(session["user_id"])
+        for item in watchlist:
+            if item["mal_id"] == mal_id:
+                user_status = item["status"]
+                break
+
+    return render_template("anime_details.html", anime=anime, user_status=user_status)
+
+@ui_bp.route("/profile")
+@ui_bp.route("/dashboard")
+def profile_page():
+    """Kullanıcı profil ve dashboard sayfası."""
+    from flask import session
+    if "user_id" not in session:
+        return redirect(url_for("ui.login_page"))
+
+    user = db.get_user_by_id(session["user_id"])
+    if not user:
+        return redirect(url_for("ui.login_page"))
+
+    stats = db.get_user_stats(session["user_id"])
+    watch_history = db.get_user_watch_history(session["user_id"], limit=50)
+    watchlist = db.get_user_watchlist(session["user_id"])
+
+    # İzleme listesini kategorize et
+    categorized_watchlist = {
+        "watching": [],
+        "plan-to-watch": [],
+        "completed": [],
+        "on-hold": [],
+        "dropped": []
+    }
+    for item in watchlist:
+        status = item["status"]
+        if status in categorized_watchlist:
+            categorized_watchlist[status].append(item)
+
+    return render_template("profile.html",
+                         user=user,
+                         stats=stats,
+                         watch_history=watch_history,
+                         watchlist=categorized_watchlist)
+
 @ui_bp.route("/")
 def home():
     """Ana sayfa."""
@@ -233,7 +293,7 @@ def player():
     # Eğer bölüm yoksa, en az total episode kadar placeholder oluştur
     total_eps = anime.get("episodes")
     if not episodes and total_eps:
-        episodes = [{"episode_number": i, "title": f"{i}. Bölüm", "has_video": False}
+        episodes = [{"episode_number": i, "title": f"Episode {i}", "has_video": False}
                     for i in range(1, int(total_eps) + 1)]
 
     return render_template("player.html",

@@ -27,13 +27,18 @@
         <h2 class="text-2xl font-semibold mb-4 border-l-4 border-yellow-500 pl-4">Continue Watching</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for entry in user_history %}
-            <a href="/player?mal_id={{ entry.mal_id }}&ep={{ entry.episode_number }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+            <a href="/anime/{{ entry.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
                 <div class="relative">
-                    <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover">
+                    <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover transition duration-300 group-hover:scale-110">
                     <div class="absolute bottom-0 left-0 w-full bg-blue-600 h-1" style="width: {{ entry.progress_percent }}%"></div>
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                         <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
                 </div>
                 <div class="p-3">
-                    <h3 class="font-bold text-sm truncate">{{ entry.title }}</h3>
+                    <h3 class="font-bold text-sm truncate group-hover:text-blue-400">{{ entry.title }}</h3>
                     <p class="text-gray-400 text-xs">Episode {{ entry.episode_number }}</p>
                 </div>
             </a>
@@ -48,10 +53,12 @@
         <h2 class="text-2xl font-semibold mb-4 border-l-4 border-blue-500 pl-4">My Watchlist</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for entry in user_watchlist %}
-            <a href="/player?mal_id={{ entry.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-                <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover">
+            <a href="/anime/{{ entry.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
+                <div class="relative overflow-hidden">
+                    <img src="{{ entry.cover_local or entry.cover_url }}" alt="{{ entry.title }}" class="w-full h-48 object-cover transition duration-300 group-hover:scale-110">
+                </div>
                 <div class="p-3">
-                    <h3 class="font-bold text-sm truncate">{{ entry.title }}</h3>
+                    <h3 class="font-bold text-sm truncate group-hover:text-blue-400">{{ entry.title }}</h3>
                     <div class="flex justify-between items-center mt-1">
                         <span class="text-xs text-blue-400 px-2 py-0.5 bg-blue-900/50 rounded">{{ entry.status.replace('-', ' ').title() }}</span>
                         <span class="text-xs text-gray-400">⭐ {{ entry.score }}</span>
@@ -73,13 +80,15 @@
         </h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for anime in local_trending %}
-            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-                <img src="{{ anime.cover_local or anime.cover_url }}" alt="{{ anime.title }}" class="w-full h-48 object-cover">
+            <a href="/anime/{{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
+                <div class="relative overflow-hidden">
+                    <img src="{{ anime.cover_local or anime.cover_url }}" alt="{{ anime.title }}" class="w-full h-48 object-cover transition duration-300 group-hover:scale-110">
+                </div>
                 <div class="p-3">
-                    <h3 class="font-bold text-sm truncate">{{ anime.title }}</h3>
+                    <h3 class="font-bold text-sm truncate group-hover:text-purple-400">{{ anime.title }}</h3>
                     <div class="flex justify-between items-center mt-1">
                         <span class="text-xs text-gray-400">{{ anime.type }}</span>
-                        <span class="text-xs text-purple-400 font-bold">{{ anime.view_count }} views</span>
+                        <span class="text-xs text-purple-400 font-bold">{{ anime.watch_count }} views</span>
                     </div>
                 </div>
             </a>
@@ -104,10 +113,12 @@
         <h2 class="text-2xl font-semibold mb-4 border-l-4 border-red-500 pl-4">Top Anime</h2>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for anime in top_anime %}
-            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-                <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+            <a href="/anime/{{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
+                <div class="relative overflow-hidden">
+                    <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover transition duration-300 group-hover:scale-110">
+                </div>
                 <div class="p-4">
-                    <h3 class="font-bold text-lg truncate">{{ anime.title }}</h3>
+                    <h3 class="font-bold text-lg truncate group-hover:text-red-500 transition">{{ anime.title }}</h3>
                     <p class="text-gray-400 text-sm">Score: {{ anime.score }}</p>
                 </div>
             </a>
@@ -121,10 +132,12 @@
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {% for entry in recommendations %}
                 {% for anime in entry.entry %}
-                <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-                    <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                <a href="/anime/{{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
+                    <div class="relative overflow-hidden">
+                        <img src="{{ anime.images.jpg.large_image_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover transition duration-300 group-hover:scale-110">
+                    </div>
                     <div class="p-4">
-                        <h3 class="font-bold text-lg truncate">{{ anime.title }}</h3>
+                        <h3 class="font-bold text-lg truncate group-hover:text-green-400 transition">{{ anime.title }}</h3>
                     </div>
                 </a>
                 {% endfor %}
@@ -155,7 +168,7 @@
                 container.innerHTML = data.map(anime => {
                     const cover = anime.cover_local ? `/covers/${anime.mal_id}.jpg` : anime.cover_url;
                     return `
-                        <a href="/player?mal_id=${anime.mal_id}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 transition transform hover:scale-105">
+                        <a href="/anime/${anime.mal_id}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 transition transform hover:scale-105">
                             <div class="relative">
                                 <img src="${cover}" alt="${anime.title}" class="w-full h-64 object-cover">
                                 <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs font-bold text-orange-400">

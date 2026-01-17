@@ -8,19 +8,19 @@
     {% if results %}
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {% for anime in results %}
-            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
-                <div class="relative">
+            <a href="/anime/{{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 group">
+                <div class="relative overflow-hidden">
                     {% if anime.cover_local %}
-                        <img src="/covers/{{ anime.mal_id }}.jpg" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                        <img src="/covers/{{ anime.mal_id }}.jpg" alt="{{ anime.title }}" class="w-full h-64 object-cover transition duration-300 group-hover:scale-110">
                     {% else %}
-                        <img src="{{ anime.cover_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover">
+                        <img src="{{ anime.cover_url }}" alt="{{ anime.title }}" class="w-full h-64 object-cover transition duration-300 group-hover:scale-110">
                     {% endif %}
                     <div class="absolute top-2 right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow">
                         {{ anime.type }}
                     </div>
                 </div>
                 <div class="p-4">
-                    <h3 class="font-bold text-lg truncate" title="{{ anime.title }}">{{ anime.title }}</h3>
+                    <h3 class="font-bold text-lg truncate group-hover:text-blue-400 transition" title="{{ anime.title }}">{{ anime.title }}</h3>
                     <div class="flex justify-between items-center mt-2 text-sm text-gray-400">
                         <span>{{ anime.year or 'N/A' }}</span>
                         <span class="text-yellow-500 font-bold">⭐ {{ anime.score or 'N/A' }}</span>
