@@ -10,44 +10,44 @@ from config import JIKAN_API_BASE, JIKAN_RATE_LIMIT
 ui_bp = Blueprint('ui', __name__)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# JIKAN API - SEZON ANIME LİSTESİ (RATE LIMIT: 3/saniye, 60/dakika)
+# JIKAN API - SEASON ANIME LIST (RATE LIMIT: 3/sec, 60/min)
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Rate limiter için global değişkenler
+# Global variables for rate limiter
 _jikan_last_request_time = 0.0
 _jikan_rate_lock = threading.Lock()
 
 def _apply_jikan_rate_limit():
-    """Jikan API rate limit - saniyede max 3 istek."""
+    """Jikan API rate limit - max 3 requests per second."""
     global _jikan_last_request_time
     with _jikan_rate_lock:
         now = time.time()
         elapsed = now - _jikan_last_request_time
-        if elapsed < 0.35:  # ~3 istek/saniye için güvenli aralık
+        if elapsed < 0.35:  # Safe interval for ~3 requests/sec
             time.sleep(0.35 - elapsed)
         _jikan_last_request_time = time.time()
 
 
 def fetch_season_anime(year: int, season: str, page: int = 1, max_retries: int = 5) -> Dict[str, Any] | None:
     """
-    Jikan API'den sezon anime listesini çek.
-    429 (Too Many Requests) hatası aldığında bekleyip tekrar dener.
+    Fetch season anime list from Jikan API.
+    Retries on 429 (Too Many Requests).
 
     season: winter, spring, summer, fall
     """
     for attempt in range(max_retries):
         try:
-            _apply_jikan_rate_limit()  # Rate limit uygula
+            _apply_jikan_rate_limit()
 
             url = f"{JIKAN_API_BASE}/seasons/{year}/{season}"
             params = {"page": page, "limit": 25}
             response = requests.get(url, params=params, timeout=30)
 
-            # 429 Too Many Requests - bekle ve tekrar dene
+            # 429 Too Many Requests - wait and retry
             if response.status_code == 429:
                 retry_after = int(response.headers.get("Retry-After", 5))
                 wait_time = max(retry_after, 2 ** attempt + 1)
-                print(f"[Jikan] Rate limit! {wait_time}s bekleniyor... (deneme {attempt+1}/{max_retries})")
+                print(f"[Jikan] Rate limit! Waiting {wait_time}s... (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait_time)
                 continue
 
@@ -57,16 +57,16 @@ def fetch_season_anime(year: int, season: str, page: int = 1, max_retries: int =
         except requests.exceptions.HTTPError as e:
             if hasattr(e, 'response') and e.response is not None and e.response.status_code == 429:
                 wait_time = 2 ** attempt + 2
-                print(f"[Jikan] Rate limit! {wait_time}s bekleniyor... (deneme {attempt+1}/{max_retries})")
+                print(f"[Jikan] Rate limit! Waiting {wait_time}s... (attempt {attempt+1}/{max_retries})")
                 time.sleep(wait_time)
                 continue
-            print(f"[Jikan] Sezon çekme hatası ({year}/{season}): {e}")
+            print(f"[Jikan] Season fetch error ({year}/{season}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
                 continue
             return None
         except requests.exceptions.Timeout:
-            print(f"[Jikan] Timeout ({year}/{season} s.{page}), tekrar deneniyor...")
+            print(f"[Jikan] Timeout ({year}/{season} p.{page}), retrying...")
             if attempt < max_retries - 1:
                 time.sleep(2)
                 continue
@@ -80,25 +80,25 @@ def fetch_season_anime(year: int, season: str, page: int = 1, max_retries: int =
 
 def fetch_all_season_anime(year: int, season: str, save_to_db: bool = True) -> list:
     """
-    Bir sezonun tüm anime'lerini çek (tüm sayfalar).
+    Fetch all anime of a season (all pages).
 
     Args:
-        year: Yıl (ör: 2026)
-        season: Sezon (winter, spring, summer, fall)
-        save_to_db: True ise eksik anime'leri DB'ye kaydet
+        year: Year (e.g., 2026)
+        season: Season (winter, spring, summer, fall)
+        save_to_db: If True, saves missing anime to DB
 
     Returns:
-        Anime listesi
+        Anime list
     """
     all_anime = []
     page = 1
 
-    # Mevcut DB'deki MAL ID'ler
+    # Existing MAL IDs in DB
     existing_ids = set(db.get_all_mal_ids()) if save_to_db else set()
     saved_count = 0
 
     while True:
-        print(f"[Jikan] {year}/{season} sayfa {page} çekiliyor...")
+        print(f"[Jikan] Fetching {year}/{season} page {page}...")
         result = fetch_season_anime(year, season, page)
 
         if not result:
@@ -121,7 +121,7 @@ def fetch_all_season_anime(year: int, season: str, save_to_db: bool = True) -> l
 
 @ui_bp.route("/anime/<int:mal_id>")
 def anime_details(mal_id):
-    """Anime detay sayfası."""
+    """Anime details page."""
     from flask import session
     anime = db.get_anime_full_details(mal_id)
 
@@ -133,7 +133,7 @@ def anime_details(mal_id):
     if not anime:
         return "Anime not found", 404
 
-    # Kullanıcı durumu (İzleme listesinde mi?)
+    # User status (In watchlist?)
     user_status = None
     if "user_id" in session:
         watchlist = db.get_user_watchlist(session["user_id"])
@@ -147,7 +147,7 @@ def anime_details(mal_id):
 @ui_bp.route("/profile")
 @ui_bp.route("/dashboard")
 def profile_page():
-    """Kullanıcı profil ve dashboard sayfası."""
+    """User profile and dashboard page."""
     from flask import session
     if "user_id" not in session:
         return redirect(url_for("ui.login_page"))
@@ -163,7 +163,7 @@ def profile_page():
     activity = db.get_user_activity(session["user_id"], limit=20)
     social_feed = db.get_social_feed(session["user_id"], limit=20)
 
-    # İzleme listesini kategorize et
+    # Categorize watchlist
     categorized_watchlist = {
         "watching": [],
         "plan-to-watch": [],
@@ -227,9 +227,9 @@ def public_profile(username):
 
 @ui_bp.route("/")
 def home():
-    """Ana sayfa."""
+    """Home page."""
     from flask import session
-    # İstatistikleri çek
+    # Fetch statistics
     conn = db.get_connection()
     stats = {"anime_count": 0, "episode_count": 0, "video_count": 0}
 
@@ -251,7 +251,7 @@ def home():
 
     seasons = get_available_seasons()
 
-    # Kullanıcı geçmişi ve izleme listesi
+    # User history and watchlist
     user_history = []
     user_watchlist = []
     user_recommendations = []
@@ -260,10 +260,10 @@ def home():
         user_watchlist = db.get_user_watchlist(session["user_id"])
         user_recommendations = db.get_personalized_recommendations(session["user_id"], limit=5)
 
-    # Yerel Trending
+    # Local Trending
     local_trending = db.get_trending_anime(limit=10)
 
-    # Jikan API'den dinamik içerik çek
+    # Fetch dynamic content from Jikan API
     top_anime = []
     recommendations = []
     try:
@@ -298,22 +298,22 @@ def register_page():
 
 @ui_bp.route("/player")
 def player():
-    """Anime oynatıcı sayfası."""
+    """Anime player page."""
     mal_id = request.args.get("mal_id", type=int)
     ep = request.args.get("ep", 1, type=int)
 
     if not mal_id:
         return redirect("/")
 
-    # Anime bilgilerini çek (Helper kullan)
+    # Fetch anime info (Using helper)
     anime_raw = ensure_anime_data(mal_id)
 
     if not anime_raw:
-        return "Anime bulunamadı", 404
+        return "Anime not found", 404
 
     anime = dict(anime_raw)
 
-    # Bölümleri çek
+    # Fetch episodes
     conn = db.get_connection()
     episodes = []
 
@@ -339,7 +339,7 @@ def player():
         cursor.close()
         conn.close()
 
-    # Eğer bölüm yoksa, en az total episode kadar placeholder oluştur
+    # If no episodes, create placeholders up to total episodes
     total_eps = dict(anime).get("episodes")
     if not episodes and total_eps:
         episodes = [{"episode_number": i, "title": f"Episode {i}", "has_video": False}
@@ -353,11 +353,11 @@ def player():
 
 @ui_bp.route("/season/<int:year>/<season>")
 def season_page(year, season):
-    """Sezon anime listesi sayfası."""
-    # Jikan'dan sezon listesini çek
+    """Season anime list page."""
+    # Fetch season list from Jikan
     anime_list_raw = fetch_all_season_anime(year, season)
 
-    # Veritabanındaki MAL ID'leri
+    # MAL IDs in database
     db_mal_ids = set(db.get_all_mal_ids())
 
     anime_list = []
@@ -389,7 +389,7 @@ def season_page(year, season):
 
 @ui_bp.route("/watchlist")
 def watchlist_page():
-    """İzleme listesi sayfası."""
+    """Watchlist page."""
     from flask import session
     if "user_id" not in session:
         return redirect(url_for("ui.login_page"))
@@ -400,7 +400,7 @@ def watchlist_page():
 
 @ui_bp.route("/search")
 def search_page():
-    """Arama sayfası."""
+    """Search page."""
     query = request.args.get("q", "")
 
     if not query:
@@ -418,7 +418,7 @@ def community_page():
 
 @ui_bp.route("/discover")
 def discover_page():
-    """Keşfet (Gelişmiş Filtreleme) sayfası."""
+    """Discover (Advanced Filtering) page."""
     genres = db.get_genres()
     current_filters = {
         "sort": request.args.get("sort", "score"),
@@ -433,12 +433,12 @@ def discover_page():
 
 @ui_bp.route("/anime/covers/<filename>")
 def serve_cover(filename):
-    """Cover resimlerini sun."""
+    """Serve cover images."""
     from flask import send_from_directory
     return send_from_directory("covers", filename)
 
 def get_available_seasons() -> list:
-    """Mevcut sezonları listele (2000'den bugüne)."""
+    """List available seasons (from 2000 to today)."""
     import datetime
     current_year = datetime.datetime.now().year
     seasons = ["winter", "spring", "summer", "fall"]
@@ -451,10 +451,10 @@ def get_available_seasons() -> list:
     return result
 
 def ensure_anime_data(mal_id):
-    """Anime verisi eksikse veya yoksa tamamla."""
+    """Complete anime data if missing or incomplete."""
     anime = db.get_anime_by_mal_id(mal_id)
     if not anime:
-        print(f"[Info] Anime {mal_id} DB'de yok, indiriliyor...")
+        print(f"[Info] Anime {mal_id} not in DB, downloading...")
         from main import update_anime_by_mal_id
         update_anime_by_mal_id(mal_id)
         return db.get_anime_by_mal_id(mal_id)

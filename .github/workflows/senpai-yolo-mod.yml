@@ -20,6 +20,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: 📦 Sistem Bağımlılıkları
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
       - name: 🔧 Conflict Çözüm Denemesi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,18 +33,38 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          echo "🎎 Senpai: Bir PR tespit edildi! Conflict kontrolü yapıyorum..."
+          echo "🎎 Senpai: Bir PR tespit edildi! Conflict ve Draft kontrolü yapıyorum..."
           
-          # Adım 1: PR'ın mergeable durumunu kontrol et
-          MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
+          # Adım 0: Durum verilerini çek (Hem mergeable durumu hem de draft durumu)
+          # JSON çıktısından iki veriyi de aynı anda alıyoruz
+          PR_DATA=$(gh pr view "$PR_NUMBER" --json mergeable,isDraft)
+          MERGEABLE_STATUS=$(echo "$PR_DATA" | jq -r .mergeable)
+          IS_DRAFT=$(echo "$PR_DATA" | jq -r .isDraft)
+          
+          # jq yoksa alternatif (senin kullandığın yöntemle ayrı ayrı çekim):
+          if [ -z "$MERGEABLE_STATUS" ]; then
+              MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
+              IS_DRAFT=$(gh pr view "$PR_NUMBER" --json isDraft -q .isDraft)
+          fi
           
           if [ "$MERGEABLE_STATUS" = "MERGEABLE" ]; then
-            echo "✅ PR merge edilebilir! İşlem devam ediyor..."
+            echo "✅ Kodda conflict yok. Draft durumu kontrol ediliyor..."
             
-            # Adım 2: PR'ı onayla (Approve) - Bazı branch korumaları onay ister
-            gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve hiç okumadan onayladı! 🚀"
+            # --- DÜZELTME BAŞLANGICI ---
+            # Eğer PR Draft ise, 'Ready for Review' durumuna çek
+            if [ "$IS_DRAFT" = "true" ]; then
+                echo "📝 PR şu an Draft modunda. Otomatik olarak 'Ready for review' yapılıyor..."
+                gh pr ready "$PR_URL"
+                echo "🔓 PR draft modundan çıkarıldı."
+            fi
+            # --- DÜZELTME BİTİŞİ ---
             
-            # Adım 3: Merge işlemini yap (Squash ile tek parça halinde)
+            echo "🚀 İşlem devam ediyor..."
+            
+            # Adım 2: PR'ı onayla (Approve)
+            gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve draft'tan çıkarıp onayladı! 🚀"
+            
+            # Adım 3: Merge işlemini yap
             gh pr merge "$PR_URL" --squash --delete-branch
             
             echo "✅ İşlem Tamam! Kod artık ana yapının bir parçası."
@@ -48,7 +73,6 @@ jobs:
             echo "❌ PR'da conflict var! Otomatik çözüm deniyorum..."
             
             # Adım 2: Conflict çözüm denemesi
-            # PR branch'ini checkout et
             git fetch origin "$HEAD_REF"
             git checkout "$HEAD_REF"
             
@@ -57,24 +81,29 @@ jobs:
               echo "✅ Rebase başarılı! Push ediyorum..."
               git push --force-with-lease origin "$HEAD_REF"
               
-              # Tekrar mergeable kontrolü
               sleep 5
               NEW_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
               
               if [ "$NEW_STATUS" = "MERGEABLE" ]; then
-                gh pr review "$PR_URL" --approve --body "Senpai conflict'leri otomatik çözdü ve onayladı! 🚀"
+                # Rebase sonrası tekrar Draft kontrolü yapmak iyi olur
+                IS_DRAFT_RECHECK=$(gh pr view "$PR_NUMBER" --json isDraft -q .isDraft)
+                if [ "$IS_DRAFT_RECHECK" = "true" ]; then
+                     gh pr ready "$PR_URL"
+                fi
+                
+                gh pr review "$PR_URL" --approve --body "Senpai conflict'leri çözdü ve onayladı! 🚀"
                 gh pr merge "$PR_URL" --squash --delete-branch
                 echo "✅ Conflict çözüldü ve merge edildi!"
               else
-                gh pr comment "$PR_URL" --body "🤖 **Otomatik Rebase Denendi** ama hala conflict var. Lütfen manuel olarak çözün."
+                gh pr comment "$PR_URL" --body "🤖 **Otomatik Rebase Denendi** ama hala conflict var. Lütfen manuel çözün."
               fi
             else
               echo "❌ Rebase başarısız! Manuel çözüm gerekli..."
               git rebase --abort
-              gh pr comment "$PR_URL" --body "🚫 **Conflict Tespit Edildi!** Otomatik çözüm başarısız. Lütfen conflict'leri manuel olarak çözün ve tekrar push edin."
+              gh pr comment "$PR_URL" --body "🚫 **Conflict Tespit Edildi!** Otomatik çözüm başarısız."
             fi
             
           else
             echo "⏳ PR henüz hazır değil ($MERGEABLE_STATUS). Biraz bekleyip tekrar dene..."
-            gh pr comment "$PR_URL" --body "⏳ PR henüz merge edilebilir durumda değil. Check'ler tamamlandıktan sonra tekrar deneyeceğim..."
+            gh pr comment "$PR_URL" --body "⏳ PR henüz merge edilebilir durumda değil."
           fi
