@@ -148,9 +148,12 @@ def home():
     # Kullanıcı geçmişi ve izleme listesi
     user_history = []
     user_watchlist = []
+    personalized_recs = []
     if "user_id" in session:
-        user_history = db.get_user_watch_history(session["user_id"], limit=5)
-        user_watchlist = db.get_user_watchlist(session["user_id"])
+        user_id = session["user_id"]
+        user_history = db.get_user_watch_history(user_id, limit=5)
+        user_watchlist = db.get_user_watchlist(user_id)
+        personalized_recs = db.get_personalized_recommendations(user_id, limit=5)
 
     # Yerel Trending
     local_trending = db.get_trending_anime(limit=10)
@@ -176,7 +179,8 @@ def home():
                          recommendations=recommendations,
                          local_trending=local_trending,
                          user_history=user_history,
-                         user_watchlist=user_watchlist)
+                         user_watchlist=user_watchlist,
+                         personalized_recs=personalized_recs)
 
 @ui_bp.route("/login")
 def login_page():
@@ -185,6 +189,56 @@ def login_page():
 @ui_bp.route("/register")
 def register_page():
     return render_template("register.html")
+
+
+@ui_bp.route("/discover")
+def discover():
+    """Keşfet / Filtreleme sayfası."""
+    genres = db.get_all_genres()
+
+    # URL'den filtreleri al
+    genre_id = request.args.get("genre", type=int)
+    year = request.args.get("year", type=int)
+    anime_type = request.args.get("type")
+    sort_by = request.args.get("sort", "popularity")
+
+    # İlk yüklemede filtre uygulanmışsa sonuçları getir
+    initial_results = []
+    genre_ids = [genre_id] if genre_id else None
+    initial_results = db.discover_animes(genre_ids=genre_ids, year=year, anime_type=anime_type, sort_by=sort_by, limit=20)
+
+    return render_template("discover.html",
+                           genres=genres,
+                           results=initial_results,
+                           current_filters={
+                               "genre": genre_id,
+                               "year": year,
+                               "type": anime_type,
+                               "sort": sort_by
+                           })
+
+
+@ui_bp.route("/anime/<int:mal_id>")
+def anime_detail(mal_id):
+    """Anime detay sayfası."""
+    anime = db.get_anime_full_details(mal_id)
+    if not anime:
+        # Eğer DB'de yoksa çekmeyi dene
+        anime_raw = ensure_anime_data(mal_id)
+        if not anime_raw:
+            return "Anime bulunamadı", 404
+        anime = db.get_anime_full_details(mal_id)
+
+    # İlgili anime'nin türlerine göre benzer anime'ler getir
+    similar_anime = []
+    if anime.get('genres'):
+        genre_ids = [g['id'] for g in anime['genres'] if g.get('id')]
+        if genre_ids:
+            similar_anime = db.discover_animes(genre_ids=genre_ids, limit=6)
+            # Kendisini listeden çıkar
+            similar_anime = [a for a in similar_anime if a['mal_id'] != mal_id][:5]
+
+    return render_template("anime.html", anime=anime, similar_anime=similar_anime)
 
 
 @ui_bp.route("/player")

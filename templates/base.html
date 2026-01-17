@@ -16,10 +16,13 @@
         <div class="container mx-auto flex justify-between items-center">
             <a href="/" class="text-2xl font-bold text-blue-500">Anime Platform</a>
 
-            <form action="/search" method="get" class="hidden md:flex flex-grow max-w-md mx-4">
-                <input type="search" name="q" placeholder="Search anime..." class="w-full bg-gray-700 border border-gray-600 rounded-l-lg py-1 px-4 focus:outline-none focus:border-blue-500 text-sm">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-1 text-sm">Search</button>
-            </form>
+            <div class="hidden md:flex items-center space-x-6 ml-10 flex-grow">
+                <a href="/discover" class="hover:text-blue-400 font-medium transition">Discover</a>
+                <form action="/search" method="get" class="flex flex-grow max-w-sm">
+                    <input type="search" name="q" placeholder="Search anime..." class="w-full bg-gray-700 border border-gray-600 rounded-l-lg py-1 px-4 focus:outline-none focus:border-blue-500 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-1 text-sm">Search</button>
+                </form>
+            </div>
 
             <div class="flex items-center space-x-4">
                 {% if session.user_id %}

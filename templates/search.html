@@ -8,7 +8,7 @@
     {% if results %}
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
             {% for anime in results %}
-            <a href="/player?mal_id={{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700">
+            <a href="/anime/{{ anime.mal_id }}" class="anime-card bg-gray-800 rounded-lg overflow-hidden shadow-lg border border-gray-700 transition transform hover:scale-105">
                 <div class="relative">
                     {% if anime.cover_local %}
                         <img src="/covers/{{ anime.mal_id }}.jpg" alt="{{ anime.title }}" class="w-full h-64 object-cover">

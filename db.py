@@ -1023,6 +1023,162 @@ def get_trending_anime(limit: int = 10, days: int = 7):
     conn.close()
     return results
 
+
+def discover_animes(genre_ids=None, year=None, score_min=None, anime_type=None, sort_by='popularity', limit=20, offset=0):
+    """Gelişmiş anime keşif ve filtreleme."""
+    conn = get_connection()
+    if not conn: return []
+
+    query = """
+        SELECT DISTINCT a.*
+        FROM animes a
+    """
+    params = []
+    where_clauses = []
+
+    if genre_ids:
+        query += " JOIN anime_genres ag ON a.id = ag.anime_id"
+        placeholders = ",".join(["%s"] * len(genre_ids))
+        where_clauses.append(f"ag.genre_id IN ({placeholders})")
+        params.extend(genre_ids)
+
+    if year:
+        where_clauses.append("a.year = %s")
+        params.append(year)
+
+    if score_min:
+        where_clauses.append("a.score >= %s")
+        params.append(score_min)
+
+    if anime_type:
+        where_clauses.append("a.type = %s")
+        params.append(anime_type)
+
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+
+    # Sıralama
+    sort_map = {
+        'popularity': 'a.popularity ASC',
+        'score': 'a.score DESC',
+        'newest': 'a.year DESC, a.aired_from DESC',
+        'title': 'a.title ASC'
+    }
+    order_by = sort_map.get(sort_by, 'a.popularity ASC')
+    query += f" ORDER BY {order_by}"
+
+    # Limit ve Offset
+    query += " LIMIT %s OFFSET %s"
+    params.extend([limit, offset])
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(query, params)
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+
+def get_anime_full_details(mal_id: int):
+    """Anime'nin tüm detaylarını (türler, stüdyolar, bölümler) getir."""
+    anime = get_anime_by_mal_id(mal_id)
+    if not anime:
+        return None
+
+    anime_id = anime['id']
+    conn = get_connection()
+    if not conn: return anime
+
+    cursor = conn.cursor(dictionary=True)
+
+    # Türler
+    cursor.execute("""
+        SELECT g.name, g.mal_id, g.id
+        FROM genres g
+        JOIN anime_genres ag ON g.id = ag.genre_id
+        WHERE ag.anime_id = %s
+    """, (anime_id,))
+    anime['genres'] = cursor.fetchall()
+
+    # Stüdyolar
+    cursor.execute("""
+        SELECT s.name, s.mal_id
+        FROM studios s
+        JOIN anime_studios ast ON s.id = ast.studio_id
+        WHERE ast.anime_id = %s
+    """, (anime_id,))
+    anime['studios'] = cursor.fetchall()
+
+    # Bölümler
+    cursor.execute("""
+        SELECT e.episode_number, e.title,
+               (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id AND is_active = TRUE) as video_count
+        FROM episodes e
+        WHERE e.anime_id = %s
+        ORDER BY e.episode_number
+    """, (anime_id,))
+    anime['episodes_list'] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return anime
+
+
+def get_all_genres():
+    """Tüm türleri getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM genres ORDER BY name ASC")
+    results = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return results
+
+
+def get_personalized_recommendations(user_id: int, limit: int = 5):
+    """Kullanıcının izleme geçmişine göre öneriler yap."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+
+    # 1. Kullanıcının en çok izlediği türleri bul
+    cursor.execute("""
+        SELECT ag.genre_id, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        WHERE wh.user_id = %s
+        GROUP BY ag.genre_id
+        ORDER BY count DESC
+        LIMIT 3
+    """, (user_id,))
+    top_genres = [r['genre_id'] for r in cursor.fetchall()]
+
+    if not top_genres:
+        # Eğer geçmişi yoksa en popülerlerden öner
+        cursor.execute("SELECT * FROM animes ORDER BY popularity ASC LIMIT %s", (limit,))
+        results = cursor.fetchall()
+    else:
+        # 2. Bu türlerdeki yüksek puanlı, kullanıcının henüz izlemediği anime'leri bul
+        genre_placeholders = ",".join(["%s"] * len(top_genres))
+        query = f"""
+            SELECT DISTINCT a.*
+            FROM animes a
+            JOIN anime_genres ag ON a.id = ag.anime_id
+            LEFT JOIN watch_history wh ON a.id = wh.anime_id AND wh.user_id = %s
+            WHERE ag.genre_id IN ({genre_placeholders})
+            AND wh.id IS NULL
+            ORDER BY a.score DESC, a.popularity ASC
+            LIMIT %s
+        """
+        cursor.execute(query, (user_id, *top_genres, limit))
+        results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return results
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON SERİLEŞTİRME YARDIMCI FONKSİYONU
 # ─────────────────────────────────────────────────────────────────────────────
