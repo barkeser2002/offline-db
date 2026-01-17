@@ -1023,6 +1023,49 @@ def get_trending_anime(limit: int = 10, days: int = 7):
     conn.close()
     return results
 
+def get_personalized_recommendations(user_id: int, limit: int = 5):
+    """Kullanıcının izleme geçmişine göre tür bazlı öneriler getir."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor(dictionary=True)
+
+    # 1. Kullanıcının en çok izlediği 3 türü bul
+    cursor.execute("""
+        SELECT g.id, COUNT(*) as weight
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = %s
+        GROUP BY g.id
+        ORDER BY weight DESC
+        LIMIT 3
+    """, (user_id,))
+    top_genres = [row['id'] for row in cursor.fetchall()]
+
+    if not top_genres:
+        # Eğer geçmişi yoksa en popülerlerden öner
+        cursor.execute("SELECT * FROM animes ORDER BY popularity ASC LIMIT %s", (limit,))
+        results = cursor.fetchall()
+    else:
+        # 2. Bu türlerdeki, kullanıcının henüz izlemediği en iyi anime'leri bul
+        genre_placeholders = ",".join(["%s"] * len(top_genres))
+        query = f"""
+            SELECT a.*
+            FROM animes a
+            JOIN anime_genres ag ON a.id = ag.anime_id
+            WHERE ag.genre_id IN ({genre_placeholders})
+            AND a.id NOT IN (SELECT anime_id FROM watch_history WHERE user_id = %s)
+            GROUP BY a.id
+            ORDER BY a.score DESC
+            LIMIT %s
+        """
+        cursor.execute(query, (*top_genres, user_id, limit))
+        results = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return results
+
 # ─────────────────────────────────────────────────────────────────────────────
 # JSON SERİLEŞTİRME YARDIMCI FONKSİYONU
 # ─────────────────────────────────────────────────────────────────────────────

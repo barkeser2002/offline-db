@@ -148,9 +148,11 @@ def home():
     # Kullanıcı geçmişi ve izleme listesi
     user_history = []
     user_watchlist = []
+    user_recommendations = []
     if "user_id" in session:
         user_history = db.get_user_watch_history(session["user_id"], limit=5)
         user_watchlist = db.get_user_watchlist(session["user_id"])
+        user_recommendations = db.get_personalized_recommendations(session["user_id"], limit=5)
 
     # Yerel Trending
     local_trending = db.get_trending_anime(limit=10)
@@ -176,7 +178,8 @@ def home():
                          recommendations=recommendations,
                          local_trending=local_trending,
                          user_history=user_history,
-                         user_watchlist=user_watchlist)
+                         user_watchlist=user_watchlist,
+                         user_recommendations=user_recommendations)
 
 @ui_bp.route("/login")
 def login_page():

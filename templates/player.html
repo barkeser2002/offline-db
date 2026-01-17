@@ -5,14 +5,21 @@
 {% block content %}
 <div class="flex flex-col lg:flex-row gap-6">
     <!-- Video Player Area -->
-    <div class="lg:w-3/4">
-        <div class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800">
+    <div id="video-area" class="lg:w-3/4 transition-all duration-500">
+        <div id="player-wrapper" class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800">
             <div id="player-container" class="w-full h-full flex items-center justify-center">
                 <div class="text-center">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                     <p class="text-gray-400">Loading sources...</p>
                 </div>
             </div>
+            <!-- Theater Mode Toggle -->
+            <button onclick="toggleTheaterMode()" class="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition z-10" title="Theater Mode">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+            </button>
         </div>
 
         <!-- Anime Info & Watchlist -->
@@ -110,6 +117,17 @@
 
 {% block scripts %}
 <style>
+    .theater-mode {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .theater-mode #player-wrapper {
+        aspect-ratio: auto;
+        height: 80vh;
+    }
+    .theater-mode-bg {
+        background-color: #000 !important;
+    }
     .spoiler-blur {
         filter: blur(8px);
         user-select: none;
@@ -322,6 +340,23 @@
             }
         } catch (e) {
             showNotification('An error occurred while deleting comment', 'error');
+        }
+    }
+
+    function toggleTheaterMode() {
+        const videoArea = document.getElementById('video-area');
+        const isTheater = videoArea.classList.toggle('theater-mode');
+
+        // Hide/Show sidebar
+        const sidebar = document.querySelector('.lg\\:w-1\\/4');
+        if (isTheater) {
+            sidebar.classList.add('hidden');
+            document.body.classList.add('theater-mode-bg');
+            // Scroll to player
+            videoArea.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            sidebar.classList.remove('hidden');
+            document.body.classList.remove('theater-mode-bg');
         }
     }
 
