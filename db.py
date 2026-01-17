@@ -901,7 +901,7 @@ def insert_anime_titles(anime_id, titles):
     # Basit versiyon - şimdilik sadece ana başlığı kullan
     pass
 
-def insert_or_get_genre(mal_id, name):
+def insert_or_get_genre(name):
     """Türü ekle veya mevcut olanı getir."""
     conn = get_connection()
     if not conn:
@@ -945,7 +945,7 @@ def link_anime_genre(anime_id, genre_id):
     conn.close()
     return True
 
-def insert_or_get_theme(mal_id, name):
+def insert_or_get_theme(name):
     """Temayı ekle veya mevcut olanı getir."""
     conn = get_connection()
     if not conn:
@@ -989,7 +989,7 @@ def link_anime_theme(anime_id, theme_id):
     conn.close()
     return True
 
-def insert_or_get_studio(mal_id, name):
+def insert_or_get_studio(name):
     """Stüdyoyu ekle veya mevcut olanı getir."""
     conn = get_connection()
     if not conn:
@@ -1033,7 +1033,7 @@ def link_anime_studio(anime_id, studio_id):
     conn.close()
     return True
 
-def insert_or_get_producer(mal_id, name):
+def insert_or_get_producer(name):
     """Yapımcıyı ekle veya mevcut olanı getir."""
     conn = get_connection()
     if not conn:
