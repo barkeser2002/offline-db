@@ -33,7 +33,7 @@ ADAPTERS = {
 }
 
 # FlareSolverr ayarları (CloudFlare bypass için)
-FLARESOLVERR_URL = "http://localhost:8191/v1"
+FLARESOLVERR_URL = "http://node-kyb.bariskeser.com:8191/v1"
 
 # Paralel işlem sayısı (30-200 arası önerilir)
 MAX_WORKERS = 200

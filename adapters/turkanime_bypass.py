@@ -43,7 +43,7 @@ except ImportError:
 import requests as std_requests
 
 # FlareSolverr entegrasyonu
-FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "http://localhost:8191/v1")
+FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "http://node-kyb.bariskeser.com:8191/v1")
 
 session = None
 BASE_URL = "https://www.turkanime.co"

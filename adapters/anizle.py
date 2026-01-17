@@ -737,13 +737,56 @@ def get_anime_details(slug: str) -> Optional[AnizleAnime]:
     return AnizleAnime(slug=slug, title=slug.replace("-", " ").title())
 
 
-__all__ = [
-    "AnizleAnime",
-    "AnizleEpisode",
-    "get_anime_details",
-    "get_anime_episodes",
-    "get_episode_streams",
-    "load_anime_database",
-    "search_anizle",
-    "USE_REMOTE_SERVER",
-]
+def get_episode_streams(episode_slug: str, timeout: int = 60) -> List[Dict[str, str]]:
+    """
+    Episode için stream URL'lerini al.
+    Anizle için karmaşık API akışı kullanılır.
+    """
+    try:
+        # Episode slug'dan temiz URL oluştur
+        if episode_slug.startswith(("http://", "https://")):
+            url = episode_slug
+        else:
+            clean_slug = episode_slug.lstrip("/")
+            url = f"{API_BASE_URL}/{clean_slug}"
+        
+        # 1. Translator'ları al
+        translators = _get_episode_translators(url)
+        if not translators:
+            return []
+        
+        streams = []
+        
+        # 2. Her translator için paralel video çek
+        def process_translator(translator: Dict[str, str]) -> List[Dict[str, str]]:
+            translator_streams = []
+            try:
+                videos = _get_translator_videos(translator["url"])
+                for video in videos:
+                    video_info = {
+                        "url": video["url"],
+                        "name": video["name"],
+                        "fansub": translator["name"]
+                    }
+                    result = _process_single_video(video_info)
+                    if result:
+                        translator_streams.append(result)
+            except Exception:
+                pass
+            return translator_streams
+        
+        # Paralel işlem
+        with ThreadPoolExecutor(max_workers=min(len(translators), MAX_WORKERS)) as executor:
+            futures = [executor.submit(process_translator, t) for t in translators]
+            for future in as_completed(futures):
+                try:
+                    translator_streams = future.result()
+                    streams.extend(translator_streams)
+                except Exception:
+                    pass
+        
+        return streams
+        
+    except Exception as e:
+        print(f"[Anizle] Stream çekme hatası: {e}")
+        return []

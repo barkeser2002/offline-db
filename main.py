@@ -220,36 +220,102 @@ def search_in_single_adapter(adapter_func, adapter_name, search_terms, threshold
     return None
 
 
+def create_romanji_from_japanese(japanese_text: str) -> str:
+    """
+    Basit Romanji dönüşümü (hiragana/katakana -> romanji).
+    Bu tam doğru değil ama temel dönüşümler yapar.
+    """
+    if not japanese_text:
+        return ""
+    
+    # Hiragana -> romanji mapping
+    hiragana_map = {
+        'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
+        'か': 'ka', 'き': 'ki', 'く': 'ku', 'け': 'ke', 'こ': 'ko',
+        'さ': 'sa', 'し': 'shi', 'す': 'su', 'せ': 'se', 'そ': 'so',
+        'た': 'ta', 'ち': 'chi', 'つ': 'tsu', 'て': 'te', 'と': 'to',
+        'な': 'na', 'に': 'ni', 'ぬ': 'nu', 'ね': 'ne', 'の': 'no',
+        'は': 'ha', 'ひ': 'hi', 'ふ': 'fu', 'へ': 'he', 'ほ': 'ho',
+        'ま': 'ma', 'み': 'mi', 'む': 'mu', 'め': 'me', 'も': 'mo',
+        'や': 'ya', 'ゆ': 'yu', 'よ': 'yo',
+        'ら': 'ra', 'り': 'ri', 'る': 'ru', 'れ': 're', 'ろ': 'ro',
+        'わ': 'wa', 'を': 'wo', 'ん': 'n',
+        'が': 'ga', 'ぎ': 'gi', 'ぐ': 'gu', 'げ': 'ge', 'ご': 'go',
+        'ざ': 'za', 'じ': 'ji', 'ず': 'zu', 'ぜ': 'ze', 'ぞ': 'zo',
+        'だ': 'da', 'ぢ': 'ji', 'づ': 'zu', 'で': 'de', 'ど': 'do',
+        'ば': 'ba', 'び': 'bi', 'ぶ': 'bu', 'べ': 'be', 'ぼ': 'bo',
+        'ぱ': 'pa', 'ぴ': 'pi', 'ぷ': 'pu', 'ぺ': 'pe', 'ぽ': 'po',
+        'ゃ': 'ya', 'ゅ': 'yu', 'ょ': 'yo', 'っ': 'tsu', 'ー': '-'
+    }
+    
+    # Katakana -> romanji mapping (hiragana'ya dönüştürüp map et)
+    katakana_map = {}
+    for hira, roma in hiragana_map.items():
+        kata = chr(ord(hira) + 0x60)  # Hiragana -> Katakana
+        katakana_map[kata] = roma
+    
+    # Combine maps
+    char_map = {**hiragana_map, **katakana_map}
+    
+    result = ""
+    for char in japanese_text:
+        if char in char_map:
+            result += char_map[char]
+        elif char.isalnum() or char in [' ', '-']:
+            result += char
+        # Diğer karakterleri ignore et
+    
+    return result.strip()
+
+
 def search_in_adapters(title: Optional[str], title_english: Optional[str] = None, title_japanese: Optional[str] = None) -> dict:
     """
-    Search anime in all adapters.
+    Search anime in all adapters with multi-language support.
     Returns: {adapter_name: (source_id, source_slug, source_title)}
+    
+    Search priority by adapter:
+    - AnimeCiX: Romanji (title) -> English -> Japanese
+    - Anizle: Romanji (title) -> Japanese -> English  
+    - TRAnime: English -> Romanji (title) -> Japanese
+    - TurkAnime: Romanji (title) -> English -> Japanese
     """
     results = {}
-    search_terms = [t for t in [title, title_english, title_japanese] if t]
-
-    if not search_terms:
+    
+    # Romanji (title), English, Japanese
+    romanji = title
+    english = title_english  
+    japanese = title_japanese
+    
+    # Eğer Romanji yoksa Japanese'dan oluşturmaya çalış
+    if not romanji and japanese:
+        romanji = create_romanji_from_japanese(japanese)
+    
+    if not any([romanji, english, japanese]):
         return results
 
-    # AnimeCiX
-    match = search_in_single_adapter(animecix.search_animecix, "animecix", search_terms)
+    # AnimeCiX - Prefers Romanji/English
+    search_terms_cix = [t for t in [romanji, english, japanese] if t]
+    match = search_in_single_adapter(animecix.search_animecix, "animecix", search_terms_cix)
     if match:
         results["animecix"] = (match[0], match[0], match[1])
 
-    # Anizle
-    match = search_in_single_adapter(lambda term: anizle.search_anizle(term, limit=10, timeout=10), "anizle", search_terms)
+    # Anizle - Prefers Romanji/Japanese
+    search_terms_anizle = [t for t in [romanji, japanese, english] if t]
+    match = search_in_single_adapter(lambda term: anizle.search_anizle(term, limit=10, timeout=10), "anizle", search_terms_anizle)
     if match:
-        results["anizle"] = (match[0], match[0], match[1])  # slug'i source_anime_id olarak kullan
+        results["anizle"] = (match[0], match[0], match[1])
 
-    # TRAnime
-    match = search_in_single_adapter(lambda term: tranime.search_tranime(term, limit=10), "tranime", search_terms)
+    # TRAnime - Prefers English/Romanji
+    search_terms_tranime = [t for t in [english, romanji, japanese] if t]
+    match = search_in_single_adapter(lambda term: tranime.search_tranime(term, limit=10), "tranime", search_terms_tranime)
     if match:
-        results["tranime"] = (match[0], match[0], match[1])  # slug'i source_anime_id olarak kullan
+        results["tranime"] = (match[0], match[0], match[1])
 
-    # TurkAnime
+    # TurkAnime - Prefers Romanji
     if ADAPTERS.get("turkanime"):
+        search_terms_turk = [t for t in [romanji, english, japanese] if t]
         try:
-            for term in search_terms:
+            for term in search_terms_turk:
                 try:
                     ta_results = turkanime.search_anime(term)
                     if ta_results:
@@ -498,6 +564,107 @@ def update_anime_by_title(title: str) -> bool:
 
     except Exception as e:
         print(f"Search error: {e}")
+        return False
+
+
+def update_anime_by_mal_id(mal_id: int, extra_ids: Optional[Dict[str, Any]] = None) -> bool:
+    """Update anime by MAL ID."""
+    print(f"\nUpdating: [{mal_id}]")
+
+    try:
+        # Fetch from Jikan
+        jikan_data = jikan.get_anime(mal_id)
+        if not jikan_data:
+            print(f"[{mal_id}] Jikan data not found!")
+            return False
+
+        anime_data = parse_jikan_data(jikan_data, extra_ids)
+        related_data = get_jikan_related_data(jikan_data)
+
+        if not anime_data:
+            print(f"[{mal_id}] Parse error!")
+            return False
+
+        # Download cover
+        cover_url = anime_data.get("cover_url")
+        if cover_url:
+            local_cover = download_cover(cover_url, mal_id)
+            anime_data["cover_local"] = local_cover
+            print(f"[{mal_id}] Cover downloaded: {local_cover}")
+
+        anime_id = db.insert_or_update_anime(anime_data)
+        if not anime_id:
+            print(f"[{mal_id}] Database save error!")
+            return False
+
+        print(f"[{mal_id}] {anime_data.get('title')} - DB ID: {anime_id}")
+
+        # Related data
+        if related_data.get("titles"):
+            db.insert_anime_titles(anime_id, related_data["titles"])
+
+        for genre in related_data.get("genres", []):
+            genre_id = db.insert_or_get_genre(genre.get("name"))
+            if genre_id:
+                db.link_anime_genre(anime_id, genre_id)
+
+        for theme in related_data.get("themes", []):
+            theme_id = db.insert_or_get_theme(theme.get("name"))
+            if theme_id:
+                db.link_anime_theme(anime_id, theme_id)
+
+        for studio in related_data.get("studios", []):
+            studio_id = db.insert_or_get_studio(studio.get("name"))
+            if studio_id:
+                db.link_anime_studio(anime_id, studio_id)
+
+        for producer in related_data.get("producers", []):
+            producer_id = db.insert_or_get_producer(producer.get("name"))
+            if producer_id:
+                db.link_anime_producer(anime_id, producer_id, "producer")
+
+        for licensor in related_data.get("licensors", []):
+            licensor_id = db.insert_or_get_producer(licensor.get("name"))
+            if licensor_id:
+                db.link_anime_producer(anime_id, licensor_id, "licensor")
+
+        # Fetch episodes from Jikan
+        total_episodes = jikan_data.get("episodes") or 0
+        print(f"[{mal_id}] Fetching episodes...")
+        episodes = jikan.get_anime_episodes(mal_id)
+
+        if episodes:
+            for ep in episodes:
+                ep_num = ep.get("mal_id")
+                ep_title = ep.get("title") or ep.get("title_japanese") or f"Episode {ep_num}"
+                if ep_num:
+                    db.insert_or_update_episode(anime_id, ep_num, ep_title)
+            print(f"[{mal_id}] ✓ {len(episodes)} episodes saved")
+        elif total_episodes > 0:
+            print(f"[{mal_id}] No episode details, creating {total_episodes} placeholders...")
+            for ep_num in range(1, total_episodes + 1):
+                db.insert_or_update_episode(anime_id, ep_num, f"Episode {ep_num}")
+            print(f"[{mal_id}] ✓ {total_episodes} episodes created")
+
+        # Search in adapters
+        print(f"[{mal_id}] Searching in adapters...")
+        adapter_matches = search_in_adapters(
+            anime_data.get("title"),
+            anime_data.get("title_english"),
+            anime_data.get("title_japanese")
+        )
+
+        for adapter_name, (source_anime_id, source_slug, source_title) in adapter_matches.items():
+            print(f"[{mal_id}] {adapter_name}: {source_title}")
+            source_id = db.get_source_id(adapter_name)
+            if source_id and source_anime_id:  # source_anime_id None değilse kaydet
+                db.insert_or_update_anime_source(anime_id, source_id, source_anime_id, source_slug, source_title)
+
+        print(f"[{mal_id}] ✓ Anime info, cover and episodes saved.")
+        return True
+
+    except Exception as e:
+        print(f"[{mal_id}] Update error: {e}")
         return False
 
 
