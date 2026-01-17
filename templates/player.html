@@ -6,7 +6,7 @@
 <div class="flex flex-col lg:flex-row gap-6">
     <!-- Video Player Area -->
     <div class="lg:w-3/4">
-        <div class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800">
+        <div id="player-wrapper" class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800 transition-all duration-500">
             <div id="player-container" class="w-full h-full flex items-center justify-center">
                 <div class="text-center">
                     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -15,16 +15,56 @@
             </div>
         </div>
 
+        <!-- Player Controls -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                {% if current_ep > 1 %}
+                <a href="/player?mal_id={{ anime.mal_id }}&ep={{ current_ep - 1 }}" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition border border-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Previous
+                </a>
+                {% endif %}
+
+                {% set next_ep = current_ep + 1 %}
+                {% if next_ep <= episodes|length %}
+                <a href="/player?mal_id={{ anime.mal_id }}&ep={{ next_ep }}" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition shadow-lg">
+                    Next
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button onclick="toggleTheaterMode()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg transition border border-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm1 1v10h12V5H4z" clip-rule="evenodd" />
+                    </svg>
+                    Theater Mode
+                </button>
+                <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="auto-next" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <span class="ml-3 font-medium">Auto-Next</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- Anime Info & Watchlist -->
-        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
+        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700 shadow-xl">
             <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="text-3xl font-bold">{{ anime.title }}</h1>
-                    <h2 class="text-xl text-gray-400">Episode {{ current_ep }}</h2>
+                    <h1 class="text-3xl font-black text-white leading-tight">{{ anime.title }}</h1>
+                    <h2 class="text-xl text-blue-500 font-bold">Episode {{ current_ep }}</h2>
                 </div>
                 {% if session.user_id %}
                 <div class="flex space-x-2">
-                    <select id="watchlist-status" onchange="updateWatchlistStatus()" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500">
+                    <select id="watchlist-status" onchange="updateWatchlistStatus()" class="bg-gray-900 border border-gray-700 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500 transition shadow-inner">
                         <option value="">Add to List</option>
                         <option value="watching">Watching</option>
                         <option value="completed">Completed</option>
@@ -110,6 +150,19 @@
 
 {% block scripts %}
 <style>
+    body.theater-mode {
+        overflow-y: scroll;
+    }
+    body.theater-mode nav, body.theater-mode footer {
+        display: none;
+    }
+    body.theater-mode #player-wrapper {
+        border-radius: 0;
+        border: none;
+        max-width: 100% !important;
+        width: 100vw !important;
+        margin-left: calc(-50vw + 50%);
+    }
     .spoiler-blur {
         filter: blur(8px);
         user-select: none;
@@ -127,7 +180,26 @@
 <script>
     const malId = {{ anime.mal_id }};
     const currentEp = {{ current_ep }};
+    const hasNextEp = {{ (current_ep + 1) <= episodes|length | lower }};
     let progressInterval;
+    let isTheaterMode = false;
+
+    function toggleTheaterMode() {
+        isTheaterMode = !isTheaterMode;
+        const wrapper = document.getElementById('player-wrapper');
+        const container = document.querySelector('.container');
+
+        if (isTheaterMode) {
+            wrapper.classList.remove('aspect-video');
+            wrapper.style.height = '80vh';
+            document.body.classList.add('theater-mode');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            wrapper.classList.add('aspect-video');
+            wrapper.style.height = '';
+            document.body.classList.remove('theater-mode');
+        }
+    }
 
     async function loadStreams() {
         const container = document.getElementById('player-container');
@@ -147,6 +219,17 @@
                         </video>`;
 
                     setupProgressTracking();
+
+                    const videoEl = document.getElementById('main-player');
+                    videoEl.onended = () => {
+                        updateHistory(100);
+                        if (document.getElementById('auto-next').checked && hasNextEp) {
+                            showNotification('Auto-playing next episode...', 'info');
+                            setTimeout(() => {
+                                window.location.href = `/player?mal_id=${malId}&ep=${currentEp + 1}`;
+                            }, 2000);
+                        }
+                    };
                 }
             } else {
                 container.innerHTML = `

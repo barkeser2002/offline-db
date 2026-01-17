@@ -22,7 +22,10 @@ def add_comment():
     if not anime:
         return jsonify({"error": "Anime not found"}), 404
 
-    comment_id = db.add_comment(session["user_id"], anime["id"], episode, content, is_spoiler)
+    # Convert to dict if it's a Row object
+    anime = dict(anime)
+
+    comment_id = db.add_comment(session["user_id"], int(anime["id"]), int(episode), content, bool(is_spoiler))
 
     if comment_id:
         return jsonify({
@@ -40,7 +43,10 @@ def get_comments(mal_id, episode):
     if not anime:
         return jsonify({"error": "Anime not found"}), 404
 
-    comments = db.get_episode_comments(anime["id"], episode)
+    # Convert to dict if it's a Row object
+    anime = dict(anime)
+
+    comments = db.get_episode_comments(int(anime["id"]), int(episode))
 
     # Format datetime for JSON
     comments = db.serialize_for_json(comments)

@@ -32,8 +32,13 @@
 
             <div class="flex items-center space-x-4">
                 {% if session.user_id %}
-                    <span class="text-gray-300">Hi, <span class="font-semibold">{{ session.username }}</span></span>
-                    <button onclick="logout()" class="text-sm bg-red-600 hover:bg-red-700 px-3 py-1 rounded">Logout</button>
+                    <a href="/profile" class="flex items-center space-x-2 group">
+                        <div class="w-8 h-8 rounded bg-blue-600 overflow-hidden border-2 border-gray-700 group-hover:border-blue-400 transition">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ session.username }}" alt="Avatar" class="w-full h-full">
+                        </div>
+                        <span class="text-gray-300 group-hover:text-blue-400 font-semibold transition">{{ session.username }}</span>
+                    </a>
+                    <button onclick="logout()" class="text-sm bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-1 rounded border border-red-500/50 transition">Logout</button>
                 {% else %}
                     <a href="/login" class="text-sm hover:text-blue-400">Login</a>
                     <a href="/register" class="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Register</a>
