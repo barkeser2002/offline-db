@@ -16,6 +16,12 @@ from urllib.parse import urlparse, parse_qs, quote, urlsplit, urlunsplit
 
 import urllib.request
 
+# Cloudflare bypass entegrasyonu
+try:
+    from .turkanime_bypass import CFBypassError
+    HAS_CF_BYPASS = True
+except ImportError:
+    HAS_CF_BYPASS = False
 
 
 BASE_URL = "https://animecix.tv/"
@@ -23,6 +29,20 @@ ALT_URL = "https://mangacix.net/"
 HEADERS = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
 VIDEO_PLAYERS = ["tau-video.xyz", "sibnet"]
 
+# Global CF session (lazy-load)
+_cf_session: Optional[Any] = None
+
+
+def _get_cf_session() -> Optional[Any]:
+    """CF session'ı lazy-load et."""
+    global _cf_session
+    if _cf_session is None and HAS_CF_BYPASS:
+        try:
+            from .turkanime_bypass import _get_cf_session as get_sess
+            _cf_session = get_sess()
+        except ImportError:
+            _cf_session = None
+    return _cf_session
 
 
 def _http_get(url: str, timeout: int = 10) -> bytes:
@@ -33,6 +53,16 @@ def _http_get(url: str, timeout: int = 10) -> bytes:
     safe_url = urlunsplit((sp.scheme, sp.netloc, safe_path, sp.query, sp.fragment))
     
     # Önce CF bypass ile dene
+    cf_session = _get_cf_session()
+    if cf_session is not None:
+        try:
+            if hasattr(cf_session, "get"):
+                resp = cf_session.get(safe_url, headers=HEADERS)
+                if resp.status_code == 200:
+                    return resp.content
+        except Exception as e:
+            print(f"[AnimeCix] CF bypass başarısız, fallback kullanılıyor: {e}")
+
     # Fallback: Normal urllib
     req = urllib.request.Request(safe_url, headers=HEADERS)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -129,6 +159,38 @@ def _video_streams(embed_path: str) -> List[Dict[str, str]]:
     return out
 
 
+@dataclass
+class CixEpisode:
+    title: str
+    url: str
+
+
+@dataclass
+class CixAnime:
+    """AnimeciX başlığı.
+
+    Not: Bu sınıf, yalnızca isim ve bölümleri sağlar. Oynatma/indirme için
+    mevcut Video/Bolum akışı kullanılmaya devam edilir.
+    """
+    id: str  # ID artık string olabilir
+    title: str
+
+    @property
+    def episodes(self) -> List[CixEpisode]:
+        # ID'yi güvenli şekilde int'e çevir
+        try:
+            title_id = int(self.id)
+        except (ValueError, TypeError):
+            # String ID ise hash değeri al
+            title_id = hash(self.id) % 1000000 if isinstance(self.id, str) and self.id else 0
+
+        eps = _episodes_for_title(title_id)
+        out: List[CixEpisode] = []
+        for i, e in enumerate(eps):
+            out.append(CixEpisode(title=e.get("name") or f"Bölüm {i+1}", url=e.get("url") or ""))
+        return out
+
+
 def get_episode_streams(episode_url: str, timeout: int = 10) -> List[Dict[str, str]]:
     """
     Episode URL'sinden video stream'leri çek.
@@ -163,35 +225,3 @@ def get_episode_streams(episode_url: str, timeout: int = 10) -> List[Dict[str, s
         print(f"[AnimeciX] Stream çekme hatası: {e}")
     
     return []
-
-
-@dataclass
-class CixEpisode:
-    title: str
-    url: str
-
-
-@dataclass
-class CixAnime:
-    """AnimeciX başlığı.
-
-    Not: Bu sınıf, yalnızca isim ve bölümleri sağlar. Oynatma/indirme için
-    mevcut Video/Bolum akışı kullanılmaya devam edilir.
-    """
-    id: str  # ID artık string olabilir
-    title: str
-
-    @property
-    def episodes(self) -> List[CixEpisode]:
-        # ID'yi güvenli şekilde int'e çevir
-        try:
-            title_id = int(self.id)
-        except (ValueError, TypeError):
-            # String ID ise hash değeri al
-            title_id = hash(self.id) % 1000000 if isinstance(self.id, str) and self.id else 0
-        
-        eps = _episodes_for_title(title_id)
-        out: List[CixEpisode] = []
-        for i, e in enumerate(eps):
-            out.append(CixEpisode(title=e.get("name") or f"Bölüm {i+1}", url=e.get("url") or ""))
-        return out

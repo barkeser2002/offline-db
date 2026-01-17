@@ -23,6 +23,7 @@ import db
 from jikan_client import jikan
 from .ui import ensure_anime_data, get_available_seasons
 from adapters import anizle, animecix, tranime, turkanime
+from services.video_service import ensure_episode_videos, check_video_link_alive, remove_dead_video_link
 
 api_bp = Blueprint('api', __name__)
 
@@ -47,7 +48,7 @@ def home():
     stats = {"anime_count": 0, "episode_count": 0, "video_count": 0}
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) as count FROM animes")
         res = cursor.fetchone()
@@ -98,12 +99,12 @@ def player():
     episodes = []
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT e.*,
                    (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id) as video_count
             FROM episodes e
-            WHERE e.anime_id = %s
+            WHERE e.anime_id = ?
             ORDER BY e.episode_number
         """, (int(anime["id"]),))
 
@@ -240,7 +241,7 @@ def api_db_anime_list():
     if not conn:
         return jsonify({"error": "DB bağlantı hatası"}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT mal_id, title, title_english, title_japanese,
                type, episodes, status, score, year, season,
@@ -258,10 +259,10 @@ def api_db_anime_list():
     animes = []
     for row in rows:
         r = cast(Dict[str, Any], row)
-        mal_id = r.get("mal_id")
+        mal_id = dict(r).get("mal_id")
 
         # Cover URL
-        cover_local = r.get("cover_local", "")
+        cover_local = dict(r).get("cover_local", "")
         if cover_local:
             cover_url = f"{host}/covers/{mal_id}.jpg"
         else:
@@ -269,18 +270,18 @@ def api_db_anime_list():
 
         animes.append({
             "mal_id": mal_id,
-            "title": r.get("title"),
-            "title_english": r.get("title_english"),
-            "title_japanese": r.get("title_japanese"),
+            "title": dict(r).get("title"),
+            "title_english": dict(r).get("title_english"),
+            "title_japanese": dict(r).get("title_japanese"),
             "cover": cover_url,
-            "type": r.get("type"),
-            "episodes": r.get("episodes"),
-            "status": r.get("status"),
-            "score": float(r["score"]) if r.get("score") else None,
-            "year": r.get("year"),
-            "season": r.get("season"),
-            "rating": r.get("rating"),
-            "popularity": r.get("popularity")
+            "type": dict(r).get("type"),
+            "episodes": dict(r).get("episodes"),
+            "status": dict(r).get("status"),
+            "score": float(r["score"]) if dict(r).get("score") else None,
+            "year": dict(r).get("year"),
+            "season": dict(r).get("season"),
+            "rating": dict(r).get("rating"),
+            "popularity": dict(r).get("popularity")
         })
 
     return jsonify({
@@ -374,14 +375,14 @@ def api_json_endpoint():
         if not conn:
             return jsonify({"error": "DB bağlantı hatası"}), 500
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         # Bölüm listesi
         cursor.execute("""
             SELECT e.episode_number, e.title,
                    (SELECT COUNT(*) FROM video_links vl WHERE vl.episode_id = e.id AND vl.is_active = TRUE) as video_count
             FROM episodes e
-            WHERE e.anime_id = %s
+            WHERE e.anime_id = ?
             ORDER BY e.episode_number
         """, (anime_db_id,))
 
@@ -390,8 +391,8 @@ def api_json_endpoint():
             r = cast(Dict[str, Any], row)
             episodes_list.append({
                 "episode": r["episode_number"],
-                "title": r.get("title"),
-                "video_count": r.get("video_count", 0)
+                "title": dict(r).get("title"),
+                "video_count": dict(r).get("video_count", 0)
             })
 
         # Bölüm yoksa tekrar güncelle (belki yeni eklendi)
@@ -404,12 +405,12 @@ def api_json_endpoint():
             # Tekrar çek
             conn = db.get_connection()
             if conn:
-                cursor = conn.cursor(dictionary=True)
+                cursor = conn.cursor()
                 cursor.execute("""
                     SELECT e.episode_number, e.title,
                            (SELECT COUNT(*) FROM video_links vl WHERE vl.episode_id = e.id AND vl.is_active = TRUE) as video_count
                     FROM episodes e
-                    WHERE e.anime_id = %s
+                    WHERE e.anime_id = ?
                     ORDER BY e.episode_number
                 """, (anime_db_id,))
 
@@ -417,8 +418,8 @@ def api_json_endpoint():
                     r = cast(Dict[str, Any], row)
                     episodes_list.append({
                         "episode": r["episode_number"],
-                        "title": r.get("title"),
-                        "video_count": r.get("video_count", 0)
+                        "title": dict(r).get("title"),
+                        "video_count": dict(r).get("video_count", 0)
                     })
                 cursor.close()
                 conn.close()
@@ -428,11 +429,11 @@ def api_json_endpoint():
         genres = []
         studios = []
         if conn:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute("""
                 SELECT g.name FROM genres g
                 JOIN anime_genres ag ON g.id = ag.genre_id
-                WHERE ag.anime_id = %s
+                WHERE ag.anime_id = ?
             """, (anime_db_id,))
             genres = [cast(Dict[str, Any], r)["name"] for r in cursor.fetchall()]
 
@@ -440,7 +441,7 @@ def api_json_endpoint():
             cursor.execute("""
                 SELECT s.name FROM studios s
                 JOIN anime_studios ast ON s.id = ast.studio_id
-                WHERE ast.anime_id = %s
+                WHERE ast.anime_id = ?
             """, (anime_db_id,))
             studios = [cast(Dict[str, Any], r)["name"] for r in cursor.fetchall()]
 
@@ -591,12 +592,12 @@ def api_episodes(mal_id):
     if not conn:
         return jsonify({"error": "DB bağlantı hatası"}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
     cursor.execute("""
         SELECT e.episode_number, e.title,
                (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id) as video_count
         FROM episodes e
-        WHERE e.anime_id = %s
+        WHERE e.anime_id = ?
         ORDER BY e.episode_number
     """, (int(anime["id"]),))
 
@@ -777,10 +778,10 @@ def api_trending():
     # URL'leri düzenle
     host = request.host_url.rstrip('/')
     for r in trending:
-        if r.get("cover_local"):
+        if dict(r).get("cover_local"):
             r["cover"] = f"{host}/covers/{r['mal_id']}.jpg"
         else:
-            r["cover"] = r.get("cover_url")
+            r["cover"] = dict(r).get("cover_url")
 
     return jsonify(trending)
 
@@ -1001,7 +1002,7 @@ def api_sync_covers():
     if not mal_ids:
         conn = db.get_connection()
         if conn:
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             if missing_only:
                 cursor.execute("SELECT mal_id, cover_url FROM animes WHERE cover_local IS NULL OR cover_local = ''")
             else:
@@ -1040,7 +1041,7 @@ def api_sync_covers():
                 conn = db.get_connection()
                 if conn:
                     cursor = conn.cursor()
-                    cursor.execute("UPDATE animes SET cover_local = %s WHERE mal_id = %s", (local_path, mal_id))
+                    cursor.execute("UPDATE animes SET cover_local = ? WHERE mal_id = ?", (local_path, mal_id))
                     conn.commit()
                     cursor.close()
                     conn.close()
@@ -1113,12 +1114,12 @@ def api_sync_videos():
         if not conn:
             return {"mal_id": mal_id, "status": "failed", "reason": "db_error"}
 
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT asrc.source_slug, asrc.source_anime_id, s.name as source_name, s.id as source_tbl_id
             FROM anime_sources asrc
             JOIN sources s ON asrc.source_id = s.id
-            WHERE asrc.anime_id = %s
+            WHERE asrc.anime_id = ?
         """, (anime_db_id,))
         sources = [cast(Dict[str, Any], r) for r in cursor.fetchall()]
         cursor.close()
@@ -1200,12 +1201,12 @@ def api_sync_single_adapter(adapter_name: str):
             if not conn:
                 return False
 
-            cursor = conn.cursor(dictionary=True)
+            cursor = conn.cursor()
             cursor.execute("""
                 SELECT asrc.source_slug, asrc.source_anime_id, s.id as source_tbl_id
                 FROM anime_sources asrc
                 JOIN sources s ON asrc.source_id = s.id
-                WHERE asrc.anime_id = %s AND s.name = %s
+                WHERE asrc.anime_id = ? AND s.name = ?
             """, (anime_db_id, adapter_name))
             source = cursor.fetchone()
             cursor.close()
@@ -1306,7 +1307,7 @@ def api_sync_batch():
                             conn = db.get_connection()
                             if conn:
                                 cursor = conn.cursor()
-                                cursor.execute("UPDATE animes SET cover_local = %s WHERE mal_id = %s",
+                                cursor.execute("UPDATE animes SET cover_local = ? WHERE mal_id = ?",
                                              (local_path, mal_id))
                                 conn.commit()
                                 cursor.close()
@@ -1438,7 +1439,7 @@ def api_validate_single_link():
         conn = db.get_connection()
         if conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE video_links SET is_active = FALSE WHERE video_url = %s", (url,))
+            cursor.execute("UPDATE video_links SET is_active = FALSE WHERE video_url = ?", (url,))
             affected = cursor.rowcount
             conn.commit()
             cursor.close()
@@ -1486,21 +1487,21 @@ def api_validate_anime_links(mal_id: int):
     if not conn:
         return jsonify({"error": "DB bağlantı hatası"}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     if episode:
         cursor.execute("""
             SELECT vl.id, vl.video_url, vl.fansub, e.episode_number
             FROM video_links vl
             JOIN episodes e ON vl.episode_id = e.id
-            WHERE e.anime_id = %s AND e.episode_number = %s AND vl.is_active = TRUE
+            WHERE e.anime_id = ? AND e.episode_number = ? AND vl.is_active = TRUE
         """, (anime_db_id, episode))
     else:
         cursor.execute("""
             SELECT vl.id, vl.video_url, vl.fansub, e.episode_number
             FROM video_links vl
             JOIN episodes e ON vl.episode_id = e.id
-            WHERE e.anime_id = %s AND vl.is_active = TRUE
+            WHERE e.anime_id = ? AND vl.is_active = TRUE
         """, (anime_db_id,))
 
     links = [cast(Dict[str, Any], r) for r in cursor.fetchall()]
@@ -1548,7 +1549,7 @@ def api_validate_anime_links(mal_id: int):
         if conn:
             cursor = conn.cursor()
             for link_id in dead_link_ids:
-                cursor.execute("UPDATE video_links SET is_active = FALSE WHERE id = %s", (link_id,))
+                cursor.execute("UPDATE video_links SET is_active = FALSE WHERE id = ?", (link_id,))
             conn.commit()
             removed_count = cursor.rowcount
             cursor.close()
@@ -1594,18 +1595,18 @@ def api_validate_batch_links():
     if not conn:
         return jsonify({"error": "DB bağlantı hatası"}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     if mal_ids:
         # Belirli anime'ler
-        placeholders = ",".join(["%s"] * len(mal_ids))
+        placeholders = ",".join(["?"] * len(mal_ids))
         cursor.execute(f"""
             SELECT vl.id, vl.video_url, a.mal_id
             FROM video_links vl
             JOIN episodes e ON vl.episode_id = e.id
             JOIN animes a ON e.anime_id = a.id
             WHERE a.mal_id IN ({placeholders}) AND vl.is_active = TRUE
-            LIMIT %s
+            LIMIT ?
         """, (*mal_ids, limit))
     else:
         # Tüm aktif linkler
@@ -1616,7 +1617,7 @@ def api_validate_batch_links():
             JOIN animes a ON e.anime_id = a.id
             WHERE vl.is_active = TRUE
             ORDER BY vl.updated_at ASC
-            LIMIT %s
+            LIMIT ?
         """, (limit,))
 
     links = [cast(Dict[str, Any], r) for r in cursor.fetchall()]
@@ -1665,7 +1666,7 @@ def api_validate_batch_links():
         if conn:
             cursor = conn.cursor()
             for link_id in dead_link_ids:
-                cursor.execute("UPDATE video_links SET is_active = FALSE WHERE id = %s", (link_id,))
+                cursor.execute("UPDATE video_links SET is_active = FALSE WHERE id = ?", (link_id,))
             conn.commit()
             removed_count = len(dead_link_ids)
             cursor.close()
@@ -1699,13 +1700,13 @@ def api_cleanup_dead_links():
     if not conn:
         return jsonify({"error": "DB bağlantı hatası"}), 500
 
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor()
 
     # Kaç tane ölü link var?
     cursor.execute("""
         SELECT COUNT(*) as count FROM video_links
         WHERE is_active = FALSE
-        AND updated_at < DATE_SUB(NOW(), INTERVAL %s DAY)
+        AND updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)
     """, (older_than_days,))
 
     result = cast(Dict[str, Any], cursor.fetchone())
@@ -1717,7 +1718,7 @@ def api_cleanup_dead_links():
         cursor.execute("""
             DELETE FROM video_links
             WHERE is_active = FALSE
-            AND updated_at < DATE_SUB(NOW(), INTERVAL %s DAY)
+            AND updated_at < DATE_SUB(NOW(), INTERVAL ? DAY)
         """, (older_than_days,))
         conn.commit()
         deleted_count = cursor.rowcount
