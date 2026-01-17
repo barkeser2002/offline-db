@@ -91,7 +91,7 @@ def player():
     if not anime_raw:
         return "Anime bulunamadı", 404
 
-    anime = cast(Dict[str, Any], anime_raw)
+    anime = dict(anime_raw)
 
     # Bölümleri çek
     conn = db.get_connection()
@@ -332,7 +332,7 @@ def api_json_endpoint():
         if not anime_raw:
             return jsonify({"error": "Anime çekilemedi", "mal_id": mal_id}), 500
 
-    anime = cast(Dict[str, Any], anime_raw)
+    anime = dict(anime_raw)
     anime_db_id = int(anime["id"])
 
     # Cover URL
@@ -705,45 +705,6 @@ def api_stream(mal_id, episode):
         "episode": episode,
         "videos": result_videos
     })
-
-
-@api_bp.route("/api/discover")
-def api_discover():
-    """Gelişmiş filtreleme API'si."""
-    genre_ids = request.args.getlist("genres[]", type=int)
-    if not genre_ids and request.args.get("genre"):
-        genre_ids = [request.args.get("genre", type=int)]
-
-    year = request.args.get("year", type=int)
-    score_min = request.args.get("score_min", type=float)
-    anime_type = request.args.get("type")
-    sort_by = request.args.get("sort", "popularity")
-    page = request.args.get("page", 1, type=int)
-    limit = 20
-    offset = (page - 1) * limit
-
-    results = db.discover_animes(
-        genre_ids=genre_ids,
-        year=year,
-        score_min=score_min,
-        anime_type=anime_type,
-        sort_by=sort_by,
-        limit=limit,
-        offset=offset
-    )
-
-    # JSON serileştirme (Decimal vs.)
-    results = db.serialize_for_json(results)
-
-    return jsonify(results)
-
-
-@api_bp.route("/api/trending")
-def api_trending():
-    """Platformda trend olan anime'leri döndür."""
-    limit = request.args.get("limit", 10, type=int)
-    trending = db.get_trending_anime(limit)
-    return jsonify(trending)
 
 
 @api_bp.route("/api/discover", methods=["GET", "POST"])
@@ -1770,3 +1731,248 @@ def api_cleanup_dead_links():
         "deleted": deleted_count if permanent else 0,
         "message": f"{dead_count} ölü link bulundu" + (f", {deleted_count} kalıcı olarak silindi" if permanent else "")
     })
+
+@api_bp.route("/api/anime/<int:mal_id>/fetch-episodes/<source_name>", methods=["POST"])
+def fetch_episodes_from_source(mal_id: int, source_name: str):
+    """Belirli bir kaynaktan anime bölümlerini çek ve kaydet."""
+    try:
+        # Anime'yi doğrula
+        anime = db.get_anime_by_mal_id(mal_id)
+        if not anime:
+            return jsonify({"error": "Anime bulunamadı"}), 404
+
+        # Kaynak ID'sini al
+        source_id = db.get_source_id(source_name)
+        if not source_id:
+            return jsonify({"error": f"Kaynak '{source_name}' bulunamadı"}), 404
+
+        # Anime-kaynak eşleşmesini kontrol et
+        conn = db.get_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT source_anime_id, source_slug FROM anime_sources
+                WHERE anime_id = ? AND source_id = ?
+            """, (anime["id"], source_id))
+            source_match = cursor.fetchone()
+            cursor.close()
+            conn.close()
+
+            if not source_match:
+                return jsonify({"error": f"Anime '{source_name}' kaynağında bulunamadı"}), 404
+
+            source_anime_id, source_slug = source_match["source_anime_id"], source_match["source_slug"]
+        else:
+            return jsonify({"error": "Veritabanı bağlantı hatası"}), 500
+
+        # Kaynağa göre adaptörü seç
+        adapter_map = {
+            "animecix": animecix,
+            "anizle": anizle,
+            "tranime": tranime,
+            "turkanime": turkanime
+        }
+
+        if source_name not in adapter_map:
+            return jsonify({"error": f"Desteklenmeyen kaynak: {source_name}"}), 400
+
+        adapter = adapter_map[source_name]
+
+        # Bölümleri çek
+        try:
+            if source_name == "animecix":
+                # AnimeciX için özel işlem
+                episodes_data = adapter._episodes_for_title(source_anime_id)
+            elif source_name == "anizle":
+                episodes_data = adapter.get_anime_episodes(source_slug)
+            elif source_name == "tranime":
+                episodes_data = adapter.get_anime_episodes(source_slug)
+            elif source_name == "turkanime":
+                episodes_data = adapter.get_anime_episodes(source_slug)
+            else:
+                return jsonify({"error": "Adaptör bulunamadı"}), 500
+
+        except Exception as e:
+            return jsonify({"error": f"Bölüm çekme hatası: {str(e)}"}), 500
+
+        # Bölümleri kaydet
+        saved_count = 0
+        for ep_data in episodes_data:
+            try:
+                if source_name == "animecix":
+                    ep_num = ep_data.get("season_num", 1)  # AnimeciX'te bölüm numarası yok gibi
+                    title = ep_data.get("name", f"Bölüm {ep_num}")
+                elif hasattr(ep_data, 'episode_number'):
+                    ep_num = ep_data.episode_number
+                    title = ep_data.name
+                else:
+                    continue
+
+                # Bölümü kaydet
+                episode_id = db.insert_or_update_episode(anime["id"], ep_num, title)
+                if episode_id:
+                    saved_count += 1
+
+            except Exception as e:
+                print(f"[API] Bölüm kaydetme hatası: {e}")
+                continue
+
+        return jsonify({
+            "success": True,
+            "message": f"{saved_count} bölüm {source_name}'dan çekildi ve kaydedildi",
+            "episodes_saved": saved_count,
+            "source": source_name
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
+
+@api_bp.route("/api/anime/<int:mal_id>/sources")
+def get_anime_sources(mal_id: int):
+    """Anime'nin mevcut kaynaklarını getir."""
+    try:
+        anime = db.get_anime_by_mal_id(mal_id)
+        if not anime:
+            return jsonify({"error": "Anime bulunamadı"}), 404
+
+        conn = db.get_connection()
+        if not conn:
+            return jsonify({"error": "Veritabanı bağlantı hatası"}), 500
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT s.name as source_name, s.base_url, asrc.source_anime_id,
+                   asrc.source_slug, asrc.source_title
+            FROM anime_sources asrc
+            JOIN sources s ON asrc.source_id = s.id
+            WHERE asrc.anime_id = ?
+        """, (anime["id"],))
+
+        sources = []
+        for row in cursor.fetchall():
+            sources.append({
+                "name": row["source_name"],
+                "base_url": row["base_url"],
+                "source_anime_id": row["source_anime_id"],
+                "source_slug": row["source_slug"],
+                "source_title": row["source_title"]
+            })
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"sources": sources})
+
+    except Exception as e:
+        return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
+
+@api_bp.route("/api/anime/<int:mal_id>/episodes")
+def get_anime_episodes(mal_id: int):
+    """Anime'nin bölümlerini getir."""
+    try:
+        anime = db.get_anime_by_mal_id(mal_id)
+        if not anime:
+            return jsonify({"error": "Anime bulunamadı"}), 404
+
+        conn = db.get_connection()
+        if not conn:
+            return jsonify({"error": "Veritabanı bağlantı hatası"}), 500
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT e.episode_number, e.title,
+                   COUNT(vl.id) as video_count
+            FROM episodes e
+            LEFT JOIN video_links vl ON e.id = vl.episode_id
+            WHERE e.anime_id = ?
+            GROUP BY e.id
+            ORDER BY e.episode_number
+        """, (anime["id"],))
+
+        episodes = []
+        for row in cursor.fetchall():
+            episodes.append({
+                "episode_number": row["episode_number"],
+                "title": row["title"],
+                "video_count": row["video_count"]
+            })
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"episodes": episodes})
+
+    except Exception as e:
+        return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
+
+@api_bp.route("/api/anime/<int:mal_id>/episode/<int:episode_number>/stream/<source_name>")
+def get_episode_stream(mal_id: int, episode_number: int, source_name: str):
+    """Belirli bir bölüm için gerçek zamanlı video stream linki al."""
+    try:
+        # Anime'yi doğrula
+        anime = db.get_anime_by_mal_id(mal_id)
+        if not anime:
+            return jsonify({"error": "Anime bulunamadı"}), 404
+
+        # Kaynak ID'sini al
+        source_id = db.get_source_id(source_name)
+        if not source_id:
+            return jsonify({"error": f"Kaynak '{source_name}' bulunamadı"}), 404
+
+        # Anime-kaynak eşleşmesini kontrol et
+        conn = db.get_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT source_anime_id, source_slug FROM anime_sources
+                WHERE anime_id = ? AND source_id = ?
+            """, (anime["id"], source_id))
+            source_match = cursor.fetchone()
+            cursor.close()
+            conn.close()
+
+            if not source_match:
+                return jsonify({"error": f"Anime '{source_name}' kaynağında bulunamadı"}), 404
+
+            source_anime_id, source_slug = source_match["source_anime_id"], source_match["source_slug"]
+        else:
+            return jsonify({"error": "Veritabanı bağlantı hatası"}), 500
+
+        # Bölümü bul
+        episode = db.get_episode_by_number(anime["id"], episode_number)
+        if not episode:
+            return jsonify({"error": f"Bölüm {episode_number} bulunamadı"}), 404
+
+        # Kaynağa göre adaptörü seç ve video linkini çek
+        adapter_map = {
+            "animecix": animecix,
+            "anizle": anizle,
+            "tranime": tranime,
+            "turkanime": turkanime
+        }
+
+        if source_name not in adapter_map:
+            return jsonify({"error": f"Desteklenmeyen kaynak: {source_name}"}), 400
+
+        adapter = adapter_map[source_name]
+
+        # Video linkini çek (örnek episode slug kullanarak)
+        episode_slug = f"{source_slug}-{episode_number}-bolum"  # Adaptöre göre ayarlanmalı
+        
+        try:
+            streams = adapter.get_episode_streams(episode_slug)
+            if streams:
+                # İlk stream'i döndür
+                stream = streams[0]
+                return jsonify({
+                    "stream_url": stream["url"],
+                    "quality": stream.get("quality", "default"),
+                    "fansub": stream.get("fansub", "Unknown")
+                })
+            else:
+                return jsonify({"error": "Video linki bulunamadı"}), 404
+        except Exception as e:
+            return jsonify({"error": f"Video çekme hatası: {str(e)}"}), 500
+
+    except Exception as e:
+        return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500

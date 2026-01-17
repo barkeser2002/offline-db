@@ -145,36 +145,50 @@
 <script>
     const malId = {{ anime.mal_id }};
     const currentEp = {{ current_ep }};
+    const urlParams = new URLSearchParams(window.location.search);
+    const sourceName = urlParams.get('source') || 'animecix'; // Default to animecix
     let progressInterval;
 
     async function loadStreams() {
         const container = document.getElementById('player-container');
         try {
-            const resp = await fetch(`/api/stream/${malId}/${currentEp}`);
+            // Fetch real-time stream from source
+            const resp = await fetch(`/api/anime/${malId}/episode/${currentEp}/stream/${sourceName}`);
             const data = await resp.json();
 
-            if (data.videos && data.videos.length > 0) {
-                const video = data.videos[0]; // Load the first (best quality) video
-                if (video.type === 'iframe' || video.video_url.includes('iframe') || video.stream_url.includes('iframe')) {
-                    container.innerHTML = `<iframe src="${video.stream_url}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
-                } else {
-                    container.innerHTML = `
-                        <video id="main-player" class="w-full h-full" controls autoplay>
-                            <source src="${video.stream_url}" type="video/mp4">
-                            Your browser does not support the video tag.
-                        </video>`;
+            if (data.stream_url) {
+                // Create blob URL for security
+                const blobUrl = await createBlobUrl(data.stream_url);
+                
+                container.innerHTML = `
+                    <video id="main-player" class="w-full h-full" controls autoplay>
+                        <source src="${blobUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>`;
 
-                    setupProgressTracking();
-                }
+                setupProgressTracking();
             } else {
                 container.innerHTML = `
                     <div class="text-center p-8">
-                        <p class="text-red-500 mb-4">No working video links found for this episode.</p>
+                        <p class="text-red-500 mb-4">${data.error || 'No working video links found for this episode.'}</p>
                         <button onclick="location.reload()" class="bg-blue-600 px-4 py-2 rounded">Try Refresh</button>
                     </div>`;
             }
         } catch (e) {
             container.innerHTML = `<p class="text-red-500">Error loading stream: ${e.message}</p>`;
+        }
+    }
+
+    async function createBlobUrl(videoUrl) {
+        try {
+            // Fetch video as blob
+            const response = await fetch(videoUrl);
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch (e) {
+            console.error('Error creating blob URL:', e);
+            // Fallback to direct URL
+            return videoUrl;
         }
     }
 

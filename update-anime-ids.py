@@ -185,15 +185,10 @@ logger.separator()
 
 if git_available and [item.a_path for item in Repo(path=".").index.diff(None) if item.a_path.endswith(".json")]:
 
-    logger.info("Saving Anime ID Changes")
-
-    with open("README.md", "r") as f:
-        data = f.readlines()
-
-    data[2] = f"Last generated at: {datetime.now(UTC).strftime('%B %d, %Y %I:%M %p')} UTC\n"
-
-    with open("README.md", "w") as f:
-        f.writelines(data)
+    logger.info("Anime ID Changes Detected, Committing to Git")
+    repo = Repo(path=".")
+    repo.index.add(["anime_ids.json"])
+    repo.index.commit(f"Update Anime IDs - {datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S UTC')}")
 else:
     logger.info("No Anime ID Changes Detected")
 

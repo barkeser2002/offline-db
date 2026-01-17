@@ -9,9 +9,13 @@ from blueprints.ui import ui_bp
 from blueprints.api import api_bp
 from blueprints.user import user_bp
 from blueprints.social import social_bp
+import db
 
 app = Flask(__name__)
 app.secret_key = "senpai-v4-secret-key" # In production this should be in .env
+
+# Veritabanını başlat
+db.init_database()
 
 app.register_blueprint(ui_bp)
 app.register_blueprint(api_bp)

@@ -6,15 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# MySQL Veritabanı Ayarları
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-    "charset": os.getenv("DB_CHARSET"),
-    "collation": os.getenv("DB_COLLATION")
-}
+# SQLite Veritabanı Ayarları
+DB_PATH = os.getenv("DB_PATH", "anime_db.sqlite")
 
 # Jikan API (MyAnimeList)
 JIKAN_API_BASE = "https://api.jikan.moe/v4"
@@ -25,6 +18,10 @@ COVER_DIR = "./covers"
 
 # Güncellenen anime'lerin takibi
 UPDATED_IDS_FILE = "updated_mal_ids.json"
+
+# Flask API ayarları
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8988"))
 
 # Adaptör ayarları
 ADAPTERS = {

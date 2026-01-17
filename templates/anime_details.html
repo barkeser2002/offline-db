@@ -101,6 +101,20 @@
     </div>
 </div>
 
+<!-- Sources Section -->
+<section class="mt-8 px-4 md:px-8">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl md:text-3xl font-black text-white border-l-4 border-blue-600 pl-4 uppercase tracking-tighter">Available Sources</h2>
+        <div class="text-sm text-gray-400" id="sources-count">
+            Loading sources...
+        </div>
+    </div>
+
+    <div id="sources-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Sources will be loaded here -->
+    </div>
+</section>
+
 <!-- Episodes Section -->
 <section class="mt-12 px-4 md:px-8">
     <div class="flex items-center justify-between mb-6">
@@ -151,6 +165,161 @@
 
 {% block scripts %}
 <script>
+    // Global variables
+    let animeSources = [];
+
+    // Load sources when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAnimeSources();
+    });
+
+    async function loadAnimeSources() {
+        try {
+            const response = await fetch(`/api/anime/{{ anime.mal_id }}/sources`);
+            const data = await response.json();
+
+            if (data.sources) {
+                animeSources = data.sources;
+                displaySources(data.sources);
+            } else {
+                document.getElementById('sources-container').innerHTML = '<p class="text-gray-400">No sources found for this anime.</p>';
+            }
+
+            document.getElementById('sources-count').textContent = `${data.sources ? data.sources.length : 0} Sources`;
+        } catch (error) {
+            console.error('Error loading sources:', error);
+            document.getElementById('sources-container').innerHTML = '<p class="text-red-400">Error loading sources.</p>';
+            document.getElementById('sources-count').textContent = 'Error';
+        }
+    }
+
+    function displaySources(sources) {
+        const container = document.getElementById('sources-container');
+
+        if (sources.length === 0) {
+            container.innerHTML = '<p class="text-gray-400">No sources found for this anime.</p>';
+            return;
+        }
+
+        const sourceCards = sources.map(source => `
+            <div class="bg-gray-800 rounded-lg p-4 border border-gray-700 mb-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-lg font-bold text-white capitalize">${source.name}</h3>
+                    <span class="px-2 py-1 bg-blue-600 text-white text-xs rounded-full">${source.name}</span>
+                </div>
+
+                <div class="mb-3">
+                    <p class="text-sm text-gray-400 truncate" title="${source.source_title || source.source_slug}">
+                        ${source.source_title || source.source_slug || 'N/A'}
+                    </p>
+                </div>
+
+                <div class="flex gap-2 mb-4">
+                    <button onclick="fetchEpisodes('${source.name}')"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 text-sm"
+                            id="fetch-btn-${source.name}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Fetch Episodes
+                    </button>
+
+                    <a href="${source.base_url || '#'}" target="_blank"
+                       class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-3 rounded-lg transition flex items-center justify-center text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Episodes for this source -->
+                <div id="episodes-${source.name}" class="border-t border-gray-700 pt-4">
+                    <div class="text-sm text-gray-400 mb-2">Episodes from ${source.name}:</div>
+                    <div id="episodes-list-${source.name}" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                        <!-- Episodes will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        container.innerHTML = sourceCards;
+
+        // Load episodes for each source
+        sources.forEach(source => {
+            loadSourceEpisodes(source.name);
+        });
+    }
+
+    async function fetchEpisodes(sourceName) {
+        const button = document.getElementById(`fetch-btn-${sourceName}`);
+        const originalText = button.innerHTML;
+
+        // Disable button and show loading
+        button.disabled = true;
+        button.innerHTML = `
+            <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Fetching...
+        `;
+
+        try {
+            const response = await fetch(`/api/anime/{{ anime.mal_id }}/fetch-episodes/${sourceName}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message, 'success');
+                // Reload episodes for this source
+                setTimeout(() => {
+                    loadSourceEpisodes(sourceName);
+                }, 500);
+            } else {
+                showNotification(data.error || 'Failed to fetch episodes', 'error');
+                // Reset button
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        } catch (error) {
+            console.error('Error fetching episodes:', error);
+            showNotification('Network error while fetching episodes', 'error');
+            // Reset button
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+
+    async function loadSourceEpisodes(sourceName) {
+        const container = document.getElementById(`episodes-list-${sourceName}`);
+        
+        try {
+            // Load episodes from database
+            const response = await fetch(`/api/anime/{{ anime.mal_id }}/episodes`);
+            const data = await response.json();
+            
+            if (data.episodes && data.episodes.length > 0) {
+                const episodeCards = data.episodes.map(ep => `
+                    <a href="/player?mal_id={{ anime.mal_id }}&ep=${ep.episode_number}&source=${sourceName}"
+                       class="bg-gray-700 hover:bg-gray-600 rounded p-2 text-center text-sm text-white transition">
+                        ${ep.episode_number}
+                    </a>
+                `).join('');
+                container.innerHTML = episodeCards;
+            } else {
+                container.innerHTML = '<p class="text-gray-500 text-sm col-span-full">No episodes fetched yet</p>';
+            }
+        } catch (error) {
+            console.error('Error loading episodes:', error);
+            container.innerHTML = '<p class="text-red-500 text-sm col-span-full">Error loading episodes</p>';
+        }
+    }
+
     async function addToWatchlist(malId) {
         try {
             const resp = await fetch('/api/user/watchlist', {

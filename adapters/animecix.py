@@ -129,6 +129,42 @@ def _video_streams(embed_path: str) -> List[Dict[str, str]]:
     return out
 
 
+def get_episode_streams(episode_url: str, timeout: int = 10) -> List[Dict[str, str]]:
+    """
+    Episode URL'sinden video stream'leri çek.
+    
+    Args:
+        episode_url: Episode sayfasının URL'si
+        timeout: Zaman aşımı
+        
+    Returns:
+        Stream listesi [{"label": "...", "url": "..."}, ...]
+    """
+    try:
+        # Episode URL'sinden embed path'i çıkar
+        # Örnek: https://animecix.tv/watch/fullmetal-alchemist-brotherhood-1-bolum
+        # Embed: /embed/fullmetal-alchemist-brotherhood-1-bolum
+        if "/watch/" in episode_url:
+            embed_path = episode_url.replace("/watch/", "/embed/")
+            return _video_streams(embed_path)
+        else:
+            # Eğer direkt embed URL'i ise
+            if episode_url.startswith("/embed/"):
+                return _video_streams(episode_url)
+            else:
+                # Tam URL ise path'i al
+                parsed = urlparse(episode_url)
+                if parsed.path.startswith("/embed/"):
+                    return _video_streams(parsed.path)
+                elif parsed.path.startswith("/watch/"):
+                    embed_path = parsed.path.replace("/watch/", "/embed/")
+                    return _video_streams(embed_path)
+    except Exception as e:
+        print(f"[AnimeciX] Stream çekme hatası: {e}")
+    
+    return []
+
+
 @dataclass
 class CixEpisode:
     title: str

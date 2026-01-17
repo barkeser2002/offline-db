@@ -188,7 +188,7 @@ def home():
     stats = {"anime_count": 0, "episode_count": 0, "video_count": 0}
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) as count FROM animes")
         res = cursor.fetchone()
         if res: stats["anime_count"] = int(cast(Dict[str, Any], res)["count"])
@@ -265,19 +265,19 @@ def player():
     if not anime_raw:
         return "Anime bulunamadı", 404
 
-    anime = cast(Dict[str, Any], anime_raw)
+    anime = dict(anime_raw)
 
     # Bölümleri çek
     conn = db.get_connection()
     episodes = []
 
     if conn:
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("""
             SELECT e.*,
                    (SELECT COUNT(*) FROM video_links WHERE episode_id = e.id) as video_count
             FROM episodes e
-            WHERE e.anime_id = %s
+            WHERE e.anime_id = ?
             ORDER BY e.episode_number
         """, (int(anime["id"]),))
 
@@ -294,7 +294,7 @@ def player():
         conn.close()
 
     # Eğer bölüm yoksa, en az total episode kadar placeholder oluştur
-    total_eps = anime.get("episodes")
+    total_eps = dict(anime).get("episodes")
     if not episodes and total_eps:
         episodes = [{"episode_number": i, "title": f"Episode {i}", "has_video": False}
                     for i in range(1, int(total_eps) + 1)]
@@ -341,18 +341,6 @@ def season_page(year, season):
                                   in_db_count=in_db_count)
 
 
-@ui_bp.route("/profile")
-def profile_page():
-    """Kullanıcı profil sayfası."""
-    from flask import session
-    if "user_id" not in session:
-        return redirect(url_for("ui.login_page"))
-
-    user = db.get_user_by_id(session["user_id"])
-    stats = db.get_user_stats(session["user_id"])
-
-    return render_template("profile.html", user=user, stats=stats)
-
 @ui_bp.route("/watchlist")
 def watchlist_page():
     """İzleme listesi sayfası."""
@@ -380,10 +368,18 @@ def search_page():
 def discover_page():
     """Keşfet (Gelişmiş Filtreleme) sayfası."""
     genres = db.get_genres()
-    return render_template("discover.html", genres=genres)
+    current_filters = {
+        "sort": request.args.get("sort", "score"),
+        "genres": request.args.getlist("genres"),
+        "type": request.args.get("type", ""),
+        "status": request.args.get("status", ""),
+        "min_score": request.args.get("min_score", ""),
+        "year": request.args.get("year", "")
+    }
+    return render_template("discover.html", genres=genres, current_filters=current_filters)
 
 
-@ui_bp.route("/covers/<filename>")
+@ui_bp.route("/anime/covers/<filename>")
 def serve_cover(filename):
     """Cover resimlerini sun."""
     from flask import send_from_directory

@@ -14,7 +14,7 @@ def verify_innodb_migration():
             password=DB_CONFIG["password"],
             database=DB_CONFIG["database"]
         )
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
 
         cursor.execute(f"SELECT TABLE_NAME, ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '{DB_CONFIG['database']}'")
 
