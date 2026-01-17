@@ -27,7 +27,7 @@ jobs:
 
       - name: 🔍 Run Pylint Analysis
         run: |
-          python -m pylint --output-format=parseable --reports=no --disable=C,R,W . 2>/dev/null > pylint_report.txt || true
+          python -m pylint --output-format=parseable --reports=yes . 2>/dev/null > pylint_report.txt || true
 
       - name: 📤 Upload Pylint Report
         uses: actions/upload-artifact@v4
@@ -35,12 +35,22 @@ jobs:
           name: pylint-report
           path: pylint_report.txt
 
-      - name: ✅ Check Pylint Results
+      - name: ✅ Check Pylint Score
         run: |
-          if [ -f pylint_report.txt ] && [ -s pylint_report.txt ]; then
-            echo "❌ Pylint found issues:"
-            cat pylint_report.txt
+          # Extract the score from pylint output
+          SCORE=$(grep "Your code has been rated at" pylint_report.txt | grep -o "[0-9]\+\.[0-9]\+")
+          
+          if [ -z "$SCORE" ]; then
+            echo "❌ Could not find pylint score in report"
+            exit 1
+          fi
+          
+          echo "📊 Pylint Score: $SCORE/10"
+          
+          # Check if score is 5.0 or below
+          if (( $(echo "$SCORE <= 5.0" | bc -l) )); then
+            echo "❌ Pylint score is too low ($SCORE/10). Minimum required: 5.0/10"
             exit 1
           else
-            echo "✅ No pylint issues found!"
+            echo "✅ Pylint score is acceptable ($SCORE/10)"
           fi
