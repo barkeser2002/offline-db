@@ -29,7 +29,7 @@ api_bp = Blueprint('api', __name__)
 
 @api_bp.route("/info")
 def info_page():
-    """Anime bilgi ve JSON çıktısı."""
+    """Anime information and JSON output."""
     mal_id = request.args.get("mal_id", type=int)
     if not mal_id:
         return jsonify({"error": "mal_id required"}), 400
@@ -42,8 +42,8 @@ def info_page():
 
 @api_bp.route("/")
 def home():
-    """Ana sayfa."""
-    # İstatistikleri çek
+    """Home page."""
+    # Fetch statistics
     conn = db.get_connection()
     stats = {"anime_count": 0, "episode_count": 0, "video_count": 0}
 
@@ -79,22 +79,22 @@ def home():
 
 @api_bp.route("/player")
 def player():
-    """Anime oynatıcı sayfası."""
+    """Anime player page."""
     mal_id = request.args.get("mal_id", type=int)
     ep = request.args.get("ep", 1, type=int)
 
     if not mal_id:
         return redirect("/")
 
-    # Anime bilgilerini çek (Helper kullan)
+    # Fetch anime info (Using helper)
     anime_raw = ensure_anime_data(mal_id)
 
     if not anime_raw:
-        return "Anime bulunamadı", 404
+        return "Anime not found", 404
 
     anime = dict(anime_raw)
 
-    # Bölümleri çek
+    # Fetch episodes
     conn = db.get_connection()
     episodes = []
 
@@ -120,10 +120,10 @@ def player():
         cursor.close()
         conn.close()
 
-    # Eğer bölüm yoksa, en az total episode kadar placeholder oluştur
+    # If no episodes, create placeholders up to total episodes
     total_eps = anime.get("episodes")
     if not episodes and total_eps:
-        episodes = [{"episode_number": i, "title": f"{i}. Bölüm", "has_video": False}
+        episodes = [{"episode_number": i, "title": f"Episode {i}", "has_video": False}
                     for i in range(1, int(total_eps) + 1)]
 
     return render_template_string(PLAYER_TEMPLATE,
@@ -134,8 +134,8 @@ def player():
 
 @api_bp.route("/season/<int:year>/<season>")
 def season_page(year, season):
-    """Sezon anime listesi sayfası."""
-    # Jikan'dan sezon listesini çek
+    """Season anime list page."""
+    # Fetch season list from Jikan
     anime_list_raw = fetch_all_season_anime(year, season)
 
     # Veritabanındaki MAL ID'leri
@@ -170,7 +170,7 @@ def season_page(year, season):
 
 @api_bp.route("/search")
 def search_page():
-    """Arama sayfası."""
+    """Search page."""
     query = request.args.get("q", "")
 
     if not query:
@@ -215,7 +215,7 @@ def proxy():
 @api_bp.route("/api/dbanimelist")
 def api_db_anime_list():
     """
-    Veritabanındaki tüm anime'lerin kısa listesi (hızlı çekilebilir).
+    A short list of all animes in the database (fast to fetch).
 
     Response:
     {
@@ -254,7 +254,7 @@ def api_db_anime_list():
     cursor.close()
     conn.close()
 
-    # Cover URL'lerini oluştur
+    # Generate cover URLs
     host = request.host_url.rstrip('/')
     animes = []
     for row in rows:
@@ -572,19 +572,19 @@ def api_json_endpoint():
 
 @api_bp.route("/api/anime/<int:mal_id>")
 def api_anime(mal_id):
-    """Anime bilgilerini döndür."""
+    """Return anime information."""
     anime = db.get_anime_by_mal_id(mal_id)
     if not anime:
-        return jsonify({"error": "Anime bulunamadı"}), 404
+        return jsonify({"error": "Anime not found"}), 404
     return jsonify(anime)
 
 
 @api_bp.route("/api/episodes/<int:mal_id>")
 def api_episodes(mal_id):
-    """Bölüm listesini döndür."""
+    """Return episode list."""
     anime_raw = db.get_anime_by_mal_id(mal_id)
     if not anime_raw:
-        return jsonify({"error": "Anime bulunamadı"}), 404
+        return jsonify({"error": "Anime not found"}), 404
 
     anime = cast(Dict[str, Any], anime_raw)
 
@@ -611,8 +611,8 @@ def api_episodes(mal_id):
 @api_bp.route("/api/stream/<int:mal_id>/<int:episode>")
 def api_stream(mal_id, episode):
     """
-    Bölüm video stream URL'lerini döndür.
-    yt-dlp ile en iyi kaliteyi bul.
+    Return episode video stream URLs.
+    Find the best quality using yt-dlp.
     """
     refresh = request.args.get('refresh', 'false').lower() == 'true'
     anime_raw = ensure_anime_data(mal_id)
@@ -710,7 +710,7 @@ def api_stream(mal_id, episode):
 
 @api_bp.route("/api/discover", methods=["GET", "POST"])
 def api_discover():
-    """Gelişmiş filtreleme ile anime listesini döndür."""
+    """Return anime list with advanced filtering."""
     if request.method == "POST":
         filters = request.get_json() or {}
     else:
@@ -743,13 +743,13 @@ def api_discover():
 
 @api_bp.route("/api/seasons")
 def api_seasons():
-    """Mevcut sezonları listele."""
+    """List available seasons."""
     return jsonify(get_available_seasons()[:100])
 
 
 @api_bp.route("/api/seasons/<int:year>/<season>")
 def api_season_anime(year, season):
-    """Sezon anime listesini döndür."""
+    """Return season anime list."""
     anime_list = fetch_all_season_anime(year, season)
 
     result = []
@@ -771,7 +771,7 @@ def api_season_anime(year, season):
 
 @api_bp.route("/api/trending")
 def api_trending():
-    """Son 7 günün en çok izlenen anime'lerini getir."""
+    """Fetch the most watched animes from the last 7 days."""
     limit = request.args.get("limit", 10, type=int)
     trending = db.get_trending_anime(limit=limit)
 
@@ -784,6 +784,13 @@ def api_trending():
             r["cover"] = dict(r).get("cover_url")
 
     return jsonify(trending)
+
+@api_bp.route("/api/schedule")
+def api_schedule():
+    """Fetch the weekly anime schedule."""
+    day = request.args.get("day")
+    schedule = jikan.get_schedule(day=day)
+    return jsonify(schedule)
 
 
 @api_bp.route("/api/sync/season", methods=["POST"])
