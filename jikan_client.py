@@ -8,8 +8,8 @@ from config import JIKAN_API_BASE, HTTP_TIMEOUT
 
 class JikanClient:
     """
-    Jikan API için merkezi bir istemci.
-    Rate limiting, yeniden deneme ve hata yönetimini yönetir.
+    Central client for the Jikan API.
+    Handles rate limiting, retries, and error management.
     """
     def __init__(self, base_url: str = JIKAN_API_BASE, timeout: int = HTTP_TIMEOUT):
         self.base_url = base_url
@@ -18,7 +18,7 @@ class JikanClient:
         self._lock = threading.Lock()
 
     def _rate_limit(self):
-        """Jikan API rate limit - saniyede max 3 istek."""
+        """Jikan API rate limit - max 3 requests per second."""
         with self._lock:
             now = time.time()
             elapsed = now - self._last_request_time
@@ -112,6 +112,15 @@ class JikanClient:
     def get_recommendations(self, limit: int = 10) -> list:
         """Anime önerilerini alır."""
         response = self._request("recommendations/anime", params={"limit": limit})
+        return response.get("data", []) if response else []
+
+    def get_schedule(self, day: Optional[str] = None) -> list:
+        """Haftalık yayın akışını alır."""
+        params = {}
+        if day:
+            params["filter"] = day
+
+        response = self._request("schedules", params=params)
         return response.get("data", []) if response else []
 
 # Global Jikan istemcisi

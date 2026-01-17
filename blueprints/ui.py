@@ -6,6 +6,7 @@ import threading
 
 import db
 from config import JIKAN_API_BASE, JIKAN_RATE_LIMIT
+from jikan_client import jikan
 
 ui_bp = Blueprint('ui', __name__)
 
@@ -187,7 +188,7 @@ def profile_page():
 
 @ui_bp.route("/user/<username>")
 def public_profile(username):
-    """Genel kullanıcı profili."""
+    """Public user profile."""
     from flask import session
     user_raw = db.get_user_by_username(username)
     if not user_raw:
@@ -412,7 +413,7 @@ def search_page():
 
 @ui_bp.route("/community")
 def community_page():
-    """Topluluk ve Leaderboard sayfası."""
+    """Community and Leaderboard page."""
     leaderboard = db.get_top_watchers(limit=20)
     return render_template("community.html", leaderboard=leaderboard)
 
@@ -429,6 +430,15 @@ def discover_page():
         "year": request.args.get("year", "")
     }
     return render_template("discover.html", genres=genres, current_filters=current_filters)
+
+@ui_bp.route("/schedule")
+def schedule_page():
+    """Weekly anime schedule page."""
+    import datetime
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    today = datetime.datetime.now().strftime("%A").lower()
+
+    return render_template("schedule.html", today=today, days=days)
 
 
 @ui_bp.route("/anime/covers/<filename>")
