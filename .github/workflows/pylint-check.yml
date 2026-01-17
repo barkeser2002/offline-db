@@ -24,6 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install requests lxml GitPython flask pylint
+          sudo apt-get update && sudo apt-get install -y bc
 
       - name: 🔍 Run Pylint Analysis
         run: |
