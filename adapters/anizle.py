@@ -21,6 +21,12 @@ from typing import List, Dict, Any, Optional, Tuple
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# CF Bypass modülünü içe aktar
+try:
+    from .turkanime_bypass import CFBypassError
+    HAS_CF_BYPASS = True
+except ImportError:
+    HAS_CF_BYPASS = False
 
 import requests
 
@@ -40,12 +46,7 @@ USE_REMOTE_SERVER = False  # True yapılırsa eski sunucu kullanılır
 
 # Hız ayarları
 HTTP_TIMEOUT = 10  # Varsayılan timeout (saniye)
-
-# MAX_WORKERS'ı config'den al
-try:
-    from config import MAX_WORKERS
-except ImportError:
-    MAX_WORKERS = 200  # Varsayılan
+MAX_WORKERS = 8  # Paralel işlem sayısı
 
 # Global anime veritabanı (cache)
 _anime_database: List[Dict[str, Any]] = []
@@ -55,6 +56,20 @@ _database_loaded: bool = False
 _cf_session: Optional[Any] = None
 
 
+def _get_cf_session() -> Any:
+    """CF session'ı döndür (singleton)."""
+    global _cf_session
+    if _cf_session is None:
+        if HAS_CF_BYPASS:
+            try:
+                from .turkanime_bypass import _get_cf_session as get_sess
+                _cf_session = get_sess()
+            except ImportError:
+                _cf_session = requests.Session()
+        else:
+            # Fallback: basit bir nesne oluştur
+            _cf_session = requests.Session()
+    return _cf_session
 
 
 def _http_get(url: str, timeout: int = 60, headers: Optional[Dict[str, str]] = None) -> Optional[requests.Response]:
@@ -77,7 +92,11 @@ def _http_get(url: str, timeout: int = 60, headers: Optional[Dict[str, str]] = N
         except ImportError:
             pass
         
-
+        # CF Bypass modülü dene
+        if HAS_CF_BYPASS:
+            session = _get_cf_session()
+            if hasattr(session, "get"):
+                return session.get(url, headers=default_headers)
         
         # Fallback: normal requests
         return requests.get(url, headers=default_headers, timeout=timeout)
@@ -107,6 +126,11 @@ def _http_post(url: str, timeout: int = 60, headers: Optional[Dict[str, str]] = 
         except ImportError:
             pass
         
+        # CF Bypass modülü dene
+        if HAS_CF_BYPASS:
+            session = _get_cf_session()
+            if hasattr(session, "post"):
+                return session.post(url, headers=default_headers, data=data)
         
         # Fallback: normal requests
         return requests.post(url, headers=default_headers, timeout=timeout, data=data)
@@ -123,22 +147,6 @@ def _http_post(url: str, timeout: int = 60, headers: Optional[Dict[str, str]] = 
 def load_anime_database(force_reload: bool = False) -> List[Dict[str, Any]]:
     """
     Anizm.pro'dan anime veritabanını yükle.
-    
-    API Endpoint: https://anizm.pro/getAnimeListForSearch
-    
-    Her anime şu alanları içerir:
-    - info_id: int
-    - info_title: str (Türkçe/orijinal başlık)
-    - info_titleoriginal: str
-    - info_titleenglish: str
-    - info_slug: str
-    - info_poster: str
-    - info_summary: str
-    - info_year: str
-    - info_malid: int (MyAnimeList ID)
-    - info_malpoint: float
-    - lastEpisode: list (son bölümler)
-    - categories: list (kategoriler)
     """
     global _anime_database, _database_loaded
     
@@ -191,14 +199,6 @@ def _similarity_score(query: str, text: str) -> float:
 def search_anizle(query: str, limit: int = 20, timeout: int = 60) -> List[Tuple[str, str]]:
     """
     Anizle/Anizm üzerinde anime ara.
-    
-    Args:
-        query: Arama sorgusu
-        limit: Maksimum sonuç sayısı
-        timeout: Zaman aşımı (saniye)
-    
-    Returns:
-        Liste[Tuple[slug, title]] formatında sonuçlar
     """
     # Uzak sunucu modunda eski API'yi kullan
     if USE_REMOTE_SERVER:
@@ -258,13 +258,6 @@ def _search_remote(query: str, limit: int = 20, timeout: int = 60) -> List[Tuple
 def get_anime_episodes(slug: str, timeout: int = 60) -> List[Tuple[str, str]]:
     """
     Bir animenin bölümlerini getir.
-    
-    Args:
-        slug: Anime slug'ı (örn: "one-piece")
-        timeout: Zaman aşımı (saniye)
-    
-    Returns:
-        Liste[Tuple[episode_slug, episode_title]] formatında bölümler
     """
     # Önce veritabanından dene
     database = load_anime_database()
@@ -273,8 +266,6 @@ def get_anime_episodes(slug: str, timeout: int = 60) -> List[Tuple[str, str]]:
         if anime.get("info_slug") == slug:
             episodes = anime.get("lastEpisode", [])
             if episodes:
-                # Veritabanındaki son bölümler sınırlı olabilir
-                # Tam listeyi almak için sayfayı çekmemiz gerekebilir
                 result = []
                 for ep in episodes:
                     ep_slug = ep.get("episode_slug", "")
@@ -282,8 +273,6 @@ def get_anime_episodes(slug: str, timeout: int = 60) -> List[Tuple[str, str]]:
                     if ep_slug and ep_title:
                         result.append((ep_slug, ep_title))
                 
-                # Veritabanında sadece son birkaç bölüm var
-                # Tam liste için anime sayfasını çek
                 if len(result) > 0:
                     full_episodes = _fetch_all_episodes_from_page(slug, timeout)
                     if full_episodes:
@@ -313,12 +302,8 @@ def _fetch_all_episodes_from_page(slug: str, timeout: int = 60) -> List[Tuple[st
         
         html = response.text
         
-        # Bölüm linklerini regex ile çek
-        # Format: href="/episode-slug" data-order="X" title="Episode Title"
-        # veya: <a href="/episode-slug">Episode Title</a>
-        
         episodes: List[Tuple[int, str, str]] = []
-        seen_episode_nums: set = set()  # Bölüm numarasına göre duplikasyon kontrolü
+        seen_episode_nums: set = set()
         
         # Pattern 1: data-order ile
         pattern1 = r'href="/?([^"]+?-bolum[^"]*)"[^>]*data-order="(\d+)"[^>]*>([^<]+)'
@@ -381,18 +366,16 @@ def _get_episodes_remote(slug: str, timeout: int = 60) -> List[Tuple[str, str]]:
 def _unpack_js(p: str, a: int, c: int, k: List[str]) -> str:
     """Dean Edwards' JavaScript packer decoder."""
     def e(c: int, a: int) -> str:
-        """Base conversion function."""
         first = '' if c < a else e(c // a, a)
         c = c % a
         if c > 35:
-            second = chr(c + 29)  # A-Z (uppercase)
+            second = chr(c + 29)
         elif c > 9:
-            second = chr(c + 87)  # a-z (lowercase)
+            second = chr(c + 87)
         else:
             second = str(c)
         return first + second
     
-    # Sözlük oluştur
     d = {}
     temp_c = c
     while temp_c:
@@ -400,7 +383,6 @@ def _unpack_js(p: str, a: int, c: int, k: List[str]) -> str:
         key = e(temp_c, a)
         d[key] = k[temp_c] if temp_c < len(k) and k[temp_c] else key
     
-    # Kelimeleri değiştir
     def replace_func(match):
         return d.get(match.group(0), match.group(0))
     
@@ -409,8 +391,6 @@ def _unpack_js(p: str, a: int, c: int, k: List[str]) -> str:
 
 def _extract_fireplayer_id(player_html: str) -> Optional[str]:
     """Player HTML'inden FirePlayer ID'sini çıkar."""
-    
-    # Packed JS'i bul
     eval_match = re.search(
         r"eval\(function\(p,a,c,k,e,d\)\{.*?\}return p\}\('(.*?)',(\d+),(\d+),'([^']+)'\.split\('\|'\),0,\{\}\)\)",
         player_html, re.S
@@ -422,7 +402,6 @@ def _extract_fireplayer_id(player_html: str) -> Optional[str]:
         c = int(eval_match.group(3))
         k = eval_match.group(4).split('|')
         
-        # Decode edip FirePlayer pattern'ini ara
         try:
             decoded = _unpack_js(p, a, c, k)
             id_match = re.search(r'FirePlayer\s*\(\s*["\']([a-f0-9]{32})["\']', decoded)
@@ -431,7 +410,6 @@ def _extract_fireplayer_id(player_html: str) -> Optional[str]:
         except Exception as e:
             print(f"[Anizle] JS decode hatası: {e}")
     
-    # Fallback: Doğrudan HTML'de FirePlayer pattern'i ara
     fp_direct = re.search(r'FirePlayer\s*\(["\']([a-f0-9]{32})["\']', player_html)
     if fp_direct:
         return fp_direct.group(1)
@@ -440,11 +418,7 @@ def _extract_fireplayer_id(player_html: str) -> Optional[str]:
 
 
 def _get_video_stream_from_player(player_id: str, video_name: str) -> Optional[Dict[str, str]]:
-    """
-    FirePlayer ID'sinden gerçek video stream URL'sini al.
-    
-    Endpoint: anizmplayer.com/player/index.php?data=ID&do=getVideo
-    """
+    """FirePlayer ID'sinden gerçek video stream URL'sini al."""
     try:
         url = f"{PLAYER_BASE_URL}/player/index.php?data={player_id}&do=getVideo"
         response = _http_post(
@@ -460,7 +434,6 @@ def _get_video_stream_from_player(player_id: str, video_name: str) -> Optional[D
         
         data = response.json()
         
-        # HLS stream
         if data.get("hls") and data.get("securedLink"):
             return {
                 "url": data["securedLink"],
@@ -468,7 +441,6 @@ def _get_video_stream_from_player(player_id: str, video_name: str) -> Optional[D
                 "type": "hls"
             }
         
-        # Video source
         if data.get("videoSource"):
             return {
                 "url": data["videoSource"],
@@ -484,11 +456,7 @@ def _get_video_stream_from_player(player_id: str, video_name: str) -> Optional[D
 
 
 def _get_player_iframe_url(video_url: str) -> Optional[Tuple[str, str]]:
-    """
-    Video endpoint'inden player ID'sini al.
-    
-    Returns: (player_id, video_name) tuple
-    """
+    """Video endpoint'inden player ID'sini al."""
     try:
         response = _http_get(
             video_url,
@@ -505,8 +473,6 @@ def _get_player_iframe_url(video_url: str) -> Optional[Tuple[str, str]]:
         data = response.json()
         player_html = data.get("player", "")
         
-        # iframe src'den player ID'yi çıkar
-        # src="https://anizle.org/player/1538440" -> 1538440
         iframe_match = re.search(r'/player/(\d+)', player_html)
         if iframe_match:
             return iframe_match.group(1), "Anizm Player"
@@ -519,11 +485,7 @@ def _get_player_iframe_url(video_url: str) -> Optional[Tuple[str, str]]:
 
 
 def _get_translator_videos(translator_url: str) -> List[Dict[str, str]]:
-    """
-    Translator endpoint'inden video listesini al.
-    
-    Returns: [{"url": video_url, "name": video_name}, ...]
-    """
+    """Translator endpoint'inden video listesini al."""
     videos = []
     
     try:
@@ -542,8 +504,6 @@ def _get_translator_videos(translator_url: str) -> List[Dict[str, str]]:
         data = response.json()
         html = data.get("data", "")
         
-        # video attribute'li anchor'ları bul
-        # <a href="#" video="https://anizle.org/video/1538440" data-video-name="Player Name">
         pattern = r'video="([^"]+)"[^>]*data-video-name="([^"]*)"'
         matches = re.findall(pattern, html)
         
@@ -553,7 +513,6 @@ def _get_translator_videos(translator_url: str) -> List[Dict[str, str]]:
                 "name": video_name or "Player"
             })
         
-        # Alternatif pattern (data-video-name önce)
         if not videos:
             pattern2 = r'data-video-name="([^"]*)"[^>]*video="([^"]+)"'
             matches2 = re.findall(pattern2, html)
@@ -571,17 +530,11 @@ def _get_translator_videos(translator_url: str) -> List[Dict[str, str]]:
 
 
 def _get_episode_translators(episode_slug: str) -> List[Dict[str, str]]:
-    """
-    Episode sayfasından translator listesini al.
-    
-    Returns: [{"url": translator_url, "name": fansub_name}, ...]
-    """
+    """Episode sayfasından translator listesini al."""
     translators = []
     
-    # URL'yi düzelt
     clean_slug = episode_slug
     if clean_slug.startswith(("http://", "https://")):
-        # Tam URL verilmişse
         url = clean_slug
     else:
         clean_slug = clean_slug.lstrip("/")
@@ -591,14 +544,10 @@ def _get_episode_translators(episode_slug: str) -> List[Dict[str, str]]:
         response = _http_get(url)
         
         if response is None or response.status_code != 200:
-            print(f"[Anizle] Episode sayfası alınamadı: {url}")
             return []
         
         html = response.text
         
-        # translator attribute'li elementleri bul
-        # translator="https://anizle.org/episode/18851/translator/83196"
-        # data-fansub-name="VictoriaSubs"
         pattern = r'translator="([^"]+)"[^>]*data-fansub-name="([^"]*)"'
         matches = re.findall(pattern, html)
         
@@ -619,29 +568,18 @@ def _get_episode_translators(episode_slug: str) -> List[Dict[str, str]]:
 
 
 def _process_single_video(video_info: Dict[str, str]) -> Optional[Dict[str, str]]:
-    """
-    Tek bir video için stream URL'sini al.
-    Thread-safe helper fonksiyon.
-    
-    Args:
-        video_info: {"url": video_url, "name": video_name, "fansub": fansub_name}
-    
-    Returns:
-        Dict[url, label] veya None
-    """
+    """Tek bir video için stream URL'sini al."""
     try:
         video_url = video_info["url"]
         video_name = video_info["name"]
         fansub_name = video_info["fansub"]
         
-        # Player ID'yi al
         iframe_result = _get_player_iframe_url(video_url)
         if not iframe_result:
             return None
         
         player_id, _ = iframe_result
         
-        # Player sayfasını al (anizle.org/player/, Referer gerekli!)
         player_page_url = f"{API_BASE_URL}/player/{player_id}"
         player_response = _http_get(
             player_page_url,
@@ -652,12 +590,10 @@ def _process_single_video(video_info: Dict[str, str]) -> Optional[Dict[str, str]
         if player_response is None or player_response.status_code != 200:
             return None
         
-        # FirePlayer ID'sini çöz
         fireplayer_id = _extract_fireplayer_id(player_response.text)
         if not fireplayer_id:
             return None
         
-        # Gerçek video URL'sini al
         return _get_video_stream_from_player(fireplayer_id, f"{fansub_name} - {video_name}")
         
     except Exception:
@@ -665,33 +601,14 @@ def _process_single_video(video_info: Dict[str, str]) -> Optional[Dict[str, str]
 
 
 def get_episode_streams(episode_slug: str, timeout: int = HTTP_TIMEOUT) -> List[Dict[str, str]]:
-    """
-    Bir bölümün video stream URL'lerini getir (paralel işlem).
-    
-    API Akışı:
-    1. Episode sayfasından translator'ları al
-    2. Her translator için video listesini al
-    3. Tüm videolar paralel olarak işlenir:
-       - Player ID'sini al
-       - anizmplayer.com player sayfasından FirePlayer ID'sini çöz
-       - anizmplayer.com'dan gerçek video URL'sini al
-    
-    Args:
-        episode_slug: Bölüm slug'ı
-        timeout: Zaman aşımı (saniye)
-    
-    Returns:
-        Liste[Dict[url, label]] formatında stream'ler
-    """
+    """Bir bölümün video stream URL'lerini getir."""
     streams: List[Dict[str, str]] = []
     
-    # 1. Translator'ları al
     translators = _get_episode_translators(episode_slug)
     
     if not translators:
         return _get_streams_remote(episode_slug, timeout)
     
-    # 2. Tüm video bilgilerini topla
     all_videos: List[Dict[str, str]] = []
     for translator in translators:
         fansub_name = translator["name"]
@@ -707,9 +624,6 @@ def get_episode_streams(episode_slug: str, timeout: int = HTTP_TIMEOUT) -> List[
     if not all_videos:
         return _get_streams_remote(episode_slug, timeout)
     
-    print(f"[Anizle] {len(all_videos)} video taranıyor...")
-    
-    # 3. Paralel olarak tüm videoları işle
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         futures = {executor.submit(_process_single_video, video): video for video in all_videos}
         
@@ -724,7 +638,6 @@ def get_episode_streams(episode_slug: str, timeout: int = HTTP_TIMEOUT) -> List[
     if not streams:
         return _get_streams_remote(episode_slug, timeout)
     
-    print(f"[Anizle] {len(streams)} stream bulundu")
     return streams
 
 
@@ -792,13 +705,12 @@ class AnizleAnime:
 
     @property
     def episodes(self) -> List[AnizleEpisode]:
-        """Animenin bölümlerini getir (duplikasyonlar filtrelenir)."""
+        """Animenin bölümlerini getir."""
         eps: List[AnizleEpisode] = []
-        seen_urls: set = set()  # Duplikasyon kontrolü
+        seen_urls: set = set()
         episodes_data = get_anime_episodes(self.slug)
         if episodes_data:
             for slug, label in episodes_data:
-                # URL bazlı duplikasyon kontrolü
                 if slug not in seen_urls:
                     seen_urls.add(slug)
                     eps.append(AnizleEpisode(title=label, url=slug))
@@ -815,22 +727,13 @@ class AnizleAnime:
 
 
 def get_anime_details(slug: str) -> Optional[AnizleAnime]:
-    """
-    Anime detaylarını al.
-    
-    Args:
-        slug: Anime slug'ı
-    
-    Returns:
-        AnizleAnime nesnesi veya None
-    """
+    """Anime detaylarını al."""
     database = load_anime_database()
     
     for anime in database:
         if anime.get("info_slug") == slug:
             return AnizleAnime.from_database(anime)
     
-    # Bulunamazsa basit nesne döndür
     return AnizleAnime(slug=slug, title=slug.replace("-", " ").title())
 
 

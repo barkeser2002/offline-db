@@ -11,6 +11,7 @@ curl_cffi>=0.14.0
 
 # HTML parsing
 lxml>=6.0.2
+beautifulsoup4>=4.12.3
 
 # Git (opsiyonel)
 GitPython>=3.1.46
