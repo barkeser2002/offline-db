@@ -55,41 +55,63 @@ def ensure_episode_videos(mal_id: int, episode_number: int, anime_db_id: int, fo
         try:
             links = []
             if source_name == "anizle":
-                ep_slug = f"{source_slug}-{episode_number}-bolum"
-                links = anizle.get_episode_streams(ep_slug)
+                # Try different slug patterns
+                slugs = [
+                    f"{source_slug}-{episode_number}-bolum",
+                    f"{source_slug}-bolum-{episode_number}"
+                ]
+                for s in slugs:
+                    links = anizle.get_episode_streams(s)
+                    if links: break
             elif source_name == "animecix":
                 # Animecix requires fetching all episodes to find the one matching episode_number
                 cix_anime = animecix.CixAnime(id=source_anime_id, title="")
                 cix_eps = cix_anime.episodes
                 target_ep = None
                 for ep in cix_eps:
-                    match = re.search(r'(\d+)\.?\s*[Bb]ölüm', ep.title)
+                    match = re.search(r'(\d+)', ep.title)
                     if match and int(match.group(1)) == episode_number:
                         target_ep = ep
                         break
                 if target_ep and target_ep.url:
-                    links = animecix._video_streams(target_ep.url)
+                    links = animecix.get_episode_streams(target_ep.url)
             elif source_name == "tranime":
-                # TRAnime logic
-                tr_eps = tranime.get_anime_episodes(source_slug)
-                for ep in tr_eps:
-                    if ep.episode_number == episode_number:
-                        details = tranime.get_episode_details(ep.slug)
-                        if details:
-                            for f_id, f_name in details.fansubs:
-                                tr_sources = details.get_sources(f_id)
-                                for s in tr_sources:
-                                    iframe = s.get_iframe()
-                                    if iframe:
-                                        links.append({"url": iframe, "label": s.name, "fansub": f_name})
-                        break
+                # Try direct slug first
+                ep_slug = f"{source_slug}-{episode_number}-bolum-izle"
+                links = tranime.get_episode_streams(ep_slug)
+
+                if not links:
+                    # Fallback: get episodes and find matching number
+                    tr_eps = tranime.get_anime_episodes(source_slug)
+                    for ep in tr_eps:
+                        if ep.episode_number == episode_number:
+                            links = tranime.get_episode_streams(ep.slug)
+                            break
+            elif source_name == "turkanime":
+                ep_slug = f"{source_slug}-{episode_number}"
+                # TurkAnime might return TurkAnimeStream objects
+                raw_links = turkanime.get_episode_streams(ep_slug)
+                for rl in raw_links:
+                    if hasattr(rl, 'url'):
+                        links.append({
+                            "url": rl.url,
+                            "quality": getattr(rl, 'quality', '720p'),
+                            "fansub": getattr(rl, 'fansub', 'TurkAnime')
+                        })
+                    else:
+                        links.append(rl)
 
             for link in links:
-                url = link.get("url") or link.get("videoUrl")
-                if not url or url in found_links: continue
+                if isinstance(link, dict):
+                    url = link.get("url") or link.get("videoUrl")
+                    quality = link.get("label") or link.get("quality") or "default"
+                    fansub = link.get("fansub") or source_name.capitalize()
+                else:
+                    url = getattr(link, 'url', None)
+                    quality = getattr(link, 'quality', 'default')
+                    fansub = getattr(link, 'fansub', source_name.capitalize())
 
-                quality = link.get("label") or link.get("quality") or "default"
-                fansub = link.get("fansub") or source_name.capitalize()
+                if not url or url in found_links: continue
 
                 db.insert_video_link(episode_id, source_id, url, quality, fansub)
                 found_links.append(url)

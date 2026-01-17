@@ -75,12 +75,41 @@ def init_database():
     CREATE TABLE IF NOT EXISTS video_links (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         episode_id INTEGER NOT NULL,
-        url TEXT NOT NULL,
+        source_id INTEGER,
+        video_url TEXT NOT NULL,
         quality TEXT,
+        fansub TEXT,
         is_active BOOLEAN DEFAULT 1,
-        FOREIGN KEY (episode_id) REFERENCES episodes(id)
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (episode_id) REFERENCES episodes(id),
+        FOREIGN KEY (source_id) REFERENCES sources(id)
     )
     """)
+
+    # Migration for video_links table
+    try:
+        # Check if video_url column exists, if not rename url to video_url
+        cursor.execute("PRAGMA table_info(video_links)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'url' in columns and 'video_url' not in columns:
+            cursor.execute("ALTER TABLE video_links RENAME COLUMN url TO video_url")
+
+        # Add source_id if missing
+        if 'source_id' not in columns:
+            cursor.execute("ALTER TABLE video_links ADD COLUMN source_id INTEGER")
+
+        # Add fansub if missing
+        if 'fansub' not in columns:
+            cursor.execute("ALTER TABLE video_links ADD COLUMN fansub TEXT")
+
+        # Add timestamps if missing
+        if 'created_at' not in columns:
+            cursor.execute("ALTER TABLE video_links ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+        if 'updated_at' not in columns:
+            cursor.execute("ALTER TABLE video_links ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass
 
     # İzleme geçmişi
     cursor.execute("""
@@ -1167,6 +1196,26 @@ def insert_or_update_episode(anime_id, episode_number, title):
     conn.close()
     return episode_id
 
+def get_anime_sources(mal_id: int):
+    """Anime'nin mevcut kaynaklarını getir."""
+    conn = get_connection()
+    if not conn:
+        return []
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT s.name as source_name, s.id as source_id, asrc.source_slug, asrc.source_anime_id
+        FROM anime_sources asrc
+        JOIN sources s ON asrc.source_id = s.id
+        JOIN animes a ON asrc.anime_id = a.id
+        WHERE a.mal_id = ? AND s.is_active = 1
+    """, (mal_id,))
+
+    results = [dict(row) for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return results
+
 def get_all_mal_ids():
     """Tüm anime'lerin MAL ID'lerini getir."""
     conn = get_connection()
@@ -1242,6 +1291,56 @@ def get_live_search_results(query, limit=5):
     conn.close()
     return [dict(row) for row in rows]
 
+def insert_video_link(episode_id, source_id, video_url, quality, fansub):
+    """Video linkini ekle."""
+    conn = get_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO video_links (episode_id, source_id, video_url, quality, fansub)
+            VALUES (?, ?, ?, ?, ?)
+        """, (episode_id, source_id, video_url, quality, fansub))
+        conn.commit()
+        return cursor.lastrowid
+    except sqlite3.Error as e:
+        print(f"[DB] insert_video_link error: {e}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def delete_video_links_for_episode(anime_id, episode_number):
+    """Bölümün video linklerini sil."""
+    conn = get_connection()
+    if not conn:
+        return
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            DELETE FROM video_links
+            WHERE episode_id IN (SELECT id FROM episodes WHERE anime_id = ? AND episode_number = ?)
+        """, (anime_id, episode_number))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+
+def remove_dead_video_link(video_id):
+    """Video linkini pasif yap."""
+    conn = get_connection()
+    if not conn:
+        return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("UPDATE video_links SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (video_id,))
+        conn.commit()
+        return True
+    finally:
+        cursor.close()
+        conn.close()
+
 def get_video_links(anime_id: int, episode_number: int = None):
     """Anime'nin video linklerini getir. Episode number verilirse sadece o bölümün linklerini döndür."""
     conn = get_connection()
@@ -1253,23 +1352,25 @@ def get_video_links(anime_id: int, episode_number: int = None):
     if episode_number:
         # Belirli bölümün video linkleri
         cursor.execute("""
-            SELECT vl.*, e.episode_number, e.title as episode_title
+            SELECT vl.*, e.episode_number, e.title as episode_title, s.name as source_name
             FROM video_links vl
             JOIN episodes e ON vl.episode_id = e.id
-            WHERE e.anime_id = ? AND e.episode_number = ?
-            ORDER BY vl.quality, vl.fansub
+            LEFT JOIN sources s ON vl.source_id = s.id
+            WHERE e.anime_id = ? AND e.episode_number = ? AND vl.is_active = 1
+            ORDER BY vl.quality DESC, vl.fansub
         """, (anime_id, episode_number))
     else:
         # Tüm video linkleri
         cursor.execute("""
-            SELECT vl.*, e.episode_number, e.title as episode_title
+            SELECT vl.*, e.episode_number, e.title as episode_title, s.name as source_name
             FROM video_links vl
             JOIN episodes e ON vl.episode_id = e.id
-            WHERE e.anime_id = ?
-            ORDER BY e.episode_number, vl.quality, vl.fansub
+            LEFT JOIN sources s ON vl.source_id = s.id
+            WHERE e.anime_id = ? AND vl.is_active = 1
+            ORDER BY e.episode_number, vl.quality DESC, vl.fansub
         """, (anime_id,))
 
-    results = cursor.fetchall()
+    results = [dict(row) for row in cursor.fetchall()]
     cursor.close()
     conn.close()
     return results
