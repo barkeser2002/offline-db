@@ -1827,6 +1827,39 @@ def fetch_episodes_from_source(mal_id: int, source_name: str):
     except Exception as e:
         return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
 
+@api_bp.route("/api/notifications")
+def get_notifications():
+    """Kullanıcı bildirimlerini getir."""
+    from flask import session
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    notifications = db.get_unread_notifications(session["user_id"])
+    return jsonify({"notifications": notifications, "unread_count": len(notifications)})
+
+@api_bp.route("/api/notifications/read", methods=["POST"])
+def read_notifications():
+    """Bildirimleri okundu olarak işaretle."""
+    from flask import session
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    notif_ids = data.get("notification_ids") # None ise hepsi
+
+    success = db.mark_notifications_read(session["user_id"], notif_ids)
+    return jsonify({"success": success})
+
+@api_bp.route("/api/search/live")
+def live_search():
+    """Canlı arama sonuçlarını getir."""
+    query = request.args.get("q", "")
+    if len(query) < 2:
+        return jsonify({"results": []})
+
+    results = db.get_live_search_results(query, limit=6)
+    return jsonify({"results": results})
+
 @api_bp.route("/api/anime/<int:mal_id>/sources")
 def get_anime_sources(mal_id: int):
     """Anime'nin mevcut kaynaklarını getir."""

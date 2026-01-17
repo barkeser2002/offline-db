@@ -243,10 +243,74 @@
         }
     }
 
-    function escapeHTML(str) {
-        const p = document.createElement('p');
-        p.textContent = str;
-        return p.innerHTML;
+    let replyingTo = null;
+
+    function replyTo(commentId, username) {
+        replyingTo = commentId;
+        const input = document.getElementById('comment-input');
+        input.placeholder = `Replying to ${username}...`;
+        input.focus();
+
+        // Show a cancel button if not already there
+        if (!document.getElementById('cancel-reply')) {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.id = 'cancel-reply';
+            cancelBtn.className = 'text-xs text-red-500 hover:underline ml-4';
+            cancelBtn.textContent = 'Cancel Reply';
+            cancelBtn.onclick = () => {
+                replyingTo = null;
+                input.placeholder = "Share your thoughts about this episode...";
+                cancelBtn.remove();
+            };
+            document.querySelector('#comment-input').parentElement.appendChild(cancelBtn);
+        }
+    }
+
+    function renderComment(c, isReply = false) {
+        const safeUsername = escapeHTML(c.username);
+        const safeContent = escapeHTML(c.content).replace(/\n/g, '<br>');
+        const isMyComment = c.user_id === {{ session.user_id if session.user_id else 0 }};
+        const myUserId = {{ session.user_id if session.user_id else 0 }};
+
+        return `
+            <div id="comment-${c.id}" class="comment-card ${isReply ? 'mt-4 ml-6 border-l-2 border-gray-700 pl-4' : 'bg-gray-900/30 p-4 rounded-lg border border-gray-800'} relative group transition-all duration-300">
+                <div class="flex justify-between items-start mb-2">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs mr-3">
+                            ${safeUsername.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <span class="font-bold text-sm text-blue-400">${safeUsername}</span>
+                            <span class="text-[10px] text-gray-500 ml-2 uppercase">${new Date(c.created_at).toLocaleDateString()}</span>
+                            ${c.is_spoiler ? '<span class="ml-2 px-1.5 py-0.5 bg-red-900/30 text-red-500 text-[9px] font-bold rounded uppercase tracking-wider border border-red-900/50">Spoiler</span>' : ''}
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        ${myUserId ? `
+                        <button onclick="replyTo(${c.id}, '${safeUsername}')" class="text-gray-500 hover:text-blue-400 transition p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                        </button>
+                        ` : ''}
+                        ${isMyComment ? `
+                        <button onclick="deleteComment(${c.id})" class="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+                <div class="comment-text text-sm leading-relaxed text-gray-300 ${c.is_spoiler ? 'spoiler-blur cursor-pointer' : ''}"
+                     ${c.is_spoiler ? 'onclick="this.classList.toggle(\'unblurred\')"' : ''}>
+                    ${safeContent}
+                </div>
+                <div class="replies-container">
+                    ${c.replies ? c.replies.map(r => renderComment(r, true)).join('') : ''}
+                </div>
+            </div>
+        `;
     }
 
     async function loadComments() {
@@ -260,43 +324,18 @@
                 return;
             }
 
-            container.innerHTML = ''; // Clear pulse
-            comments.forEach(c => {
-                const commentEl = document.createElement('div');
-                commentEl.className = "bg-gray-900/30 p-4 rounded-lg border border-gray-800 relative group";
+            container.innerHTML = comments.map(c => renderComment(c)).join('');
 
-                const safeUsername = escapeHTML(c.username);
-                const safeContent = escapeHTML(c.content).replace(/\n/g, '<br>');
-                const isMyComment = c.user_id === {{ session.user_id if session.user_id else 0 }};
-
-                commentEl.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div class="flex items-center">
-                            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs mr-3">
-                                ${safeUsername.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <span class="font-bold text-sm">${safeUsername}</span>
-                                <span class="text-xs text-gray-500 ml-2">${new Date(c.created_at).toLocaleDateString()}</span>
-                                ${c.is_spoiler ? '<span class="ml-2 px-1.5 py-0.5 bg-red-900/30 text-red-500 text-[10px] font-bold rounded uppercase tracking-wider border border-red-900/50">Spoiler</span>' : ''}
-                            </div>
-                        </div>
-                        ${isMyComment ? `
-                            <button onclick="deleteComment(${c.id})" class="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
-                        ` : ''}
-                    </div>
-                    <div class="comment-text text-sm leading-relaxed text-gray-300 ${c.is_spoiler ? 'spoiler-blur cursor-pointer' : ''}"
-                         ${c.is_spoiler ? 'onclick="this.classList.toggle(\'unblurred\')"' : ''}>
-                        ${safeContent}
-                    </div>
-                `;
-                container.appendChild(commentEl);
-            });
+            // If there's a hash in URL (e.g. #comment-123), highlight and scroll to it
+            if (window.location.hash) {
+                const target = document.querySelector(window.location.hash);
+                if (target) {
+                    target.classList.add('ring-2', 'ring-blue-500', 'bg-blue-900/20');
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            }
         } catch (e) {
+            console.error(e);
             container.innerHTML = `<p class="text-red-500 text-sm">Failed to load comments.</p>`;
         }
     }
@@ -320,13 +359,19 @@
                     mal_id: malId,
                     episode: currentEp,
                     content: content,
-                    is_spoiler: spoiler.checked
+                    is_spoiler: spoiler.checked,
+                    parent_id: replyingTo
                 })
             });
 
             if (resp.ok) {
                 input.value = '';
                 spoiler.checked = false;
+                replyingTo = null;
+                input.placeholder = "Share your thoughts about this episode...";
+                const cancelBtn = document.getElementById('cancel-reply');
+                if (cancelBtn) cancelBtn.remove();
+
                 loadComments();
                 showNotification('Comment posted successfully!', 'success');
             } else {

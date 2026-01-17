@@ -111,7 +111,7 @@ def init_database():
     )
     """)
 
-    # Yorumlar tablosu
+    # Yorumlar tablosu (Threaded support)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,11 +120,74 @@ def init_database():
         episode_number INTEGER NOT NULL,
         content TEXT NOT NULL,
         is_spoiler BOOLEAN DEFAULT 0,
+        parent_id INTEGER DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        FOREIGN KEY (parent_id) REFERENCES comments(id)
+    )
+    """)
+
+    # Bildirimler tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL, -- 'reply', 'system', 'update'
+        message TEXT NOT NULL,
+        link TEXT,
+        is_read BOOLEAN DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Favoriler tablosu
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS favorites (
+        user_id INTEGER NOT NULL,
+        anime_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, anime_id),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (anime_id) REFERENCES animes(id)
     )
     """)
+
+    # Kullanıcı Aktivite Akışı
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_activity (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        type TEXT NOT NULL, -- 'watch', 'favorite', 'comment', 'follow'
+        anime_id INTEGER,
+        target_user_id INTEGER, -- For follows
+        message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        FOREIGN KEY (target_user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Takip Sistemi
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS follows (
+        follower_id INTEGER NOT NULL,
+        followed_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (follower_id, followed_id),
+        FOREIGN KEY (follower_id) REFERENCES users(id),
+        FOREIGN KEY (followed_id) REFERENCES users(id)
+    )
+    """)
+
+    # Migration: Add parent_id to comments if it doesn't exist
+    try:
+        cursor.execute("ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL")
+    except sqlite3.OperationalError:
+        # Column already exists
+        pass
 
     # Türler tablosu
     cursor.execute("""
@@ -245,31 +308,84 @@ def get_anime_by_mal_id(mal_id: int):
     result = cursor.fetchone()
     cursor.close()
     conn.close()
-    return result
+    return dict(result) if result else None
+
+def get_user_by_username(username):
+    conn = get_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    result = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return dict(result) if result else None
+
+def create_user(username, email, password_hash):
+    conn = get_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO users (username, email, password_hash)
+            VALUES (?, ?, ?)
+        """, (username, email, password_hash))
+        conn.commit()
+        user_id = cursor.lastrowid
+        return user_id
+    except sqlite3.IntegrityError:
+        return None
+    finally:
+        cursor.close()
+        conn.close()
 
 # Basit placeholder fonksiyonları
 def serialize_for_json(data):
     """JSON serileştirme için basit versiyon."""
+    if isinstance(data, list):
+        return [serialize_for_json(i) for i in data]
+    if isinstance(data, sqlite3.Row):
+        return dict(data)
+    if isinstance(data, dict):
+        return {k: serialize_for_json(v) for k, v in data.items()}
     return data
 
-def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False):
+def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False, parent_id=None):
     """Yorum ekle."""
     conn = get_connection()
     if not conn:
         return None
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO comments (user_id, anime_id, episode_number, content, is_spoiler)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, anime_id, episode_number, content, is_spoiler))
+        INSERT INTO comments (user_id, anime_id, episode_number, content, is_spoiler, parent_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, anime_id, episode_number, content, is_spoiler, parent_id))
     conn.commit()
     comment_id = cursor.lastrowid
+
+    # If it's a reply, notify the parent comment owner
+    if parent_id:
+        cursor.execute("SELECT user_id, content FROM comments WHERE id = ?", (parent_id,))
+        parent = cursor.fetchone()
+        if parent and parent["user_id"] != user_id:
+            cursor.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+            replier = cursor.fetchone()
+
+            cursor.execute("SELECT mal_id FROM animes WHERE id = ?", (anime_id,))
+            anime = cursor.fetchone()
+
+            msg = f"{replier['username']} replied to your comment: \"{content[:30]}...\""
+            link = f"/player?mal_id={anime['mal_id']}&ep={episode_number}#comment-{comment_id}"
+
+            add_notification(parent["user_id"], 'reply', msg, link)
+
     cursor.close()
     conn.close()
     return comment_id
 
-def get_episode_comments(anime_id, episode_number):
-    """Bölüm yorumlarını getir."""
+def get_comments(anime_id, episode_number):
+    """Bölüm yorumlarını getir (Threaded)."""
     conn = get_connection()
     if not conn:
         return []
@@ -279,12 +395,80 @@ def get_episode_comments(anime_id, episode_number):
         FROM comments c
         JOIN users u ON c.user_id = u.id
         WHERE c.anime_id = ? AND c.episode_number = ?
-        ORDER BY c.created_at DESC
+        ORDER BY c.created_at ASC
     """, (anime_id, episode_number))
-    results = cursor.fetchall()
+    rows = cursor.fetchall()
     cursor.close()
     conn.close()
-    return results
+
+    # Build thread structure
+    comments = [dict(row) for row in rows]
+    comment_map = {c['id']: c for c in comments}
+    root_comments = []
+
+    for c in comments:
+        c['replies'] = []
+        if c['parent_id'] and c['parent_id'] in comment_map:
+            comment_map[c['parent_id']]['replies'].append(c)
+        else:
+            root_comments.append(c)
+
+    # Reverse root comments to show newest first
+    root_comments.reverse()
+    return root_comments
+
+def get_episode_comments(anime_id, episode_number):
+    """Alias for get_comments."""
+    return get_comments(anime_id, episode_number)
+
+def add_notification(user_id, type, message, link=None):
+    """Bildirim ekle."""
+    conn = get_connection()
+    if not conn:
+        return None
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO notifications (user_id, type, message, link)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, type, message, link))
+    conn.commit()
+    notif_id = cursor.lastrowid
+    cursor.close()
+    conn.close()
+    return notif_id
+
+def get_unread_notifications(user_id, limit=20):
+    """Okunmamış bildirimleri getir."""
+    conn = get_connection()
+    if not conn:
+        return []
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM notifications
+        WHERE user_id = ? AND is_read = 0
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (user_id, limit))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def mark_notifications_read(user_id, notification_ids=None):
+    """Bildirimleri okundu olarak işaretle."""
+    conn = get_connection()
+    if not conn:
+        return False
+    cursor = conn.cursor()
+    if notification_ids:
+        placeholders = ",".join(["?"] * len(notification_ids))
+        cursor.execute(f"UPDATE notifications SET is_read = 1 WHERE user_id = ? AND id IN ({placeholders})", [user_id] + notification_ids)
+    else:
+        cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True
 
 def delete_comment(comment_id, user_id):
     """Yorum sil."""
@@ -365,13 +549,227 @@ def get_user_by_id(user_id):
     conn.close()
     return result
 
+def log_activity(user_id, type, anime_id=None, target_user_id=None, message=None, cursor=None):
+    """Kullanıcı aktivitesini kaydet."""
+    query = """
+        INSERT INTO user_activity (user_id, type, anime_id, target_user_id, message)
+        VALUES (?, ?, ?, ?, ?)
+    """
+    params = (user_id, type, anime_id, target_user_id, message)
+
+    if cursor:
+        cursor.execute(query, params)
+        return True
+
+    conn = get_connection()
+    if not conn: return False
+    try:
+        conn.execute(query, params)
+        conn.commit()
+        return True
+    except: return False
+    finally: conn.close()
+
 def get_user_stats(user_id):
+    """Kullanıcı istatistiklerini hesapla."""
+    conn = get_connection()
+    if not conn: return {}
+    cursor = conn.cursor()
+
+    # İzlenen anime sayısı
+    cursor.execute("SELECT COUNT(*) FROM watch_history WHERE user_id = ?", (user_id,))
+    total_watched = cursor.fetchone()[0]
+
+    # Toplam izlenen bölüm (tahmini)
+    cursor.execute("SELECT SUM(episode_number) FROM watch_history WHERE user_id = ?", (user_id,))
+    total_episodes = cursor.fetchone()[0] or 0
+
+    # Favori sayısı
+    cursor.execute("SELECT COUNT(*) FROM favorites WHERE user_id = ?", (user_id,))
+    total_favorites = cursor.fetchone()[0]
+
+    # Takipçi ve Takip edilen
+    cursor.execute("SELECT COUNT(*) FROM follows WHERE followed_id = ?", (user_id,))
+    followers = cursor.fetchone()[0]
+    cursor.execute("SELECT COUNT(*) FROM follows WHERE follower_id = ?", (user_id,))
+    following = cursor.fetchone()[0]
+
+    # İzleme listesi dağılımı
+    cursor.execute("SELECT status, COUNT(*) as count FROM watchlists WHERE user_id = ? GROUP BY status", (user_id,))
+    watchlist_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
+
+    cursor.close()
+    conn.close()
+
     return {
-        "total_watched": 0,
-        "total_episodes": 0,
-        "watchlist_counts": {},
-        "favorite_genres": []
+        "total_watched": total_watched,
+        "total_episodes": total_episodes,
+        "total_favorites": total_favorites,
+        "followers": followers,
+        "following": following,
+        "watchlist_counts": watchlist_counts
     }
+
+def toggle_favorite(user_id, mal_id):
+    """Favoriye ekle/çıkar."""
+    anime = get_anime_by_mal_id(mal_id)
+    if not anime: return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM favorites WHERE user_id = ? AND anime_id = ?", (user_id, anime["id"]))
+    is_fav = cursor.fetchone()
+
+    if is_fav:
+        cursor.execute("DELETE FROM favorites WHERE user_id = ? AND anime_id = ?", (user_id, anime["id"]))
+        action = "removed"
+    else:
+        cursor.execute("INSERT INTO favorites (user_id, anime_id) VALUES (?, ?)", (user_id, anime["id"]))
+        action = "added"
+        log_activity(user_id, "favorite", anime_id=anime["id"], message=f"Added {anime['title']} to favorites", cursor=cursor)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return action
+
+def is_favorite(user_id, mal_id):
+    anime = get_anime_by_mal_id(mal_id)
+    if not anime: return False
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM favorites WHERE user_id = ? AND anime_id = ?", (user_id, anime["id"]))
+    res = cursor.fetchone()
+    conn.close()
+    return res is not None
+
+def get_user_favorites(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.* FROM animes a
+        JOIN favorites f ON a.id = f.anime_id
+        WHERE f.user_id = ?
+        ORDER BY f.created_at DESC
+    """, (user_id,))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
+def get_user_activity(user_id, limit=20):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ua.*, a.title as anime_title, a.mal_id, u.username as target_username
+        FROM user_activity ua
+        LEFT JOIN animes a ON ua.anime_id = a.id
+        LEFT JOIN users u ON ua.target_user_id = u.id
+        WHERE ua.user_id = ?
+        ORDER BY ua.created_at DESC
+        LIMIT ?
+    """, (user_id, limit))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
+def toggle_follow(follower_id, followed_id):
+    if follower_id == followed_id: return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?", (follower_id, followed_id))
+    exists = cursor.fetchone()
+
+    if exists:
+        cursor.execute("DELETE FROM follows WHERE follower_id = ? AND followed_id = ?", (follower_id, followed_id))
+        action = "unfollowed"
+    else:
+        cursor.execute("INSERT INTO follows (follower_id, followed_id) VALUES (?, ?)", (follower_id, followed_id))
+        action = "followed"
+        target_user = get_user_by_id(followed_id)
+        log_activity(follower_id, "follow", target_user_id=followed_id, message=f"Started following {target_user['username']}", cursor=cursor)
+        add_notification(followed_id, "social", f"Someone started following you!", f"/user/{get_user_by_id(follower_id)['username']}")
+
+    conn.commit()
+    conn.close()
+    return action
+
+def is_following(follower_id, followed_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM follows WHERE follower_id = ? AND followed_id = ?", (follower_id, followed_id))
+    res = cursor.fetchone()
+    conn.close()
+    return res is not None
+
+def get_social_feed(user_id, limit=50):
+    """Takip edilen kişilerin aktivitelerini getir."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ua.*, u.username, a.title as anime_title, a.mal_id, tu.username as target_username
+        FROM user_activity ua
+        JOIN users u ON ua.user_id = u.id
+        JOIN follows f ON f.followed_id = ua.user_id
+        LEFT JOIN animes a ON ua.anime_id = a.id
+        LEFT JOIN users tu ON ua.target_user_id = tu.id
+        WHERE f.follower_id = ?
+        ORDER BY ua.created_at DESC
+        LIMIT ?
+    """, (user_id, limit))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
+def get_top_watchers(limit=10):
+    """En çok izleyen kullanıcıları getir."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT u.id, u.username,
+               COUNT(wh.id) as anime_count,
+               IFNULL(SUM(wh.episode_number), 0) as total_episodes
+        FROM users u
+        LEFT JOIN watch_history wh ON u.id = wh.user_id
+        GROUP BY u.id
+        ORDER BY total_episodes DESC
+        LIMIT ?
+    """, (limit,))
+    res = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in res]
+
+def update_watch_history(user_id, anime_id, episode_number, progress=0):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO watch_history (user_id, anime_id, episode_number)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, anime_id) DO UPDATE SET
+            episode_number = MAX(episode_number, excluded.episode_number),
+            updated_at = CURRENT_TIMESTAMP
+    """, (user_id, anime_id, episode_number))
+
+    anime = cursor.execute("SELECT title FROM animes WHERE id = ?", (anime_id,)).fetchone()
+    log_activity(user_id, "watch", anime_id=anime_id, message=f"Watched Episode {episode_number} of {anime['title']}", cursor=cursor)
+
+    conn.commit()
+    conn.close()
+
+def update_watchlist(user_id, anime_id, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO watchlists (user_id, anime_id, status)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, anime_id) DO UPDATE SET
+            status = excluded.status
+    """, (user_id, anime_id, status))
+
+    anime = cursor.execute("SELECT title FROM animes WHERE id = ?", (anime_id,)).fetchone()
+    log_activity(user_id, "watchlist", anime_id=anime_id, message=f"Moved {anime['title']} to {status}", cursor=cursor)
+
+    conn.commit()
+    conn.close()
 
 def get_user_watchlist(user_id):
     conn = get_connection()
@@ -389,11 +787,18 @@ def get_user_watch_history(user_id, limit=50):
     if not conn:
         return []
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM watch_history WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?", (user_id, limit))
+    cursor.execute("""
+        SELECT wh.*, a.title, a.mal_id, a.cover_local, a.cover_url
+        FROM watch_history wh
+        JOIN animes a ON wh.anime_id = a.id
+        WHERE wh.user_id = ?
+        ORDER BY wh.updated_at DESC
+        LIMIT ?
+    """, (user_id, limit))
     results = cursor.fetchall()
     cursor.close()
     conn.close()
-    return results
+    return [dict(row) for row in results]
 
 def get_anime_full_details(mal_id: int):
     """Anime'nin tüm detaylarını getir (bölümler, türler ile birlikte)."""
@@ -795,16 +1200,47 @@ def get_anime_by_title(title_query, limit=50):
         return []
 
     cursor = conn.cursor()
+    # Search in titles and title_english
     cursor.execute("""
         SELECT * FROM animes
         WHERE title LIKE ? OR title_english LIKE ?
-        ORDER BY score DESC
+        ORDER BY
+            CASE
+                WHEN title LIKE ? THEN 1
+                WHEN title_english LIKE ? THEN 2
+                ELSE 3
+            END,
+            score DESC
         LIMIT ?
-    """, (f"%{title_query}%", f"%{title_query}%", limit))
+    """, (f"%{title_query}%", f"%{title_query}%", f"{title_query}%", f"{title_query}%", limit))
     results = cursor.fetchall()
     cursor.close()
     conn.close()
     return results
+
+def get_live_search_results(query, limit=5):
+    """Live search için hızlı sonuçlar."""
+    conn = get_connection()
+    if not conn:
+        return []
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT mal_id, title, cover_url, cover_local, type, score, year
+        FROM animes
+        WHERE title LIKE ? OR title_english LIKE ?
+        ORDER BY
+            CASE
+                WHEN title LIKE ? THEN 1
+                WHEN title_english LIKE ? THEN 2
+                ELSE 3
+            END,
+            score DESC
+        LIMIT ?
+    """, (f"%{query}%", f"%{query}%", f"{query}%", f"{query}%", limit))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [dict(row) for row in rows]
 
 def get_video_links(anime_id: int, episode_number: int = None):
     """Anime'nin video linklerini getir. Episode number verilirse sadece o bölümün linklerini döndür."""

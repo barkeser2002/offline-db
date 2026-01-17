@@ -1,135 +1,214 @@
 {% extends "base.html" %}
 
+{% block title %}Dashboard - {{ user.username }}{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Profile Header -->
-    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden border border-gray-700 mb-8">
-        <div class="h-32 bg-gradient-to-r from-blue-600 to-purple-700"></div>
+    <div class="bg-gray-800 rounded-3xl shadow-2xl overflow-hidden border border-gray-700 mb-8">
+        <div class="h-48 bg-gradient-to-r from-blue-600 via-indigo-700 to-purple-800"></div>
         <div class="px-8 pb-8">
             <div class="relative flex flex-col md:flex-row items-center md:items-end -mt-16 gap-6">
-                <div class="w-32 h-32 bg-gray-900 rounded-2xl border-4 border-gray-800 overflow-hidden shadow-2xl">
+                <div class="w-40 h-40 bg-gray-900 rounded-3xl border-4 border-gray-800 overflow-hidden shadow-2xl">
                     <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.username }}" alt="Avatar" class="w-full h-full">
                 </div>
-                <div class="flex-grow text-center md:text-left">
-                    <h1 class="text-4xl font-black text-white">{{ user.username }}</h1>
-                    <p class="text-gray-400">Member since {{ user.created_at.strftime('%B %Y') if user.created_at else 'Recently' }}</p>
+                <div class="flex-grow text-center md:text-left pb-2">
+                    <h1 class="text-4xl md:text-5xl font-black text-white">{{ user.username }}</h1>
+                    <div class="flex flex-wrap justify-center md:justify-start gap-4 mt-2">
+                        <span class="text-gray-400 font-medium">Joined {{ user.created_at.strftime('%B %Y') if user.created_at else 'Recently' }}</span>
+                        <div class="flex gap-4 text-sm font-bold">
+                            <span class="text-blue-400">{{ stats.followers }} <span class="text-gray-500 uppercase text-[10px] tracking-widest">Followers</span></span>
+                            <span class="text-indigo-400">{{ stats.following }} <span class="text-gray-500 uppercase text-[10px] tracking-widest">Following</span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pb-2">
+                    <a href="/user/{{ user.username }}" class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl font-bold transition flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        View Public Profile
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <!-- Sidebar Stats -->
         <div class="lg:col-span-1 space-y-8">
-            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-                <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Statistics
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg space-y-6">
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    📊 Your Statistics
                 </h3>
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center p-3 bg-gray-900/50 rounded-lg">
-                        <span class="text-gray-400">Episodes Watched</span>
-                        <span class="text-blue-400 font-bold text-xl">{{ stats.total_watched }}</span>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="p-4 bg-gray-900/50 rounded-2xl border border-gray-700/50">
+                        <div class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Total Episodes</div>
+                        <div class="text-3xl font-black text-blue-500">{{ stats.total_episodes }}</div>
                     </div>
+                    <div class="p-4 bg-gray-900/50 rounded-2xl border border-gray-700/50">
+                        <div class="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Anime Completed</div>
+                        <div class="text-3xl font-black text-green-500">{{ stats.watchlist_counts.get('completed', 0) }}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
                     {% for status, count in stats.watchlist_counts.items() %}
-                    <div class="flex justify-between items-center p-3 bg-gray-900/50 rounded-lg border-l-4
-                        {% if status == 'watching' %}border-blue-500
-                        {% elif status == 'completed' %}border-green-500
-                        {% elif status == 'plan-to-watch' %}border-purple-500
-                        {% else %}border-gray-500{% endif %}">
-                        <span class="text-gray-400 capitalize">{{ status.replace('-', ' ') }}</span>
-                        <span class="text-white font-bold">{{ count }}</span>
+                    {% if status != 'completed' %}
+                    <div class="flex justify-between items-center px-2">
+                        <span class="text-sm text-gray-400 capitalize">{{ status.replace('-', ' ') }}</span>
+                        <span class="text-sm font-bold text-white">{{ count }}</span>
                     </div>
+                    {% endif %}
                     {% endfor %}
                 </div>
             </div>
 
-            <div class="bg-gray-800 rounded-xl p-6 border border-gray-700 shadow-lg">
-                <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    Favorite Genres
+            <!-- Favorites Sidebar -->
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700 shadow-lg space-y-6">
+                <h3 class="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    ❤️ Favorites
                 </h3>
-                <div class="flex flex-wrap gap-2">
-                    {% for genre in stats.favorite_genres %}
-                    <span class="px-3 py-1 bg-gray-900 text-gray-300 rounded-full text-sm border border-gray-700">
-                        {{ genre.name }} <span class="text-blue-500 ml-1 font-bold">{{ genre.count }}</span>
-                    </span>
+                <div class="grid grid-cols-2 gap-2">
+                    {% for fav in favorites[:4] %}
+                    <a href="/anime/{{ fav.mal_id }}" class="aspect-[3/4] rounded-lg overflow-hidden border border-gray-700 group">
+                        <img src="{{ fav.cover_local or fav.cover_url }}" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                    </a>
                     {% endfor %}
                 </div>
+                {% if favorites|length > 4 %}
+                <button onclick="switchTab('favorites')" class="w-full py-2 text-xs font-bold text-gray-400 hover:text-white transition uppercase tracking-widest">View All {{ favorites|length }}</button>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Main Content (History & Watchlist) -->
-        <div class="lg:col-span-2 space-y-8">
-            <!-- Tabs -->
-            <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-                <div class="flex border-b border-gray-700">
-                    <button onclick="switchTab('history')" id="tab-history-btn" class="flex-1 py-4 px-6 text-center font-bold text-blue-500 border-b-2 border-blue-500 transition">History</button>
-                    <button onclick="switchTab('watchlist')" id="tab-watchlist-btn" class="flex-1 py-4 px-6 text-center font-bold text-gray-400 hover:text-white transition">Watchlist</button>
+        <!-- Main Content (Tabs) -->
+        <div class="lg:col-span-3 space-y-8">
+            <div class="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden shadow-2xl">
+                <div class="flex border-b border-gray-700 overflow-x-auto no-scrollbar">
+                    <button onclick="switchTab('social')" id="tab-social-btn" class="flex-none py-5 px-8 text-sm font-black text-blue-500 border-b-2 border-blue-500 transition uppercase tracking-widest">Social Feed</button>
+                    <button onclick="switchTab('activity')" id="tab-activity-btn" class="flex-none py-5 px-8 text-sm font-black text-gray-500 hover:text-white transition uppercase tracking-widest">My Activity</button>
+                    <button onclick="switchTab('history')" id="tab-history-btn" class="flex-none py-5 px-8 text-sm font-black text-gray-500 hover:text-white transition uppercase tracking-widest">History</button>
+                    <button onclick="switchTab('watchlist')" id="tab-watchlist-btn" class="flex-none py-5 px-8 text-sm font-black text-gray-500 hover:text-white transition uppercase tracking-widest">Watchlist</button>
+                    <button onclick="switchTab('favorites')" id="tab-favorites-btn" class="flex-none py-5 px-8 text-sm font-black text-gray-500 hover:text-white transition uppercase tracking-widest">Favorites</button>
                 </div>
 
-                <div id="tab-history" class="p-6 space-y-4">
-                    {% if watch_history %}
-                    {% for item in watch_history %}
-                    <div class="flex items-center gap-4 p-3 bg-gray-900/30 rounded-lg hover:bg-gray-900/60 transition group">
-                        <a href="/anime/{{ item.mal_id }}" class="w-16 h-20 flex-shrink-0 rounded overflow-hidden">
-                            <img src="{{ item.cover_local or item.cover_url }}" class="w-full h-full object-cover">
-                        </a>
-                        <div class="flex-grow min-w-0">
-                            <a href="/anime/{{ item.mal_id }}" class="font-bold text-white group-hover:text-blue-400 transition truncate block">{{ item.title }}</a>
-                            <p class="text-sm text-gray-400">Episode {{ item.episode_number }}</p>
-                            <p class="text-[10px] text-gray-600 mt-1 uppercase">{{ item.updated_at.strftime('%d %b %Y %H:%M') }}</p>
+                <!-- Social Feed Tab -->
+                <div id="tab-social" class="p-8 space-y-6">
+                    <h3 class="text-xl font-bold text-white">Activity from Followed Users</h3>
+                    <div class="space-y-4">
+                        {% for item in social_feed %}
+                        <div class="bg-gray-900/50 p-5 rounded-2xl border border-gray-700/50 flex gap-4 items-center group hover:bg-gray-900 transition">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ item.username }}" class="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700" alt="">
+                            <div class="flex-grow">
+                                <div class="text-sm text-gray-300">
+                                    <a href="/user/{{ item.username }}" class="font-bold text-blue-400 hover:underline">{{ item.username }}</a>
+                                    {{ item.message }}
+                                </div>
+                                <div class="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-widest">{{ item.created_at }}</div>
+                            </div>
                         </div>
-                        <a href="/player?mal_id={{ item.mal_id }}&ep={{ item.episode_number }}" class="p-2 bg-blue-600/20 text-blue-500 rounded-full hover:bg-blue-600 hover:text-white transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </a>
+                        {% else %}
+                        <div class="text-center py-12 space-y-4">
+                            <div class="text-5xl">🔭</div>
+                            <p class="text-gray-500 italic">No activity from followed users. Go to the <a href="/community" class="text-blue-500 hover:underline">Community</a> page to find people to follow!</p>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                </div>
+
+                <!-- My Activity Tab -->
+                <div id="tab-activity" class="p-8 space-y-6 hidden">
+                    <h3 class="text-xl font-bold text-white">Your Recent Activity</h3>
+                    <div class="space-y-4">
+                        {% for item in activity %}
+                        <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-700/50 flex gap-4 items-center">
+                            <div class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center shrink-0">
+                                {% if item.type == 'watch' %} 📺
+                                {% elif item.type == 'favorite' %} ❤️
+                                {% elif item.type == 'comment' %} 💬
+                                {% else %} 🚀
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow">
+                                <div class="text-sm text-gray-300">{{ item.message }}</div>
+                                <div class="text-[10px] text-gray-500 mt-1 uppercase font-bold tracking-widest">{{ item.created_at }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="tab-history" class="p-8 space-y-4 hidden">
+                    {% if watch_history %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for item in watch_history %}
+                        <div class="flex items-center gap-4 p-4 bg-gray-900/30 rounded-2xl hover:bg-gray-900 transition group border border-gray-700/50">
+                            <a href="/anime/{{ item.mal_id }}" class="w-20 h-28 flex-shrink-0 rounded-xl overflow-hidden shadow-lg border border-gray-700">
+                                <img src="{{ item.cover_local or item.cover_url }}" class="w-full h-full object-cover">
+                            </a>
+                            <div class="flex-grow min-w-0">
+                                <a href="/anime/{{ item.mal_id }}" class="font-bold text-white group-hover:text-blue-400 transition truncate block">{{ item.title }}</a>
+                                <p class="text-xs text-gray-400 mt-1 font-bold uppercase tracking-widest">Episode {{ item.episode_number }}</p>
+                                <div class="mt-4">
+                                    <a href="/player?mal_id={{ item.mal_id }}&ep={{ item.episode_number }}" class="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-tighter bg-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-700 transition">
+                                        Continue <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" /></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                    <p class="text-center text-gray-500 py-8">No watch history yet.</p>
+                    <p class="text-center text-gray-500 py-12">No watch history yet.</p>
                     {% endif %}
                 </div>
 
-                <div id="tab-watchlist" class="p-6 space-y-8 hidden">
+                <!-- Watchlist Tab -->
+                <div id="tab-watchlist" class="p-8 space-y-12 hidden">
                     {% for status, items in watchlist.items() %}
                     {% if items %}
-                    <div>
-                        <h4 class="text-sm font-black text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full
+                    <div class="space-y-6">
+                        <h4 class="text-xs font-black text-gray-500 uppercase tracking-[0.2em] flex items-center gap-3">
+                            <span class="w-3 h-3 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]
                                 {% if status == 'watching' %}bg-blue-500
                                 {% elif status == 'completed' %}bg-green-500
                                 {% elif status == 'plan-to-watch' %}bg-purple-500
                                 {% else %}bg-gray-500{% endif %}"></span>
                             {{ status.replace('-', ' ') }} ({{ items|length }})
                         </h4>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             {% for item in items %}
                             <a href="/anime/{{ item.mal_id }}" class="block group">
-                                <div class="aspect-[2/3] rounded-lg overflow-hidden border border-gray-700 group-hover:border-blue-500 transition mb-2">
-                                    <img src="{{ item.cover_local or item.cover_url }}" class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                                <div class="aspect-[2/3] rounded-2xl overflow-hidden border-2 border-gray-700 group-hover:border-blue-500 transition-all duration-300 mb-2 shadow-lg">
+                                    <img src="{{ item.cover_local or item.cover_url }}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
                                 </div>
-                                <h5 class="text-xs font-bold text-white truncate">{{ item.title }}</h5>
-                                <div class="flex justify-between items-center mt-1">
-                                    <span class="text-[10px] text-gray-500 uppercase">{{ item.type }}</span>
-                                    <span class="text-[10px] text-yellow-500 font-bold">⭐ {{ item.score }}</span>
-                                </div>
+                                <h5 class="text-xs font-bold text-white truncate px-1">{{ item.title }}</h5>
                             </a>
                             {% endfor %}
                         </div>
                     </div>
                     {% endif %}
                     {% endfor %}
+                </div>
 
-                    {% if not watchlist.watching and not watchlist['plan-to-watch'] and not watchlist.completed %}
-                    <p class="text-center text-gray-500 py-8">Your watchlist is empty.</p>
-                    {% endif %}
+                <!-- Favorites Tab -->
+                <div id="tab-favorites" class="p-8 space-y-6 hidden">
+                    <h3 class="text-xl font-bold text-white">Your Favorite Anime</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {% for fav in favorites %}
+                        <a href="/anime/{{ fav.mal_id }}" class="block group">
+                            <div class="aspect-[3/4] rounded-2xl overflow-hidden border-2 border-gray-700 group-hover:border-pink-500 transition-all duration-300 mb-2 shadow-lg">
+                                <img src="{{ fav.cover_local or fav.cover_url }}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110">
+                            </div>
+                            <h5 class="text-xs font-bold text-white truncate px-1">{{ fav.title }}</h5>
+                        </a>
+                        {% else %}
+                        <div class="col-span-full py-12 text-center text-gray-500 italic">No favorites added yet.</div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -140,26 +219,20 @@
 {% block scripts %}
 <script>
     function switchTab(tab) {
-        const historyTab = document.getElementById('tab-history');
-        const watchlistTab = document.getElementById('tab-watchlist');
-        const historyBtn = document.getElementById('tab-history-btn');
-        const watchlistBtn = document.getElementById('tab-watchlist-btn');
-
-        if (tab === 'history') {
-            historyTab.classList.remove('hidden');
-            watchlistTab.classList.add('hidden');
-            historyBtn.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
-            historyBtn.classList.remove('text-gray-400');
-            watchlistBtn.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500');
-            watchlistBtn.classList.add('text-gray-400');
-        } else {
-            historyTab.classList.add('hidden');
-            watchlistTab.classList.remove('hidden');
-            watchlistBtn.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
-            watchlistBtn.classList.remove('text-gray-400');
-            historyBtn.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500');
-            historyBtn.classList.add('text-gray-400');
-        }
+        const tabs = ['social', 'activity', 'history', 'watchlist', 'favorites'];
+        tabs.forEach(t => {
+            const content = document.getElementById(`tab-${t}`);
+            const btn = document.getElementById(`tab-${t}-btn`);
+            if (t === tab) {
+                content.classList.remove('hidden');
+                btn.classList.add('text-blue-500', 'border-b-2', 'border-blue-500');
+                btn.classList.remove('text-gray-500');
+            } else {
+                content.classList.add('hidden');
+                btn.classList.remove('text-blue-500', 'border-b-2', 'border-blue-500');
+                btn.classList.add('text-gray-500');
+            }
+        });
     }
 </script>
 {% endblock %}
