@@ -451,7 +451,7 @@ def update_anime_by_mal_id(mal_id: int, extra_ids: Optional[Dict[str, Any]] = No
     for adapter_name, (source_anime_id, source_slug, source_title) in adapter_matches.items():
         print(f"[{mal_id}] {adapter_name}: {source_title}")
         source_id = db.get_source_id(adapter_name)
-        if source_id:
+        if source_id and source_anime_id:  # source_anime_id None değilse kaydet
             db.insert_or_update_anime_source(anime_id, source_id, source_anime_id, source_slug, source_title)
 
     print(f"[{mal_id}] ✓ Anime info, cover and episodes saved.")
