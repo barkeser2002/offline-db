@@ -2001,33 +2001,24 @@ def get_episode_stream(mal_id: int, episode_number: int, source_name: str):
         try:
             streams = None
             
-            # TEMPORARY: Mock streams for testing
-            if True:  # Always use mock for now
-                streams = [{
-                    "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                    "quality": "720p",
-                    "fansub": "Test Fansub"
-                }]
-            else:
-                # Original code
-                if source_name == "animecix":
-                    # AnimeCiX için episode URL oluştur (anime adından slug yap)
-                    anime_slug = source_slug.lower().replace(' ', '-').replace(':', '').replace('?', '').replace('/', '-')
-                    episode_slug = f"{anime_slug}-{episode_number}-bolum"
-                    episode_url = f"https://animecix.tv/watch/{episode_slug}"
-                    streams = adapter.get_episode_streams(episode_url)
-                elif source_name == "anizle":
-                    # Anizle için episode slug kullan
-                    episode_slug = f"{source_slug}-{episode_number}"
-                    streams = adapter.get_episode_streams(episode_slug)
-                elif source_name == "tranime":
-                    # TRAnime için episode slug kullan
-                    episode_slug = f"{source_slug}-{episode_number}"
-                    streams = adapter.get_episode_streams(episode_slug)
-                elif source_name == "turkanime":
-                    # TurkAnime için episode slug kullan
-                    episode_slug = f"{source_slug}-{episode_number}"
-                    streams = adapter.get_episode_streams(episode_slug)
+            if source_name == "animecix":
+                # AnimeCiX için episode URL oluştur (anime adından slug yap)
+                anime_slug = source_slug.lower().replace(' ', '-').replace(':', '').replace('?', '').replace('/', '-')
+                episode_slug = f"{anime_slug}-{episode_number}-bolum"
+                episode_url = f"https://animecix.tv/watch/{episode_slug}"
+                streams = adapter.get_episode_streams(episode_url)
+            elif source_name == "anizle":
+                # Anizle için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
+            elif source_name == "tranime":
+                # TRAnime için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
+            elif source_name == "turkanime":
+                # TurkAnime için episode slug kullan
+                episode_slug = f"{source_slug}-{episode_number}"
+                streams = adapter.get_episode_streams(episode_slug)
             
             if streams and len(streams) > 0:
                 # İlk stream'i döndür
