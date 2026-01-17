@@ -1,7 +1,7 @@
 # Anime Offline DB Gereksinimleri
 
 # Veritabanı
-mysql-connector-python==9.5.0
+mysql-connector-python==9.4.0
 
 # HTTP istekleri
 requests>=2.32.5
