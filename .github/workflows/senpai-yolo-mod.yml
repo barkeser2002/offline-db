@@ -15,18 +15,66 @@ jobs:
 
     steps:
       - name: 🤖 Senpai Operasyona Başlıyor
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: 🔧 Conflict Çözüm Denemesi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |
-          echo "🎎 Senpai: Bir PR tespit edildi! Kimin attığı umurumda değil, içeri alıyorum!"
+          echo "🎎 Senpai: Bir PR tespit edildi! Conflict kontrolü yapıyorum..."
           
-          # Adım 1: Önce PR'ı onayla (Approve) - Bazı branch korumaları onay ister
-          gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve hiç okumadan onayladı! 🚀"
+          # Adım 1: PR'ın mergeable durumunu kontrol et
+          MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
           
-          # Adım 2: Merge işlemini yap (Squash ile tek parça halinde)
-          # --auto flag'i, eğer check'ler bitmediyse bitmesini bekler sonra merge eder.
-          # Eğer beklemeden hemen basmak istiyorsan --auto yerine direkt merge komutunu zorlarız ama --auto daha stabildir.
-          gh pr merge "$PR_URL" --squash --delete-branch
-          
-          echo "✅ İşlem Tamam! Kod artık ana yapının bir parçası."
+          if [ "$MERGEABLE_STATUS" = "MERGEABLE" ]; then
+            echo "✅ PR merge edilebilir! İşlem devam ediyor..."
+            
+            # Adım 2: PR'ı onayla (Approve) - Bazı branch korumaları onay ister
+            gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve hiç okumadan onayladı! 🚀"
+            
+            # Adım 3: Merge işlemini yap (Squash ile tek parça halinde)
+            gh pr merge "$PR_URL" --squash --delete-branch
+            
+            echo "✅ İşlem Tamam! Kod artık ana yapının bir parçası."
+            
+          elif [ "$MERGEABLE_STATUS" = "CONFLICTING" ]; then
+            echo "❌ PR'da conflict var! Otomatik çözüm deniyorum..."
+            
+            # Adım 2: Conflict çözüm denemesi
+            # PR branch'ini checkout et
+            git fetch origin "$HEAD_REF"
+            git checkout "$HEAD_REF"
+            
+            # Rebase dene
+            if git rebase "origin/$BASE_REF"; then
+              echo "✅ Rebase başarılı! Push ediyorum..."
+              git push --force-with-lease origin "$HEAD_REF"
+              
+              # Tekrar mergeable kontrolü
+              sleep 5
+              NEW_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
+              
+              if [ "$NEW_STATUS" = "MERGEABLE" ]; then
+                gh pr review "$PR_URL" --approve --body "Senpai conflict'leri otomatik çözdü ve onayladı! 🚀"
+                gh pr merge "$PR_URL" --squash --delete-branch
+                echo "✅ Conflict çözüldü ve merge edildi!"
+              else
+                gh pr comment "$PR_URL" --body "🤖 **Otomatik Rebase Denendi** ama hala conflict var. Lütfen manuel olarak çözün."
+              fi
+            else
+              echo "❌ Rebase başarısız! Manuel çözüm gerekli..."
+              git rebase --abort
+              gh pr comment "$PR_URL" --body "🚫 **Conflict Tespit Edildi!** Otomatik çözüm başarısız. Lütfen conflict'leri manuel olarak çözün ve tekrar push edin."
+            fi
+            
+          else
+            echo "⏳ PR henüz hazır değil ($MERGEABLE_STATUS). Biraz bekleyip tekrar dene..."
+            gh pr comment "$PR_URL" --body "⏳ PR henüz merge edilebilir durumda değil. Check'ler tamamlandıktan sonra tekrar deneyeceğim..."
+          fi
