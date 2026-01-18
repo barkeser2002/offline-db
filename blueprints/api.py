@@ -957,10 +957,7 @@ def api_sync_anime_info():
                 return {"mal_id": mal_id, "status": "failed", "reason": "db_error"}
 
             # Türler, temalar vs.
-            for genre in jikan_data.get("genres", []):
-                genre_id = db.insert_or_get_genre(genre.get("mal_id", 0), genre.get("name", ""))
-                if genre_id:
-                    db.link_anime_genre(anime_id, genre_id)
+            db.sync_anime_genres(anime_id, jikan_data.get("genres", []))
 
             return {"mal_id": mal_id, "status": "success", "anime_id": anime_id}
 
@@ -1296,10 +1293,7 @@ def api_sync_batch():
                             result["info"] = True
 
                             # Türler
-                            for genre in jikan_data.get("genres", []):
-                                gid = db.insert_or_get_genre(genre.get("mal_id", 0), genre.get("name", ""))
-                                if gid:
-                                    db.link_anime_genre(anime_id, gid)
+                            db.sync_anime_genres(anime_id, jikan_data.get("genres", []))
             elif mal_id in existing_ids:
                 result["info"] = True  # Zaten var
 
