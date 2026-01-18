@@ -2,7 +2,7 @@ import requests
 import re
 from typing import Dict, Any, List, Tuple
 import db
-from adapters import animecix, anizle, tranime, turkanime
+from adapters import animecix, anizle, tranime, turkanime, animely
 
 def check_video_link_alive(url: str, timeout: int = 10) -> Tuple[bool, Dict[str, Any]]:
     """Check if a video link is still working."""
@@ -61,8 +61,11 @@ def ensure_episode_videos(mal_id: int, episode_number: int, anime_db_id: int, fo
                     f"{source_slug}-bolum-{episode_number}"
                 ]
                 for s in slugs:
-                    links = anizle.get_episode_streams(s)
-                    if links: break
+                    # anizle.get_episode_streams returns list of dicts
+                    fetched = anizle.get_episode_streams(s)
+                    if fetched:
+                        links = fetched
+                        break
             elif source_name == "animecix":
                 # Animecix requires fetching all episodes to find the one matching episode_number
                 cix_anime = animecix.CixAnime(id=source_anime_id, title="")
@@ -78,15 +81,42 @@ def ensure_episode_videos(mal_id: int, episode_number: int, anime_db_id: int, fo
             elif source_name == "tranime":
                 # Try direct slug first
                 ep_slug = f"{source_slug}-{episode_number}-bolum-izle"
-                links = tranime.get_episode_streams(ep_slug)
+                ep_details = tranime.get_episode_details(ep_slug)
 
-                if not links:
+                if not ep_details:
                     # Fallback: get episodes and find matching number
                     tr_eps = tranime.get_anime_episodes(source_slug)
                     for ep in tr_eps:
                         if ep.episode_number == episode_number:
-                            links = tranime.get_episode_streams(ep.slug)
+                            ep_details = tranime.get_episode_details(ep.slug)
                             break
+
+                if ep_details:
+                    raw_links = ep_details.get_sources()
+                    for vid in raw_links:
+                        url = vid.get_iframe()
+                        if url:
+                            links.append({
+                                "url": url,
+                                "quality": "default",
+                                "fansub": vid.fansub
+                            })
+            elif source_name == "animely":
+                # Animely uses slug
+                episodes = animely.get_anime_episodes(source_slug)
+                target_ep = None
+                for ep in episodes:
+                     if ep.episode_number == episode_number:
+                         target_ep = ep
+                         break
+                if target_ep:
+                    raw_links = target_ep.get_streams()
+                    for vid in raw_links:
+                        links.append({
+                            "url": vid.url,
+                            "quality": vid.quality,
+                            "fansub": vid.fansub
+                        })
             elif source_name == "turkanime":
                 ep_slug = f"{source_slug}-{episode_number}"
                 # TurkAnime might return TurkAnimeStream objects

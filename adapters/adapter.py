@@ -11,8 +11,14 @@ import unicodedata
 
 from yt_dlp import YoutubeDL
 
-from .animecix import _video_streams
-# Removed internal project-specific imports that don't exist here
+from .animecix import _video_streams, search_animecix
+from .common.utils import get_ydl_opts, get_video_resolution_mpv, extract_video_info
+
+# Try to import other adapters if available for SearchEngine
+try:
+    from .turkanime import TurkAnimeAdapter
+except ImportError:
+    TurkAnimeAdapter = None
 
 def _slugify(text: str) -> str:
     """Basit ve güvenli bir slug üretici: ASCII'ye indirger,
@@ -59,7 +65,7 @@ class AdapterVideo:
         self.is_supported = True
         self._is_working: Optional[bool] = None
         self._resolution: Optional[int] = None
-        self.ydl_opts = {} # Simplified
+        self.ydl_opts = get_ydl_opts()
 
     @property
     def url(self) -> str:
@@ -67,15 +73,48 @@ class AdapterVideo:
 
     @property
     def info(self) -> Optional[Dict[str, Any]]:
-        # Simplified for local project
-        return {}
+        if self._info is None:
+            info = extract_video_info(self.url, self.ydl_opts)
+            if not info:
+                self._info = {}
+            else:
+                # info'nun Dict[str, Any] olduğunu garanti edelim
+                if isinstance(info, dict):
+                    if "direct" in info:
+                        del info["direct"]
+                    if info.get("video_ext") == "html":
+                        self._info = None
+                    else:
+                        self._info = info
+                else:
+                    self._info = {}
+        return self._info
 
     @property
     def is_working(self) -> bool:
-        return True # Simplified
+        if self._is_working is None:
+            try:
+                self._is_working = self.info not in (None, {})
+            except Exception:
+                self._is_working = False
+        return self._is_working
+
+    @is_working.setter
+    def is_working(self, value: bool):
+        self._is_working = value
 
     def indir(self, callback=None, output=""):
-        pass # Simplified
+        assert self.is_working, "Video çalışmıyor."
+        seri_slug = self.bolum.anime.slug if getattr(self.bolum, 'anime', None) else ""
+        out_tmpl_dir = join(output, seri_slug, self.bolum.slug)
+        opts = self.ydl_opts.copy()
+        if callback:
+            opts['progress_hooks'] = [callback]
+        opts['outtmpl'] = {'default': out_tmpl_dir + r'.%(ext)s'}
+        with NamedTemporaryFile("w", delete=False) as tmp:
+            json.dump(self.info, tmp)
+        with YoutubeDL(opts) as ydl:  # type: ignore
+            ydl.download_with_info_file(tmp.name)
 
     def get(self, key, default=None):
         """Dictionary-like get method for compatibility."""
@@ -86,6 +125,89 @@ class AdapterVideo:
         elif key == 'player':
             return self.player
         return default
+
+    def oynat(self, dakika_hatirla: bool = False):
+        """Videoyu mpv ile oynat."""
+        import shutil
+        from .common.utils import BIN_PATH
+        from os.path import join, exists
+
+        # Önce bin/ klasöründeki mpv'yi dene, sonra sistem PATH'ini
+        mpv_path = join(BIN_PATH, "mpv.exe")
+        if not exists(mpv_path):
+            # Sistem PATH'inde mpv ara
+            mpv_path = shutil.which("mpv")
+            if not mpv_path:
+                print("MPV bulunamadı! Lütfen mpv'yi yükleyin veya bin/ klasörüne koyun.")
+                return None
+
+        cmd = [mpv_path, self.url]
+
+        # User-agent ekle (HLS için gerekli olabilir)
+        cmd.extend(["--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"])
+
+        # Dakika hatırlama özelliği
+        if dakika_hatirla:
+            cmd.append("--save-position-on-quit")
+
+        try:
+            proc = sp.Popen(cmd)
+            proc.wait()  # İşlemin bitmesini bekle
+            return proc
+        except OSError as e:
+            # Binary uyumsuz olabilir, sistem mpv'yi dene
+            if e.winerror == 216:  # WinError 216: Uyumsuz binary
+                print("bin/mpv.exe uyumsuz, sistem mpv deneniyor...")
+                sys_mpv = shutil.which("mpv")
+                if sys_mpv:
+                    cmd[0] = sys_mpv
+                    try:
+                        proc = sp.Popen(cmd)
+                        proc.wait()
+                        return proc
+                    except Exception as e2:
+                        print(f"Sistem MPV hatası: {e2}")
+                        return None
+            print(f"MPV başlatma hatası: {e}")
+            return None
+        except Exception as e:
+            print(f"MPV başlatma hatası: {e}")
+            return None
+
+    @property
+    def resolution(self) -> int:
+        if self._resolution is None:
+            info = self.info or {}
+            res = info.get("resolution")
+            if res:
+                m = re.findall(r"(\d{3,4})p", str(res))
+                if m:
+                    self._resolution = int(m[0])
+                    return self._resolution
+            fmts = info.get("formats") or []
+            if fmts:
+                try:
+                    if "height" in (fmts[0] or {}):
+                        self._resolution = max(
+                            fmts,
+                            key=lambda x: x.get("height") or 0
+                        ).get("height") or 0
+                    else:
+                        t = max(fmts, key=lambda x: (x.get("height") or 0, x.get("tbr") or 0))
+                        self._resolution = (
+                            t.get("height") or
+                            (720 if (t.get("tbr") or 0) > 1500 else 480)
+                        ) or 0
+                except Exception:
+                    self._resolution = 0
+            else:
+                # Label'dan tahmin
+                m = re.findall(r"(\d{3,4})p", str(self.label or ""))
+                self._resolution = int(m[0]) if m else 0
+            # mpv ile son çare çözünürlük tespiti
+            if not self._resolution:
+                self._resolution = get_video_resolution_mpv(self.url) or 0
+        return self._resolution or 0
 
 
 class AdapterBolum:
@@ -102,6 +224,7 @@ class AdapterBolum:
         self.anime = anime
         self._stream_provider = stream_provider
         self._player_name = player_name or "ANIMECIX"
+        # TürkAnime ile uyumlu: animeadı-bolumadı (klasör: anime.slug, dosya adı: animeadı-bolumadı)
         self.slug = _slugify(f"{anime.title}-{title}" if anime else title)
 
     @property
@@ -110,6 +233,7 @@ class AdapterBolum:
 
     @property
     def fansubs(self):
+        # AnimeciX tarafında fansub konsepti kullanılmıyor
         return []
 
     def best_video(
@@ -120,5 +244,49 @@ class AdapterBolum:
         callback=lambda x: None,
         early_subset: int = 8
     ):
-        # Simplified for local project
+        # URL kontrolü
+        if not self.url:
+            callback({"current": 1, "total": 1, "player": "ANIMECIX", "status": "URL bulunamadı"})
+            return None
+
+        # Kaynağa uygun stream sağlayıcısını kullan
+        provider = self._stream_provider or _video_streams
+        player_label = self._player_name
+
+        callback({"current": 0, "total": 1, "player": player_label, "status": "üstbilgi çekiliyor"})
+        streams = provider(self.url)
+        if not streams:
+            callback({
+                "current": 1,
+                "total": 1,
+                "player": player_label,
+                "status": "hiçbiri çalışmıyor"
+            })
+            return None
+
+        def parse_res(label: str) -> int:
+            m = re.findall(r"(\d{3,4})p", label or "")
+            return int(m[0]) if m else default_res
+
+        picked = max(
+            streams,
+            key=lambda s: parse_res(s.get("label") or "0p")
+        ) if by_res else streams[0]
+        video_url = picked.get("url")
+        if not video_url:
+            callback({
+                "current": 1,
+                "total": 1,
+                "player": player_label,
+                "status": "video URL bulunamadı"
+            })
+            return None
+
+        vid = AdapterVideo(self, video_url, picked.get("label"), player=player_label)
+        if vid.is_working:
+            callback({"current": 1, "total": 1, "player": player_label, "status": "çalışıyor"})
+            return vid
+        callback({"current": 1, "total": 1, "player": player_label, "status": "çalışmıyor"})
         return None
+
+# SearchEngine removed or simplified as it depends on missing modules
