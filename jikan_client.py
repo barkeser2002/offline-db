@@ -133,5 +133,15 @@ class JikanClient:
         response = self._request(f"anime/{mal_id}/recommendations")
         return response.get("data", []) if response else []
 
+    def get_anime_characters(self, mal_id: int) -> list:
+        """Gets characters for an anime."""
+        response = self._request(f"anime/{mal_id}/characters")
+        return response.get("data", []) if response else []
+
+    def get_anime_staff(self, mal_id: int) -> list:
+        """Gets staff for an anime."""
+        response = self._request(f"anime/{mal_id}/staff")
+        return response.get("data", []) if response else []
+
 # Global Jikan client
 jikan = JikanClient()

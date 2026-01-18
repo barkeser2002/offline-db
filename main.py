@@ -488,6 +488,9 @@ def update_anime_by_mal_id(mal_id: int, extra_ids: Optional[Dict[str, Any]] = No
         if licensor_id:
             db.link_anime_producer(anime_id, licensor_id, "licensor")
 
+    # Character & Staff Sync
+    sync_anime_characters_and_staff(mal_id, anime_id)
+
     # Fetch episodes from Jikan
     total_episodes = jikan_data.get("episodes") or 0
     print(f"[{mal_id}] Fetching episodes...")
@@ -621,6 +624,57 @@ def bulk_update(limit: Optional[int] = None, skip_updated: bool = True, parallel
 
     save_updated_ids(updated_ids)
     print(f"\nDone! Success: {success_count}, Failed: {fail_count}")
+
+
+def sync_anime_characters_and_staff(mal_id: int, anime_id: int):
+    """Sync characters and staff for an anime."""
+    print(f"[{mal_id}] Syncing characters & staff...")
+
+    # Characters
+    characters = jikan.get_anime_characters(mal_id)
+    if characters:
+        for char_item in characters:
+            char_node = char_item.get("character", {})
+            char_data = {
+                "mal_id": char_node.get("mal_id"),
+                "name": char_node.get("name"),
+                "image_url": char_node.get("images", {}).get("jpg", {}).get("image_url"),
+                "about": "" # Jikan character details requires another request, skip for now
+            }
+            char_internal_id = db.insert_or_update_character(char_data)
+            if char_internal_id:
+                db.link_anime_character(anime_id, char_internal_id, char_item.get("role"))
+
+                # Voice Actors (Japanese only for now)
+                vas = char_item.get("voice_actors", [])
+                for va_item in vas:
+                    if va_item.get("language") == "Japanese":
+                        person_node = va_item.get("person", {})
+                        person_data = {
+                            "mal_id": person_node.get("mal_id"),
+                            "name": person_node.get("name"),
+                            "image_url": person_node.get("images", {}).get("jpg", {}).get("image_url")
+                        }
+                        person_internal_id = db.insert_or_update_person(person_data)
+                        if person_internal_id:
+                            db.link_character_voice_actor(anime_id, char_internal_id, person_internal_id, "Japanese")
+        print(f"[{mal_id}] ✓ Characters synced")
+
+    # Staff
+    staff = jikan.get_anime_staff(mal_id)
+    if staff:
+        for staff_item in staff:
+            person_node = staff_item.get("person", {})
+            person_data = {
+                "mal_id": person_node.get("mal_id"),
+                "name": person_node.get("name"),
+                "image_url": person_node.get("images", {}).get("jpg", {}).get("image_url")
+            }
+            person_internal_id = db.insert_or_update_person(person_data)
+            if person_internal_id:
+                for position in staff_item.get("positions", []):
+                    db.link_anime_staff(anime_id, person_internal_id, position)
+        print(f"[{mal_id}] ✓ Staff synced")
 
 
 def show_video_links(mal_id: int):

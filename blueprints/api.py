@@ -1903,6 +1903,14 @@ def get_anime_sources(mal_id: int):
     except Exception as e:
         return jsonify({"error": f"Sunucu hatası: {str(e)}"}), 500
 
+@api_bp.route("/api/character/<int:mal_id>")
+def get_character_details(mal_id: int):
+    """Get character details from Jikan."""
+    char_data = jikan._request(f"characters/{mal_id}/full")
+    if char_data:
+        return jsonify(char_data.get("data"))
+    return jsonify({"error": "Character not found"}), 404
+
 @api_bp.route("/api/anime/<int:mal_id>/episodes")
 def get_anime_episodes(mal_id: int):
     """Anime'nin bölümlerini getir."""

@@ -439,6 +439,65 @@ def init_database():
     )
     """)
 
+    # Characters
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS characters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mal_id INTEGER UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        image_url TEXT,
+        about TEXT
+    )
+    """)
+
+    # People (Voice Actors and Staff)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS people (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        mal_id INTEGER UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        image_url TEXT
+    )
+    """)
+
+    # Anime Characters
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS anime_characters (
+        anime_id INTEGER NOT NULL,
+        character_id INTEGER NOT NULL,
+        role TEXT,
+        PRIMARY KEY (anime_id, character_id),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        FOREIGN KEY (character_id) REFERENCES characters(id)
+    )
+    """)
+
+    # Character Voice Actors
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS character_voice_actors (
+        anime_id INTEGER NOT NULL,
+        character_id INTEGER NOT NULL,
+        person_id INTEGER NOT NULL,
+        language TEXT,
+        PRIMARY KEY (anime_id, character_id, person_id),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        FOREIGN KEY (character_id) REFERENCES characters(id),
+        FOREIGN KEY (person_id) REFERENCES people(id)
+    )
+    """)
+
+    # Anime Staff
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS anime_staff (
+        anime_id INTEGER NOT NULL,
+        person_id INTEGER NOT NULL,
+        position TEXT,
+        PRIMARY KEY (anime_id, person_id, position),
+        FOREIGN KEY (anime_id) REFERENCES animes(id),
+        FOREIGN KEY (person_id) REFERENCES people(id)
+    )
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()
@@ -1120,6 +1179,12 @@ def get_anime_full_details(mal_id: int):
         ORDER BY g.name
     """, (anime["id"],))
     anime["genres"] = [row["name"] for row in cursor.fetchall()]
+
+    # Get characters
+    anime["characters"] = get_anime_characters(anime["id"])
+
+    # Get staff
+    anime["staff"] = get_anime_staff(anime["id"])
 
     cursor.close()
     conn.close()
@@ -1946,6 +2011,158 @@ def update_collection(collection_id, user_id, name, description, is_public):
     cursor.close()
     conn.close()
     return affected > 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CHARACTER & STAFF OPERATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def insert_or_update_character(char_data):
+    """Insert or update character."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO characters (mal_id, name, image_url, about)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(mal_id) DO UPDATE SET
+                name = excluded.name,
+                image_url = excluded.image_url,
+                about = excluded.about
+        """, (char_data["mal_id"], char_data["name"], char_data.get("image_url"), char_data.get("about")))
+        conn.commit()
+        # Get internal ID
+        cursor.execute("SELECT id FROM characters WHERE mal_id = ?", (char_data["mal_id"],))
+        return cursor.fetchone()["id"]
+    except sqlite3.Error:
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def insert_or_update_person(person_data):
+    """Insert or update person (voice actor or staff)."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO people (mal_id, name, image_url)
+            VALUES (?, ?, ?)
+            ON CONFLICT(mal_id) DO UPDATE SET
+                name = excluded.name,
+                image_url = excluded.image_url
+        """, (person_data["mal_id"], person_data["name"], person_data.get("image_url")))
+        conn.commit()
+        cursor.execute("SELECT id FROM people WHERE mal_id = ?", (person_data["mal_id"],))
+        return cursor.fetchone()["id"]
+    except sqlite3.Error:
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def link_anime_character(anime_id, character_id, role):
+    """Link anime and character."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO anime_characters (anime_id, character_id, role)
+            VALUES (?, ?, ?)
+        """, (anime_id, character_id, role))
+        conn.commit()
+        return True
+    except sqlite3.Error:
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def link_character_voice_actor(anime_id, character_id, person_id, language):
+    """Link character with voice actor for a specific anime."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO character_voice_actors (anime_id, character_id, person_id, language)
+            VALUES (?, ?, ?, ?)
+        """, (anime_id, character_id, person_id, language))
+        conn.commit()
+        return True
+    except sqlite3.Error:
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def link_anime_staff(anime_id, person_id, position):
+    """Link anime and staff."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR REPLACE INTO anime_staff (anime_id, person_id, position)
+            VALUES (?, ?, ?)
+        """, (anime_id, person_id, position))
+        conn.commit()
+        return True
+    except sqlite3.Error:
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_anime_characters(anime_id, limit=20):
+    """Get characters and their voice actors for an anime."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT c.*, ac.role, p.name as va_name, p.image_url as va_image, p.mal_id as va_mal_id, cva.language
+            FROM anime_characters ac
+            JOIN characters c ON ac.character_id = c.id
+            LEFT JOIN character_voice_actors cva ON (
+                ac.anime_id = cva.anime_id AND
+                ac.character_id = cva.character_id AND
+                cva.language = 'Japanese'
+            )
+            LEFT JOIN people p ON cva.person_id = p.id
+            WHERE ac.anime_id = ?
+            ORDER BY CASE WHEN ac.role = 'Main' THEN 1 ELSE 2 END, c.name
+            LIMIT ?
+        """, (anime_id, limit))
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error:
+        return []
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_anime_staff(anime_id, limit=20):
+    """Get staff for an anime."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT p.*, ast.position
+            FROM anime_staff ast
+            JOIN people p ON ast.person_id = p.id
+            WHERE ast.anime_id = ?
+            ORDER BY ast.position
+            LIMIT ?
+        """, (anime_id, limit))
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error:
+        return []
+    finally:
+        cursor.close()
+        conn.close()
 
 if __name__ == "__main__":
     print("Initializing database...")
