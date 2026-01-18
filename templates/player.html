@@ -20,6 +20,32 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
             </button>
+
+            <!-- Advanced Controls Overlay -->
+            <div id="player-controls-overlay" class="absolute bottom-16 left-0 right-0 p-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                <div class="flex gap-2 pointer-events-auto">
+                    <button onclick="skipTime(-85)" class="bg-black/60 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 transition" title="Skip Intro (Backward)">-85s</button>
+                    <button onclick="skipTime(85)" class="bg-black/60 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 transition" title="Skip Intro (Forward)">+85s</button>
+                </div>
+                <div class="flex items-center gap-4 pointer-events-auto">
+                    <label class="flex items-center gap-2 cursor-pointer bg-black/60 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-md">
+                        <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">Auto Next</span>
+                        <input type="checkbox" id="auto-next" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500" checked>
+                    </label>
+                    <div class="flex gap-1">
+                        {% set prev_ep = current_ep - 1 %}
+                        {% set next_ep = current_ep + 1 %}
+                        {% if prev_ep > 0 %}
+                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ prev_ep }}" class="bg-black/60 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-md border border-white/10 transition">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z"></path></svg>
+                        </a>
+                        {% endif %}
+                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ next_ep }}" class="bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg backdrop-blur-md border border-white/10 transition">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z"></path></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Anime Info & Watchlist -->
@@ -197,6 +223,17 @@
                 player.ready(function() {
                     console.log('Player is ready');
                     setupProgressTracking();
+                    setupKeyboardShortcuts(player);
+                });
+
+                player.on('ended', function() {
+                    if (document.getElementById('auto-next').checked) {
+                        const nextEp = currentEp + 1;
+                        showNotification(`Starting Episode ${nextEp} in 3 seconds...`, 'success');
+                        setTimeout(() => {
+                            window.location.href = `/player?mal_id=${malId}&ep=${nextEp}`;
+                        }, 3000);
+                    }
                 });
 
                 player.on('error', function() {
@@ -260,16 +297,54 @@
         {% if session.user_id %}
         player.on('play', () => {
             progressInterval = setInterval(() => {
-                const progress = (player.currentTime() / player.duration()) * 100;
+                const progress = Math.floor((player.currentTime() / player.duration()) * 100);
                 if (progress > 0) {
                     updateHistory(progress);
                 }
             }, 30000); // Update every 30 seconds
         });
 
-        player.on('pause', () => clearInterval(progressInterval);
-        video.onended = () => updateHistory(100);
+        player.on('pause', () => clearInterval(progressInterval));
+        player.on('ended', () => updateHistory(100));
         {% endif %}
+    }
+
+    function skipTime(seconds) {
+        const player = videojs('main-player');
+        if (player) {
+            player.currentTime(player.currentTime() + seconds);
+        }
+    }
+
+    function setupKeyboardShortcuts(player) {
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger if user is typing in comment box
+            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
+
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (player.paused()) player.play(); else player.pause();
+                    break;
+                case 'ArrowRight':
+                    player.currentTime(player.currentTime() + 5);
+                    break;
+                case 'ArrowLeft':
+                    player.currentTime(player.currentTime() - 5);
+                    break;
+                case 'KeyF':
+                    if (player.isFullscreen()) player.exitFullscreen(); else player.requestFullscreen();
+                    break;
+                case 'KeyM':
+                    player.muted(!player.muted());
+                    break;
+                case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
+                case 'Digit6': case 'Digit7': case 'Digit8': case 'Digit9': case 'Digit0':
+                    const percent = parseInt(e.key) * 10;
+                    player.currentTime(player.duration() * (percent / 100));
+                    break;
+            }
+        });
     }
 
     async function updateHistory(progress) {
@@ -378,7 +453,8 @@
         const container = document.getElementById('comments-container');
         try {
             const resp = await fetch(`/api/social/comments/${malId}/${currentEp}`);
-            const comments = await resp.json();
+            const data = await resp.json();
+            const comments = data.comments || [];
 
             if (comments.length === 0) {
                 container.innerHTML = `<p class="text-center text-gray-500 py-8">No comments yet. Be the first to share your thoughts!</p>`;

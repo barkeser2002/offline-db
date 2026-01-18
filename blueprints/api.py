@@ -773,15 +773,17 @@ def api_season_anime(year, season):
 def api_trending():
     """Fetch the most watched animes from the last 7 days."""
     limit = request.args.get("limit", 10, type=int)
-    trending = db.get_trending_anime(limit=limit)
+    trending_rows = db.get_trending_anime(limit=limit)
+
+    trending = [dict(r) for r in trending_rows]
 
     # URL'leri düzenle
     host = request.host_url.rstrip('/')
     for r in trending:
-        if dict(r).get("cover_local"):
+        if r.get("cover_local"):
             r["cover"] = f"{host}/covers/{r['mal_id']}.jpg"
         else:
-            r["cover"] = dict(r).get("cover_url")
+            r["cover"] = r.get("cover_url")
 
     return jsonify(trending)
 

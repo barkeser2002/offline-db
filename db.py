@@ -173,6 +173,7 @@ def init_database():
         user_id INTEGER NOT NULL,
         anime_id INTEGER NOT NULL,
         episode_number INTEGER DEFAULT 0,
+        progress INTEGER DEFAULT 0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (anime_id) REFERENCES animes(id),
@@ -270,7 +271,12 @@ def init_database():
     try:
         cursor.execute("ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT NULL")
     except sqlite3.OperationalError:
-        # Column already exists
+        pass
+
+    # Migration: Add progress to watch_history
+    try:
+        cursor.execute("ALTER TABLE watch_history ADD COLUMN progress INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
         pass
 
     # Türler tablosu
@@ -618,14 +624,60 @@ def get_trending_anime(limit=10, days=7):
     return results
 
 def get_personalized_recommendations(user_id, limit=5):
-    """Kişiselleştirilmiş öneriler."""
-    # Basit versiyon - rastgele anime döndür
+    """Kişiselleştirilmiş öneriler (Tür bazlı)."""
     conn = get_connection()
     if not conn:
         return []
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM animes ORDER BY RANDOM() LIMIT ?", (limit,))
-    results = cursor.fetchall()
+
+    # Kullanıcının en çok izlediği/beğendiği 3 türü bul
+    cursor.execute("""
+        SELECT g.id, g.name, COUNT(*) as count
+        FROM watch_history wh
+        JOIN anime_genres ag ON wh.anime_id = ag.anime_id
+        JOIN genres g ON ag.genre_id = g.id
+        WHERE wh.user_id = ?
+        GROUP BY g.id
+        ORDER BY count DESC
+        LIMIT 3
+    """, (user_id,))
+    top_genres = cursor.fetchall()
+
+    if not top_genres:
+        # Veri yoksa rastgele döndür
+        cursor.execute("SELECT * FROM animes ORDER BY RANDOM() LIMIT ?", (limit,))
+        results = cursor.fetchall()
+    else:
+        genre_ids = [row["id"] for row in top_genres]
+        placeholders = ",".join(["?"] * len(genre_ids))
+
+        # Bu türlere sahip ama kullanıcının henüz izlemediği yüksek puanlı anime'leri getir
+        cursor.execute(f"""
+            SELECT DISTINCT a.* FROM animes a
+            JOIN anime_genres ag ON a.id = ag.anime_id
+            WHERE ag.genre_id IN ({placeholders})
+            AND a.id NOT IN (SELECT anime_id FROM watch_history WHERE user_id = ?)
+            ORDER BY a.score DESC, a.popularity ASC
+            LIMIT ?
+        """, (*genre_ids, user_id, limit))
+        results = cursor.fetchall()
+
+        # Eğer yeterli sonuç çıkmazsa rastgele ile tamamla
+        if len(results) < limit:
+            needed = limit - len(results)
+            existing_ids = [row["id"] for row in results]
+            if not existing_ids: existing_ids = [-1]
+            placeholders_existing = ",".join(["?"] * len(existing_ids))
+
+            cursor.execute(f"""
+                SELECT * FROM animes
+                WHERE id NOT IN ({placeholders_existing})
+                AND id NOT IN (SELECT anime_id FROM watch_history WHERE user_id = ?)
+                ORDER BY RANDOM()
+                LIMIT ?
+            """, (*existing_ids, user_id, needed))
+            results.extend(cursor.fetchall())
+
     cursor.close()
     conn.close()
     return results
@@ -906,6 +958,23 @@ def get_social_feed(user_id, limit=50):
     conn.close()
     return res
 
+def get_global_activity(limit=50):
+    """Tüm kullanıcıların son aktivitelerini getir."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT ua.*, u.username, a.title as anime_title, a.mal_id, tu.username as target_username
+        FROM user_activity ua
+        JOIN users u ON ua.user_id = u.id
+        LEFT JOIN animes a ON ua.anime_id = a.id
+        LEFT JOIN users tu ON ua.target_user_id = tu.id
+        ORDER BY ua.created_at DESC
+        LIMIT ?
+    """, (limit,))
+    res = cursor.fetchall()
+    conn.close()
+    return res
+
 def get_top_watchers(limit=10):
     """En çok izleyen kullanıcıları getir."""
     conn = get_connection()
@@ -928,15 +997,17 @@ def update_watch_history(user_id, anime_id, episode_number, progress=0):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO watch_history (user_id, anime_id, episode_number)
-        VALUES (?, ?, ?)
+        INSERT INTO watch_history (user_id, anime_id, episode_number, progress)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(user_id, anime_id) DO UPDATE SET
             episode_number = MAX(episode_number, excluded.episode_number),
+            progress = CASE WHEN excluded.episode_number >= episode_number THEN excluded.progress ELSE progress END,
             updated_at = CURRENT_TIMESTAMP
-    """, (user_id, anime_id, episode_number))
+    """, (user_id, anime_id, episode_number, progress))
 
-    anime = cursor.execute("SELECT title FROM animes WHERE id = ?", (anime_id,)).fetchone()
-    log_activity(user_id, "watch", anime_id=anime_id, message=f"Watched Episode {episode_number} of {anime['title']}", cursor=cursor)
+    anime_row = cursor.execute("SELECT title FROM animes WHERE id = ?", (anime_id,)).fetchone()
+    if anime_row:
+        log_activity(user_id, "watch", anime_id=anime_id, message=f"Watched Episode {episode_number} of {anime_row['title']}", cursor=cursor)
 
     conn.commit()
     conn.close()
