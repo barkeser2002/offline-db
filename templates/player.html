@@ -1,562 +1,65 @@
-{% extends "base.html" %}
-
-{% block title %}{{ anime.title }} - Episode {{ current_ep }} - Anime Platform{% endblock %}
-
+{% extends 'base.html' %}
 {% block content %}
-<div class="flex flex-col lg:flex-row gap-6">
-    <!-- Video Player Area -->
-    <div id="video-area" class="lg:w-3/4 transition-all duration-500">
-        <div id="player-wrapper" class="bg-black aspect-video rounded-lg overflow-hidden shadow-2xl relative group border border-gray-800">
-            <div id="player-container" class="w-full h-full flex items-center justify-center">
-                <div class="text-center">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                    <p class="text-gray-400">Loading sources...</p>
-                </div>
-            </div>
-            <!-- Theater Mode Toggle -->
-            <button onclick="toggleTheaterMode()" class="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition z-10" title="Theater Mode">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-            </button>
-
-            <!-- Advanced Controls Overlay -->
-            <div id="player-controls-overlay" class="absolute bottom-16 left-0 right-0 p-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
-                <div class="flex gap-2 pointer-events-auto">
-                    <button onclick="skipTime(-85)" class="bg-black/60 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 transition" title="Skip Intro (Backward)">-85s</button>
-                    <button onclick="skipTime(85)" class="bg-black/60 hover:bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md border border-white/10 transition" title="Skip Intro (Forward)">+85s</button>
-                </div>
-                <div class="flex items-center gap-4 pointer-events-auto">
-                    <label class="flex items-center gap-2 cursor-pointer bg-black/60 px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-md">
-                        <span class="text-[10px] font-bold text-gray-300 uppercase tracking-wider">Auto Next</span>
-                        <input type="checkbox" id="auto-next" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-purple-600 focus:ring-purple-500" checked>
-                    </label>
-                    <div class="flex gap-1">
-                        {% set prev_ep = current_ep - 1 %}
-                        {% set next_ep = current_ep + 1 %}
-                        {% if prev_ep > 0 %}
-                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ prev_ep }}" class="bg-black/60 hover:bg-white/20 text-white p-2 rounded-lg backdrop-blur-md border border-white/10 transition">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z"></path></svg>
-                        </a>
-                        {% endif %}
-                        <a href="/player?mal_id={{ anime.mal_id }}&ep={{ next_ep }}" class="bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-lg backdrop-blur-md border border-white/10 transition">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.555 5.168A1 1 0 003 6v8a1 1 0 001.555.832L10 11.202V14a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4A1 1 0 0010 6v2.798L4.555 5.168z"></path></svg>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Anime Info & Watchlist -->
-        <div class="mt-6 bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-bold">{{ anime.title }}</h1>
-                    <h2 class="text-xl text-gray-400">Episode {{ current_ep }}</h2>
-                </div>
-                {% if session.user_id %}
-                <div class="flex space-x-2">
-                    <select id="watchlist-status" onchange="updateWatchlistStatus()" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500">
-                        <option value="">Add to List</option>
-                        <option value="watching">Watching</option>
-                        <option value="completed">Completed</option>
-                        <option value="on-hold">On Hold</option>
-                        <option value="dropped">Dropped</option>
-                        <option value="plan-to-watch">Plan to Watch</option>
-                    </select>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="mt-4 flex flex-wrap gap-2">
-                <span class="bg-blue-900/50 text-blue-400 px-3 py-1 rounded-full text-xs font-semibold">{{ anime.type }}</span>
-                <span class="bg-gray-700 text-gray-300 px-3 py-1 rounded-full text-xs font-semibold">{{ anime.status }}</span>
-                <span class="bg-yellow-900/50 text-yellow-400 px-3 py-1 rounded-full text-xs font-semibold">⭐ {{ anime.score }}</span>
-            </div>
-
-            <p class="mt-4 text-gray-300 text-sm leading-relaxed">{{ anime.synopsis }}</p>
-        </div>
-
-        <!-- Comments Section -->
-        <div class="mt-8 bg-gray-800 p-6 rounded-lg border border-gray-700">
-            <h3 class="text-2xl font-bold mb-6 flex items-center">
-                <span class="mr-2">💬</span> Comments
-            </h3>
-
-            {% if session.user_id %}
-            <div class="mb-8">
-                <textarea id="comment-input" rows="3" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-sm focus:outline-none focus:border-blue-500" placeholder="Share your thoughts about this episode..."></textarea>
-                <div class="mt-2 flex justify-between items-center">
-                    <label class="flex items-center text-sm text-gray-400 cursor-pointer">
-                        <input type="checkbox" id="is-spoiler" class="mr-2">
-                        Contains spoilers?
-                    </label>
-                    <button onclick="postComment()" id="post-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition text-sm">Post Comment</button>
-                </div>
-            </div>
-            {% else %}
-            <div class="bg-gray-900/50 p-4 rounded-lg text-center mb-8 border border-dashed border-gray-700">
-                <p class="text-gray-400">Please <a href="/login" class="text-blue-400 hover:underline">login</a> or <a href="/register" class="text-blue-400 hover:underline">register</a> to post a comment.</p>
-            </div>
-            {% endif %}
-
-            <div id="comments-container" class="space-y-6">
-                <!-- Comments will be loaded here -->
-                <div class="animate-pulse flex space-x-4">
-                    <div class="rounded-full bg-gray-700 h-10 w-10"></div>
-                    <div class="flex-1 space-y-4 py-1">
-                        <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-                        <div class="space-y-2">
-                            <div class="h-4 bg-gray-700 rounded"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Episode List -->
-    <div class="lg:w-1/4">
-        <div class="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden sticky top-4">
-            <div class="p-4 bg-gray-700 font-bold border-b border-gray-600 flex justify-between items-center">
-                <span>Episodes</span>
-                <span class="text-xs text-gray-400">{{ episodes|length }} total</span>
-            </div>
-            <div class="max-h-[600px] overflow-y-auto">
-                {% for ep in episodes %}
-                <a href="/player?mal_id={{ anime.mal_id }}&ep={{ ep.episode_number }}"
-                   class="flex items-center p-3 hover:bg-gray-700 border-b border-gray-700 transition {% if ep.episode_number == current_ep %}bg-blue-900/30 border-l-4 border-l-blue-500{% endif %}">
-                    <div class="w-8 h-8 rounded bg-gray-900 flex items-center justify-center text-xs font-bold mr-3 {% if ep.has_video %}text-green-500{% else %}text-gray-500{% endif %}">
-                        {{ ep.episode_number }}
-                    </div>
-                    <div class="flex-grow">
-                        <h4 class="text-sm font-medium truncate {% if ep.episode_number == current_ep %}text-blue-400{% endif %}">{{ ep.title }}</h4>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
+<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
 <style>
-    .theater-mode {
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-    .theater-mode #player-wrapper {
-        aspect-ratio: auto;
-        height: 80vh;
-    }
-    .theater-mode-bg {
-        background-color: #000 !important;
-    }
-    .spoiler-blur {
-        filter: blur(8px);
-        user-select: none;
-        transition: filter 0.3s;
-    }
-    .spoiler-blur:hover {
-        filter: blur(4px);
-    }
-    .unblurred {
-        filter: none !important;
-        user-select: text !important;
+    .plyr {
+        --plyr-color-main: #ff0055;
+        border-radius: 0.5rem;
     }
 </style>
 
+<div class="max-w-5xl mx-auto">
+    <div class="mb-4 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold">{{ episode.anime.title }}</h1>
+            <p class="text-gray-400">Episode {{ episode.number }} <span class="mx-2">•</span> {{ episode.title }}</p>
+        </div>
+        <a href="/" class="text-sm text-gray-500 hover:text-white transition">&larr; Back to Home</a>
+    </div>
+
+    <div class="bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative">
+        <video id="player" controls crossorigin playsinline class="w-full aspect-video">
+            <!-- Source injected via JS -->
+        </video>
+    </div>
+
+    <!-- Player Bottom Ad -->
+    <div class="mt-4 flex justify-center">
+        {% load ad_tags %}
+        {% get_ad 'player_bottom' %}
+    </div>
+
+    <div class="mt-8 bg-gray-900 p-6 rounded-xl border border-gray-800">
+        <h2 class="text-xl font-bold mb-4">Description</h2>
+        <p class="text-gray-400">{{ episode.anime.description|default:"No description available." }}</p>
+    </div>
+</div>
+
+<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <script>
-    const malId = {{ anime.mal_id }};
-    const currentEp = {{ current_ep }};
-    const urlParams = new URLSearchParams(window.location.search);
-    const sourceName = urlParams.get('source') || 'animecix'; // Default to animecix
-    let progressInterval;
+    document.addEventListener('DOMContentLoaded', () => {
+        const video = document.querySelector('#player');
+        const source = "{{ MEDIA_URL }}{{ episode.hls_playlist }}";
 
-    async function loadStreams() {
-        const container = document.getElementById('player-container');
-        try {
-            // Fetch real-time stream from source
-            const resp = await fetch(`/api/anime/${malId}/episode/${currentEp}/stream/${sourceName}`);
-            const data = await resp.json();
+        const defaultOptions = {
+            controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+        };
 
-            if (data.stream_url) {
-                let streamUrl = data.stream_url;
-                // Determine video type based on URL
-                const videoType = getVideoType(streamUrl);
-
-                // Attempt to use Blob URL for security (if CORS allows)
-                if (videoType === 'application/x-mpegURL') {
-                    const blobUrl = await createBlobUrl(streamUrl);
-                    if (blobUrl) {
-                        console.log('Secured stream with Blob URL');
-                        streamUrl = blobUrl;
-                    }
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                xhrSetup: function(xhr, url) {
+                    xhr.withCredentials = true; // Send cookies for Key request
                 }
-
-                container.innerHTML = `
-                    <video-js id="main-player" class="vjs-default-skin vjs-big-play-centered w-full h-full" controls preload="auto" autoplay>
-                        <source src="${streamUrl}" type="${videoType}">
-                        <p class="vjs-no-js">
-                            To view this video please enable JavaScript, and consider upgrading to a web browser that
-                            <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
-                        </p>
-                    </video-js>`;
-
-                // Initialize Video.js player
-                const player = videojs('main-player', {
-                    html5: {
-                        hls: {
-                            overrideNative: !videojs.browser.IS_SAFARI
-                        },
-                        nativeAudioTracks: false,
-                        nativeVideoTracks: false
-                    },
-                    autoplay: true,
-                    controls: true,
-                    responsive: true,
-                    fluid: true
-                });
-
-                player.ready(function() {
-                    console.log('Player is ready');
-                    setupProgressTracking();
-                    setupKeyboardShortcuts(player);
-                });
-
-                player.on('ended', function() {
-                    if (document.getElementById('auto-next').checked) {
-                        const nextEp = currentEp + 1;
-                        showNotification(`Starting Episode ${nextEp} in 3 seconds...`, 'success');
-                        setTimeout(() => {
-                            window.location.href = `/player?mal_id=${malId}&ep=${nextEp}`;
-                        }, 3000);
-                    }
-                });
-
-                player.on('error', function() {
-                    console.error('Video.js error:', player.error());
-                    
-                    // Try with different MIME type if HLS fails
-                    const currentSrc = player.currentSource();
-                    if (currentSrc && currentSrc.type === 'application/x-mpegURL') {
-                        console.log('HLS failed, trying MP4 fallback...');
-                        player.src({
-                            src: currentSrc.src,
-                            type: 'video/mp4'
-                        });
-                    }
-                });
-
-            } else {
-                container.innerHTML = `
-                    <div class="text-center p-8">
-                        <p class="text-red-500 mb-4">${data.error || 'No working video links found for this episode.'}</p>
-                        <button onclick="location.reload()" class="bg-blue-600 px-4 py-2 rounded">Try Refresh</button>
-                    </div>`;
-            }
-        } catch (e) {
-            container.innerHTML = `<p class="text-red-500">Error loading stream: ${e.message}</p>`;
-        }
-    }
-
-    function getVideoType(url) {
-        if (url.includes('.m3u8') || url.includes('m3u8')) {
-            return 'application/x-mpegURL';
-        } else if (url.includes('.mp4')) {
-            return 'video/mp4';
-        } else if (url.includes('.webm')) {
-            return 'video/webm';
-        } else if (url.includes('.ogg')) {
-            return 'video/ogg';
-        } else {
-            // Default to HLS for streaming URLs
-            return 'application/x-mpegURL';
-        }
-    }
-
-    async function createBlobUrl(url) {
-        try {
-            // Attempt to fetch the content
-            const response = await fetch(url);
-            if (!response.ok) return null;
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
-        } catch (e) {
-            // Likely CORS error, fallback to direct URL
-            return null;
-        }
-    }
-
-    function setupProgressTracking() {
-        const player = videojs('main-player');
-        if (!player) return;
-
-        {% if session.user_id %}
-        player.on('play', () => {
-            progressInterval = setInterval(() => {
-                const progress = Math.floor((player.currentTime() / player.duration()) * 100);
-                if (progress > 0) {
-                    updateHistory(progress);
-                }
-            }, 30000); // Update every 30 seconds
-        });
-
-        player.on('pause', () => clearInterval(progressInterval));
-        player.on('ended', () => updateHistory(100));
-        {% endif %}
-    }
-
-    function skipTime(seconds) {
-        const player = videojs('main-player');
-        if (player) {
-            player.currentTime(player.currentTime() + seconds);
-        }
-    }
-
-    function setupKeyboardShortcuts(player) {
-        document.addEventListener('keydown', (e) => {
-            // Don't trigger if user is typing in comment box
-            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') return;
-
-            switch(e.code) {
-                case 'Space':
-                    e.preventDefault();
-                    if (player.paused()) player.play(); else player.pause();
-                    break;
-                case 'ArrowRight':
-                    player.currentTime(player.currentTime() + 5);
-                    break;
-                case 'ArrowLeft':
-                    player.currentTime(player.currentTime() - 5);
-                    break;
-                case 'KeyF':
-                    if (player.isFullscreen()) player.exitFullscreen(); else player.requestFullscreen();
-                    break;
-                case 'KeyM':
-                    player.muted(!player.muted());
-                    break;
-                case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
-                case 'Digit6': case 'Digit7': case 'Digit8': case 'Digit9': case 'Digit0':
-                    const percent = parseInt(e.key) * 10;
-                    player.currentTime(player.duration() * (percent / 100));
-                    break;
-            }
-        });
-    }
-
-    async function updateHistory(progress) {
-        await fetch('/api/user/history', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mal_id: malId,
-                episode: currentEp,
-                progress: progress
-            })
-        });
-    }
-
-    async function updateWatchlistStatus() {
-        const status = document.getElementById('watchlist-status').value;
-        if (!status) return;
-
-        const resp = await fetch('/api/user/watchlist', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                mal_id: malId,
-                status: status
-            })
-        });
-
-        if (resp.ok) {
-            showNotification('Watchlist updated!', 'success');
-        } else {
-            showNotification('Failed to update watchlist', 'error');
-        }
-    }
-
-    let replyingTo = null;
-
-    function replyTo(commentId, username) {
-        replyingTo = commentId;
-        const input = document.getElementById('comment-input');
-        input.placeholder = `Replying to ${username}...`;
-        input.focus();
-
-        // Show a cancel button if not already there
-        if (!document.getElementById('cancel-reply')) {
-            const cancelBtn = document.createElement('button');
-            cancelBtn.id = 'cancel-reply';
-            cancelBtn.className = 'text-xs text-red-500 hover:underline ml-4';
-            cancelBtn.textContent = 'Cancel Reply';
-            cancelBtn.onclick = () => {
-                replyingTo = null;
-                input.placeholder = "Share your thoughts about this episode...";
-                cancelBtn.remove();
-            };
-            document.querySelector('#comment-input').parentElement.appendChild(cancelBtn);
-        }
-    }
-
-    function renderComment(c, isReply = false) {
-        const safeUsername = escapeHTML(c.username);
-        const safeContent = escapeHTML(c.content).replace(/\n/g, '<br>');
-        const isMyComment = c.user_id === {{ session.user_id if session.user_id else 0 }};
-        const myUserId = {{ session.user_id if session.user_id else 0 }};
-
-        return `
-            <div id="comment-${c.id}" class="comment-card ${isReply ? 'mt-4 ml-6 border-l-2 border-gray-700 pl-4' : 'bg-gray-900/30 p-4 rounded-lg border border-gray-800'} relative group transition-all duration-300">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="flex items-center">
-                        <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs mr-3">
-                            ${safeUsername.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <span class="font-bold text-sm text-blue-400">${safeUsername}</span>
-                            <span class="text-[10px] text-gray-500 ml-2 uppercase">${new Date(c.created_at).toLocaleDateString()}</span>
-                            ${c.is_spoiler ? '<span class="ml-2 px-1.5 py-0.5 bg-red-900/30 text-red-500 text-[9px] font-bold rounded uppercase tracking-wider border border-red-900/50">Spoiler</span>' : ''}
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        ${myUserId ? `
-                        <button onclick="replyTo(${c.id}, '${safeUsername}')" class="text-gray-500 hover:text-blue-400 transition p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                            </svg>
-                        </button>
-                        ` : ''}
-                        ${isMyComment ? `
-                        <button onclick="deleteComment(${c.id})" class="text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition p-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                        ` : ''}
-                    </div>
-                </div>
-                <div class="comment-text text-sm leading-relaxed text-gray-300 ${c.is_spoiler ? 'spoiler-blur cursor-pointer' : ''}"
-                     ${c.is_spoiler ? 'onclick="this.classList.toggle(\'unblurred\')"' : ''}>
-                    ${safeContent}
-                </div>
-                <div class="replies-container">
-                    ${c.replies ? c.replies.map(r => renderComment(r, true)).join('') : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    async function loadComments() {
-        const container = document.getElementById('comments-container');
-        try {
-            const resp = await fetch(`/api/social/comments/${malId}/${currentEp}`);
-            const data = await resp.json();
-            const comments = data.comments || [];
-
-            if (comments.length === 0) {
-                container.innerHTML = `<p class="text-center text-gray-500 py-8">No comments yet. Be the first to share your thoughts!</p>`;
-                return;
-            }
-
-            container.innerHTML = comments.map(c => renderComment(c)).join('');
-
-            // If there's a hash in URL (e.g. #comment-123), highlight and scroll to it
-            if (window.location.hash) {
-                const target = document.querySelector(window.location.hash);
-                if (target) {
-                    target.classList.add('ring-2', 'ring-blue-500', 'bg-blue-900/20');
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            container.innerHTML = `<p class="text-red-500 text-sm">Failed to load comments.</p>`;
-        }
-    }
-
-    async function postComment() {
-        const input = document.getElementById('comment-input');
-        const spoiler = document.getElementById('is-spoiler');
-        const btn = document.getElementById('post-btn');
-        const content = input.value.trim();
-
-        if (!content) return;
-
-        btn.disabled = true;
-        btn.innerText = 'Posting...';
-
-        try {
-            const resp = await fetch('/api/social/comments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    mal_id: malId,
-                    episode: currentEp,
-                    content: content,
-                    is_spoiler: spoiler.checked,
-                    parent_id: replyingTo
-                })
             });
-
-            if (resp.ok) {
-                input.value = '';
-                spoiler.checked = false;
-                replyingTo = null;
-                input.placeholder = "Share your thoughts about this episode...";
-                const cancelBtn = document.getElementById('cancel-reply');
-                if (cancelBtn) cancelBtn.remove();
-
-                loadComments();
-                showNotification('Comment posted successfully!', 'success');
-            } else {
-                const err = await resp.json();
-                showNotification(err.error || 'Failed to post comment', 'error');
-            }
-        } catch (e) {
-            showNotification('An error occurred while posting comment', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'Post Comment';
+            hls.loadSource(source);
+            hls.attachMedia(video);
+            window.hls = hls;
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = source;
         }
-    }
 
-    async function deleteComment(id) {
-        if (!confirm('Are you sure you want to delete this comment?')) return;
-
-        try {
-            const resp = await fetch(`/api/social/comments/${id}`, { method: 'DELETE' });
-            if (resp.ok) {
-                loadComments();
-                showNotification('Comment deleted', 'info');
-            } else {
-                showNotification('Failed to delete comment', 'error');
-            }
-        } catch (e) {
-            showNotification('An error occurred while deleting comment', 'error');
-        }
-    }
-
-    function toggleTheaterMode() {
-        const videoArea = document.getElementById('video-area');
-        const isTheater = videoArea.classList.toggle('theater-mode');
-
-        // Hide/Show sidebar
-        const sidebar = document.querySelector('.lg\\:w-1\\/4');
-        if (isTheater) {
-            sidebar.classList.add('hidden');
-            document.body.classList.add('theater-mode-bg');
-            // Scroll to player
-            videoArea.scrollIntoView({ behavior: 'smooth' });
-        } else {
-            sidebar.classList.remove('hidden');
-            document.body.classList.remove('theater-mode-bg');
-        }
-    }
-
-    loadStreams();
-    loadComments();
+        const player = new Plyr(video, defaultOptions);
+    });
 </script>
 {% endblock %}

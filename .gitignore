@@ -114,3 +114,7 @@ covers
 *.sqlite
 *.png
 verification/
+
+# Django Media and Static
+media/
+staticfiles/
