@@ -109,6 +109,8 @@ def init_database():
         username TEXT UNIQUE NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
+        xp INTEGER DEFAULT 0,
+        level INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -278,6 +280,50 @@ def init_database():
         cursor.execute("ALTER TABLE watch_history ADD COLUMN progress INTEGER DEFAULT 0")
     except sqlite3.OperationalError:
         pass
+
+    # Migration: Add XP and Level to users
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN xp INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN level INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+
+    # Badges table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        description TEXT,
+        icon TEXT
+    )
+    """)
+
+    # User Badges table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_badges (
+        user_id INTEGER NOT NULL,
+        badge_id INTEGER NOT NULL,
+        awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, badge_id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (badge_id) REFERENCES badges(id)
+    )
+    """)
+
+    # Initial Badges
+    initial_badges = [
+        ("Otaku Beginner", "Watch your first episode", "🔰"),
+        ("Anime Critic", "Write your first review", "✍️"),
+        ("Social Butterfly", "Follow 5 other users", "🦋"),
+        ("Rising Star", "Reach Level 5", "⭐"),
+        ("Anime Sensei", "Reach Level 10", "👑"),
+        ("Collector", "Create 3 collections", "📦")
+    ]
+    for name, desc, icon in initial_badges:
+        cursor.execute("INSERT OR IGNORE INTO badges (name, description, icon) VALUES (?, ?, ?)", (name, desc, icon))
 
     # Genres table
     cursor.execute("""
@@ -568,6 +614,9 @@ def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False, pa
     """, (user_id, anime_id, episode_number, content, is_spoiler, parent_id))
     conn.commit()
     comment_id = cursor.lastrowid
+
+    # Award XP for commenting
+    add_xp(user_id, 5, "Commented on an episode")
 
     # If it's a reply, notify the parent comment owner
     if parent_id:
@@ -896,6 +945,12 @@ def get_user_stats(user_id):
     if not conn: return {}
     cursor = conn.cursor()
 
+    # Get User basic info (XP, Level)
+    cursor.execute("SELECT xp, level FROM users WHERE id = ?", (user_id,))
+    user_row = cursor.fetchone()
+    xp = user_row["xp"] if user_row else 0
+    level = user_row["level"] if user_row else 1
+
     # Number of watched anime and total episodes watched
     cursor.execute("SELECT COUNT(*), SUM(episode_number) FROM watch_history WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
@@ -918,16 +973,39 @@ def get_user_stats(user_id):
     cursor.execute("SELECT status, COUNT(*) as count FROM watchlists WHERE user_id = ? GROUP BY status", (user_id,))
     watchlist_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
 
+    # Badges
+    cursor.execute("""
+        SELECT b.name, b.icon, b.description FROM badges b
+        JOIN user_badges ub ON b.id = ub.badge_id
+        WHERE ub.user_id = ?
+    """, (user_id,))
+    badges = [dict(r) for r in cursor.fetchall()]
+
     cursor.close()
     conn.close()
 
+    # Calculate XP to next level: next_level_xp = (current_level)**2 * 100
+    # Current level L was calculated from int(sqrt(xp/100)) + 1
+    # So to get to level L+1, you need (L)**2 * 100 XP
+    next_level_xp = (level ** 2) * 100
+    current_level_base_xp = ((level - 1) ** 2) * 100
+
+    progress_xp = xp - current_level_base_xp
+    needed_xp = next_level_xp - current_level_base_xp
+    progress_percent = min(100, int((progress_xp / needed_xp) * 100)) if needed_xp > 0 else 100
+
     return {
+        "xp": xp,
+        "level": level,
+        "next_level_xp": next_level_xp,
+        "progress_percent": progress_percent,
         "total_watched": total_watched,
         "total_episodes": total_episodes,
         "total_favorites": total_favorites,
         "followers": followers,
         "following": following,
-        "watchlist_counts": watchlist_counts
+        "watchlist_counts": watchlist_counts,
+        "badges": badges
     }
 
 def toggle_favorite(user_id, mal_id):
@@ -1009,9 +1087,127 @@ def toggle_follow(follower_id, followed_id):
         log_activity(follower_id, "follow", target_user_id=followed_id, message=f"Started following {target_user['username']}", cursor=cursor)
         add_notification(followed_id, "social", f"Someone started following you!", f"/user/{get_user_by_id(follower_id)['username']}")
 
+        # Award XP for following
+        add_xp(follower_id, 10, "Followed a user")
+
     conn.commit()
     conn.close()
     return action
+
+def add_xp(user_id, amount, reason="Activity"):
+    """Add XP to a user and handle leveling up."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+
+    # Get current XP and level
+    cursor.execute("SELECT xp, level FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    if not user:
+        cursor.close()
+        conn.close()
+        return None
+
+    old_xp = user["xp"] or 0
+    old_level = user["level"] or 1
+    new_xp = old_xp + amount
+
+    # Calculate new level: level = sqrt(xp/100) + 1
+    new_level = int((new_xp / 100) ** 0.5) + 1
+
+    cursor.execute("UPDATE users SET xp = ?, level = ? WHERE id = ?", (new_xp, new_level, user_id))
+
+    # Check for level up notification
+    if new_level > old_level:
+        add_notification(user_id, "system", f"🎉 Congratulations! You reached Level {new_level}!", "/profile")
+
+        # Check for Level-based Badges
+        if new_level == 5:
+            award_badge(user_id, "Rising Star", cursor)
+        elif new_level == 10:
+            award_badge(user_id, "Anime Sensei", cursor)
+
+    # Check for other badges
+    check_milestone_badges(user_id, cursor)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"new_xp": new_xp, "new_level": new_level, "leveled_up": new_level > old_level}
+
+def award_badge(user_id, badge_name, cursor):
+    """Award a badge to a user if they don't have it yet."""
+    cursor.execute("SELECT id, icon FROM badges WHERE name = ?", (badge_name,))
+    badge = cursor.fetchone()
+    if not badge: return False
+
+    try:
+        cursor.execute("INSERT INTO user_badges (user_id, badge_id) VALUES (?, ?)", (user_id, badge["id"]))
+        add_notification(user_id, "system", f"🏅 New Badge Unlocked: {badge_name} {badge['icon']}!", "/profile")
+        return True
+    except sqlite3.IntegrityError:
+        return False
+
+def check_milestone_badges(user_id, cursor):
+    """Check and award milestone badges."""
+    # 1. First Episode
+    cursor.execute("SELECT COUNT(*) as count FROM watch_history WHERE user_id = ?", (user_id,))
+    if cursor.fetchone()["count"] >= 1:
+        award_badge(user_id, "Otaku Beginner", cursor)
+
+    # 2. First Review
+    cursor.execute("SELECT COUNT(*) as count FROM reviews WHERE user_id = ?", (user_id,))
+    if cursor.fetchone()["count"] >= 1:
+        award_badge(user_id, "Anime Critic", cursor)
+
+    # 3. Follow 5 users
+    cursor.execute("SELECT COUNT(*) as count FROM follows WHERE follower_id = ?", (user_id,))
+    if cursor.fetchone()["count"] >= 5:
+        award_badge(user_id, "Social Butterfly", cursor)
+
+    # 4. Create 3 collections
+    cursor.execute("SELECT COUNT(*) as count FROM collections WHERE user_id = ?", (user_id,))
+    if cursor.fetchone()["count"] >= 3:
+        award_badge(user_id, "Collector", cursor)
+
+def get_user_badges(user_id):
+    """Get all badges for a user."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT b.*, ub.awarded_at
+        FROM badges b
+        JOIN user_badges ub ON b.id = ub.badge_id
+        WHERE ub.user_id = ?
+        ORDER BY ub.awarded_at DESC
+    """, (user_id,))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def get_users_watching_anime(anime_id):
+    """Get IDs of users who have this anime in their 'watching' list."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM watchlists WHERE anime_id = ? AND status = 'watching'", (anime_id,))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return [row["user_id"] for row in rows]
+
+def get_anime_title_by_id(anime_id):
+    """Get anime title by internal ID."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    cursor.execute("SELECT title FROM animes WHERE id = ?", (anime_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row["title"] if row else None
 
 def is_following(follower_id, followed_id):
     conn = get_connection()
@@ -1062,13 +1258,13 @@ def get_top_watchers(limit=10):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT u.id, u.username,
+        SELECT u.id, u.username, u.level, u.xp,
                COUNT(wh.id) as anime_count,
                IFNULL(SUM(wh.episode_number), 0) as total_episodes
         FROM users u
         LEFT JOIN watch_history wh ON u.id = wh.user_id
         GROUP BY u.id
-        ORDER BY total_episodes DESC
+        ORDER BY total_episodes DESC, u.xp DESC
         LIMIT ?
     """, (limit,))
     res = cursor.fetchall()
@@ -1093,6 +1289,9 @@ def update_watch_history(user_id, anime_id, episode_number, progress=0):
 
     conn.commit()
     conn.close()
+
+    # Award XP for watching
+    add_xp(user_id, 10, "Watched an episode")
 
 def update_watchlist(user_id, anime_id, status):
     conn = get_connection()
@@ -1797,6 +1996,10 @@ def add_review(user_id, anime_id, score, title, content, is_spoiler=False):
                 updated_at = CURRENT_TIMESTAMP
         """, (user_id, anime_id, score, title, content, int(is_spoiler)))
         conn.commit()
+
+        # Award XP for reviewing
+        add_xp(user_id, 50, "Wrote a review")
+
         return cursor.lastrowid or True
     except sqlite3.Error as e:
         print(f"[DB] add_review error: {e}")
@@ -1896,7 +2099,12 @@ def create_collection(user_id, name, description=None, is_public=True):
             VALUES (?, ?, ?, ?)
         """, (user_id, name, description, int(is_public)))
         conn.commit()
-        return cursor.lastrowid
+        col_id = cursor.lastrowid
+
+        # Award XP for creating a collection
+        add_xp(user_id, 20, "Created a collection")
+
+        return col_id
     except sqlite3.Error:
         return None
     finally:

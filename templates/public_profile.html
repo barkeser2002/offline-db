@@ -21,8 +21,27 @@
                 {% endif %}
             </div>
             <div class="flex-grow text-center md:text-left space-y-2 mb-2">
-                <h1 class="text-4xl md:text-5xl font-black text-white break-words">{{ user.username }}</h1>
-                <p class="text-gray-400 font-medium">Joined {{ user.created_at[:7] }}</p>
+                <div class="flex items-center justify-center md:justify-start gap-4">
+                    <h1 class="text-4xl md:text-5xl font-black text-white break-words">{{ user.username }}</h1>
+                    <div class="px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500/50 text-blue-400 text-sm font-black uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                        LVL {{ stats.level }}
+                    </div>
+                </div>
+                <p class="text-gray-400 font-medium">Joined {{ user.created_at[:7] if user.created_at else 'Recently' }}</p>
+
+                <!-- Unlocked Badges Mini-Row -->
+                {% if stats.badges %}
+                <div class="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+                    {% for badge in stats.badges %}
+                    <div class="w-8 h-8 rounded-lg bg-gray-900/80 border border-white/5 flex items-center justify-center text-sm shadow-lg group relative cursor-help" title="{{ badge.name }}: {{ badge.description }}">
+                        {{ badge.icon }}
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-[10px] text-white rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-10 pointer-events-none">
+                            {{ badge.name }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
             <div class="flex gap-3 mb-2">
                 {% if not is_own_profile %}
