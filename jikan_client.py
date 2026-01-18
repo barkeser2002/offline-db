@@ -22,21 +22,21 @@ class JikanClient:
         with self._lock:
             now = time.time()
             elapsed = now - self._last_request_time
-            if elapsed < 0.35:  # ~3 istek/saniye için 0.33s, güvenlik için 0.35s
+            if elapsed < 0.35:  # 0.33s for ~3 req/s, 0.35s for safety
                 time.sleep(0.35 - elapsed)
             self._last_request_time = time.time()
 
     def _request(self, endpoint: str, params: Optional[Dict[str, Any]] = None, max_retries: int = 5) -> Optional[Dict[str, Any]]:
         """
-        Jikan API'ye güvenli bir istek gönderir.
+        Sends a safe request to the Jikan API.
 
         Args:
-            endpoint: API endpoint (örn. "anime/21")
-            params: İstek parametreleri
-            max_retries: Maksimum yeniden deneme sayısı
+            endpoint: API endpoint (e.g. "anime/21")
+            params: Request parameters
+            max_retries: Maximum number of retries
 
         Returns:
-            JSON yanıtı veya hata durumunda None
+            JSON response or None on error
         """
         url = f"{self.base_url}/{endpoint}"
         for attempt in range(max_retries):
@@ -47,7 +47,7 @@ class JikanClient:
                 if response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 5))
                     wait_time = max(retry_after, 2 ** attempt)
-                    print(f"[JikanClient] Rate limit! {wait_time}s bekleniyor... (deneme {attempt + 1}/{max_retries})")
+                    print(f"[JikanClient] Rate limit! Waiting {wait_time}s... (attempt {attempt + 1}/{max_retries})")
                     time.sleep(wait_time)
                     continue
 
@@ -56,27 +56,27 @@ class JikanClient:
 
             except requests.exceptions.HTTPError as e:
                 if e.response is not None and e.response.status_code == 404:
-                    print(f"[JikanClient] Kaynak bulunamadı: {url}")
+                    print(f"[JikanClient] Resource not found: {url}")
                     return None
-                print(f"[JikanClient] HTTP Hatası ({url}): {e}")
+                print(f"[JikanClient] HTTP Error ({url}): {e}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
             except requests.exceptions.Timeout:
-                print(f"[JikanClient] Timeout ({url}), tekrar deneniyor...")
+                print(f"[JikanClient] Timeout ({url}), retrying...")
             except Exception as e:
-                print(f"[JikanClient] Beklenmedik hata ({url}): {e}")
+                print(f"[JikanClient] Unexpected error ({url}): {e}")
                 break
 
-        print(f"[JikanClient] Maksimum deneme aşıldı: {url}")
+        print(f"[JikanClient] Max retries exceeded: {url}")
         return None
 
     def get_anime(self, mal_id: int) -> Optional[Dict[str, Any]]:
-        """Belirli bir anime'nin bilgilerini alır."""
+        """Gets info for a specific anime."""
         response = self._request(f"anime/{mal_id}")
         return response.get("data") if response else None
 
     def get_anime_episodes(self, mal_id: int) -> list:
-        """Bir anime'nin tüm bölümlerini alır."""
+        """Gets all episodes of an anime."""
         all_episodes = []
         page = 1
         while True:
@@ -96,26 +96,26 @@ class JikanClient:
         return all_episodes
 
     def search_anime(self, query: str, limit: int = 5) -> list:
-        """Anime arar."""
+        """Searches for anime."""
         response = self._request("anime", params={"q": query, "limit": limit})
         return response.get("data", []) if response else []
 
     def get_season_anime(self, year: int, season: str, page: int = 1) -> Optional[Dict[str, Any]]:
-        """Belirli bir sezonun anime'lerini alır."""
+        """Gets anime for a specific season."""
         return self._request(f"seasons/{year}/{season}", params={"page": page})
 
     def get_top_anime(self, limit: int = 10) -> list:
-        """En popüler anime'leri alır."""
+        """Gets top anime."""
         response = self._request("top/anime", params={"limit": limit})
         return response.get("data", []) if response else []
 
     def get_recommendations(self, limit: int = 10) -> list:
-        """Anime önerilerini alır."""
+        """Gets anime recommendations."""
         response = self._request("recommendations/anime", params={"limit": limit})
         return response.get("data", []) if response else []
 
     def get_schedule(self, day: Optional[str] = None) -> list:
-        """Haftalık yayın akışını alır."""
+        """Gets weekly schedule."""
         params = {}
         if day:
             params["filter"] = day
@@ -123,5 +123,15 @@ class JikanClient:
         response = self._request("schedules", params=params)
         return response.get("data", []) if response else []
 
-# Global Jikan istemcisi
+    def get_anime_relations(self, mal_id: int) -> list:
+        """Gets anime relations (sequel, prequel, etc.)."""
+        response = self._request(f"anime/{mal_id}/relations")
+        return response.get("data", []) if response else []
+
+    def get_anime_recommendations(self, mal_id: int) -> list:
+        """Gets similar anime recommendations."""
+        response = self._request(f"anime/{mal_id}/recommendations")
+        return response.get("data", []) if response else []
+
+# Global Jikan client
 jikan = JikanClient()

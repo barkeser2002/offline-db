@@ -10,6 +10,7 @@ from blueprints.api import api_bp
 from blueprints.user import user_bp
 from blueprints.social import social_bp
 from blueprints.reviews import reviews_bp
+from blueprints.collections import collections_bp
 import db
 
 app = Flask(__name__)
@@ -27,6 +28,7 @@ app.register_blueprint(api_bp)
 app.register_blueprint(user_bp)
 app.register_blueprint(social_bp)
 app.register_blueprint(reviews_bp)
+app.register_blueprint(collections_bp)
 
 if __name__ == "__main__":
     print(f"""

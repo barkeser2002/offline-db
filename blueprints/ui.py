@@ -134,6 +134,10 @@ def anime_details(mal_id):
     if not anime:
         return "Anime not found", 404
 
+    # Fetch relations and recommendations from Jikan
+    relations = jikan.get_anime_relations(mal_id)
+    related_recommendations = jikan.get_anime_recommendations(mal_id)
+
     # User status (In watchlist?)
     user_status = None
     if "user_id" in session:
@@ -143,7 +147,11 @@ def anime_details(mal_id):
                 user_status = item["status"]
                 break
 
-    return render_template("anime_details.html", anime=anime, user_status=user_status)
+    return render_template("anime_details.html",
+                         anime=anime,
+                         user_status=user_status,
+                         relations=relations,
+                         related_recommendations=related_recommendations[:6])
 
 @ui_bp.route("/profile")
 @ui_bp.route("/dashboard")
