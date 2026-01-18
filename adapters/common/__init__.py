@@ -1,0 +1,1 @@
+# adapters/common package

@@ -18,7 +18,7 @@ import urllib.request
 
 # Cloudflare bypass entegrasyonu
 try:
-    from .turkanime_bypass import CFBypassError
+    from .common.cf_bypass import CFSession, CFBypassError
     HAS_CF_BYPASS = True
 except ImportError:
     HAS_CF_BYPASS = False
@@ -30,18 +30,14 @@ HEADERS = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
 VIDEO_PLAYERS = ["tau-video.xyz", "sibnet"]
 
 # Global CF session (lazy-load)
-_cf_session: Optional[Any] = None
+_cf_session: Optional[CFSession] = None
 
 
-def _get_cf_session() -> Optional[Any]:
+def _get_cf_session() -> Optional[CFSession]:
     """CF session'ı lazy-load et."""
     global _cf_session
     if _cf_session is None and HAS_CF_BYPASS:
-        try:
-            from .turkanime_bypass import _get_cf_session as get_sess
-            _cf_session = get_sess()
-        except ImportError:
-            _cf_session = None
+        _cf_session = CFSession(impersonate="chrome110", timeout=15, max_retries=3)
     return _cf_session
 
 
@@ -51,16 +47,15 @@ def _http_get(url: str, timeout: int = 10) -> bytes:
     sp = urlsplit(url)
     safe_path = quote(sp.path, safe="/:%@")
     safe_url = urlunsplit((sp.scheme, sp.netloc, safe_path, sp.query, sp.fragment))
-    
+
     # Önce CF bypass ile dene
     cf_session = _get_cf_session()
     if cf_session is not None:
         try:
-            if hasattr(cf_session, "get"):
-                resp = cf_session.get(safe_url, headers=HEADERS)
-                if resp.status_code == 200:
-                    return resp.content
-        except Exception as e:
+            resp = cf_session.get(safe_url, headers=HEADERS)
+            if resp.status_code == 200:
+                return resp.content
+        except (CFBypassError, Exception) as e:
             print(f"[AnimeCix] CF bypass başarısız, fallback kullanılıyor: {e}")
 
     # Fallback: Normal urllib
@@ -92,7 +87,7 @@ def _seasons_for_title(title_id: int) -> List[int]:
         safe_id = int(title_id)
     except (ValueError, TypeError):
         safe_id = hash(str(title_id)) % 1000000 if title_id else 0
-    
+
     url = f"{ALT_URL}secure/related-videos?episode=1&season=1&titleId={safe_id}&videoId=637113"
     data = json.loads(_http_get(url))
     videos = data.get("videos") or []
@@ -109,7 +104,7 @@ def _episodes_for_title(title_id: int) -> List[Dict[str, Any]]:
         safe_id = int(title_id)
     except (ValueError, TypeError):
         safe_id = hash(str(title_id)) % 1000000 if title_id else 0
-    
+
     episodes: List[Dict[str, Any]] = []
     seen = set()
     for sidx in _seasons_for_title(safe_id):
@@ -190,38 +185,5 @@ class CixAnime:
             out.append(CixEpisode(title=e.get("name") or f"Bölüm {i+1}", url=e.get("url") or ""))
         return out
 
-
-def get_episode_streams(episode_url: str, timeout: int = 10) -> List[Dict[str, str]]:
-    """
-    Episode URL'sinden video stream'leri çek.
-    
-    Args:
-        episode_url: Episode sayfasının URL'si
-        timeout: Zaman aşımı
-        
-    Returns:
-        Stream listesi [{"label": "...", "url": "..."}, ...]
-    """
-    try:
-        # Episode URL'sinden embed path'i çıkar
-        # Örnek: https://animecix.tv/watch/fullmetal-alchemist-brotherhood-1-bolum
-        # Embed: /embed/fullmetal-alchemist-brotherhood-1-bolum
-        if "/watch/" in episode_url:
-            embed_path = episode_url.replace("/watch/", "/embed/")
-            return _video_streams(embed_path)
-        else:
-            # Eğer direkt embed URL'i ise
-            if episode_url.startswith("/embed/"):
-                return _video_streams(episode_url)
-            else:
-                # Tam URL ise path'i al
-                parsed = urlparse(episode_url)
-                if parsed.path.startswith("/embed/"):
-                    return _video_streams(parsed.path)
-                elif parsed.path.startswith("/watch/"):
-                    embed_path = parsed.path.replace("/watch/", "/embed/")
-                    return _video_streams(embed_path)
-    except Exception as e:
-        print(f"[AnimeciX] Stream çekme hatası: {e}")
-    
-    return []
+# Alias for compatibility with video_service
+get_episode_streams = _video_streams

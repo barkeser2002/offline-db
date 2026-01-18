@@ -157,12 +157,22 @@
             const data = await resp.json();
 
             if (data.stream_url) {
+                let streamUrl = data.stream_url;
                 // Determine video type based on URL
-                const videoType = getVideoType(data.stream_url);
+                const videoType = getVideoType(streamUrl);
+
+                // Attempt to use Blob URL for security (if CORS allows)
+                if (videoType === 'application/x-mpegURL') {
+                    const blobUrl = await createBlobUrl(streamUrl);
+                    if (blobUrl) {
+                        console.log('Secured stream with Blob URL');
+                        streamUrl = blobUrl;
+                    }
+                }
 
                 container.innerHTML = `
                     <video-js id="main-player" class="vjs-default-skin vjs-big-play-centered w-full h-full" controls preload="auto" autoplay>
-                        <source src="${data.stream_url}" type="${videoType}">
+                        <source src="${streamUrl}" type="${videoType}">
                         <p class="vjs-no-js">
                             To view this video please enable JavaScript, and consider upgrading to a web browser that
                             <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
@@ -227,6 +237,19 @@
         } else {
             // Default to HLS for streaming URLs
             return 'application/x-mpegURL';
+        }
+    }
+
+    async function createBlobUrl(url) {
+        try {
+            // Attempt to fetch the content
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            const blob = await response.blob();
+            return URL.createObjectURL(blob);
+        } catch (e) {
+            // Likely CORS error, fallback to direct URL
+            return null;
         }
     }
 
