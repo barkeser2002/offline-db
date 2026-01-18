@@ -1,5 +1,5 @@
 """
-SQLite Veritabanı İşlemleri
+SQLite Database Operations
 """
 
 import sqlite3
@@ -39,14 +39,14 @@ class ConnectionWrapper:
         return self.conn.__exit__(exc_type, exc_val, exc_tb)
 
 def get_connection():
-    """Veritabanı bağlantısı oluştur (Thread-local pooling)."""
+    """Create database connection (Thread-local pooling)."""
     if not hasattr(_local, "connection") or _local.connection is None:
         try:
             conn = sqlite3.connect(DB_PATH)
             conn.row_factory = sqlite3.Row
             _local.connection = conn
         except Error as e:
-            print(f"[DB] Bağlantı hatası: {e}")
+            print(f"[DB] Connection error: {e}")
             return None
 
     return ConnectionWrapper(_local.connection)
@@ -63,7 +63,7 @@ def close_thread_connection():
 
 def init_database():
     """
-    Veritabanı tablolarını oluştur.
+    Create database tables.
     """
     conn = get_connection()
     if not conn:
@@ -71,7 +71,7 @@ def init_database():
 
     cursor = conn.cursor()
 
-    # Ana anime tablosu
+    # Main anime table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS animes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,7 +102,7 @@ def init_database():
     )
     """)
 
-    # Kullanıcılar tablosu
+    # Users table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,7 +113,7 @@ def init_database():
     )
     """)
 
-    # Bölümler tablosu
+    # Episodes table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS episodes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,7 +125,7 @@ def init_database():
     )
     """)
 
-    # Video linkleri tablosu
+    # Video links table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS video_links (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,7 +166,7 @@ def init_database():
     except sqlite3.OperationalError:
         pass
 
-    # İzleme geçmişi
+    # Watch history
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS watch_history (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -181,7 +181,7 @@ def init_database():
     )
     """)
 
-    # İzleme listesi
+    # Watchlist
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS watchlists (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -196,7 +196,7 @@ def init_database():
     )
     """)
 
-    # Yorumlar tablosu (Threaded support)
+    # Comments table (Threaded support)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS comments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -213,7 +213,7 @@ def init_database():
     )
     """)
 
-    # Bildirimler tablosu
+    # Notifications table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS notifications (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -227,7 +227,7 @@ def init_database():
     )
     """)
 
-    # Favoriler tablosu
+    # Favorites table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS favorites (
         user_id INTEGER NOT NULL,
@@ -239,7 +239,7 @@ def init_database():
     )
     """)
 
-    # Kullanıcı Aktivite Akışı
+    # User Activity Feed
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_activity (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -255,7 +255,7 @@ def init_database():
     )
     """)
 
-    # Takip Sistemi
+    # Following System
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS follows (
         follower_id INTEGER NOT NULL,
@@ -279,7 +279,7 @@ def init_database():
     except sqlite3.OperationalError:
         pass
 
-    # Türler tablosu
+    # Genres table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS genres (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -287,7 +287,7 @@ def init_database():
     )
     """)
 
-    # Anime-Tür ilişki tablosu
+    # Anime-Genre relation table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anime_genres (
         anime_id INTEGER NOT NULL,
@@ -298,7 +298,7 @@ def init_database():
     )
     """)
 
-    # Temalar tablosu
+    # Themes table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS themes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -306,7 +306,7 @@ def init_database():
     )
     """)
 
-    # Anime-Tema ilişki tablosu
+    # Anime-Theme relation table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anime_themes (
         anime_id INTEGER NOT NULL,
@@ -317,7 +317,7 @@ def init_database():
     )
     """)
 
-    # Stüdyolar tablosu
+    # Studios table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS studios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -325,7 +325,7 @@ def init_database():
     )
     """)
 
-    # Anime-Stüdyo ilişki tablosu
+    # Anime-Studio relation table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anime_studios (
         anime_id INTEGER NOT NULL,
@@ -336,7 +336,7 @@ def init_database():
     )
     """)
 
-    # Yapımcılar/Lisansörler tablosu
+    # Producers/Licensors table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS producers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -344,19 +344,19 @@ def init_database():
     )
     """)
 
-    # Anime-Yapımcı ilişki tablosu
+    # Anime-Producer relation table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anime_producers (
         anime_id INTEGER NOT NULL,
         producer_id INTEGER NOT NULL,
-        role TEXT NOT NULL,  -- 'producer' veya 'licensor'
+        role TEXT NOT NULL,  -- 'producer' or 'licensor'
         FOREIGN KEY (anime_id) REFERENCES animes(id),
         FOREIGN KEY (producer_id) REFERENCES producers(id),
         PRIMARY KEY (anime_id, producer_id, role)
     )
     """)
 
-    # Kaynaklar tablosu (animecix, turkanime, vb.)
+    # Sources table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sources (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -366,7 +366,7 @@ def init_database():
     )
     """)
 
-    # Anime-Kaynak eşleşmeleri
+    # Anime-Source mappings
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS anime_sources (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -382,7 +382,7 @@ def init_database():
     )
     """)
 
-    # İncelemeler (Reviews) tablosu
+    # Reviews table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS reviews (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -400,16 +400,42 @@ def init_database():
     )
     """)
 
-    # İnceleme Oyları (Review Votes)
+    # Review Votes
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS review_votes (
         review_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
-        vote INTEGER NOT NULL, -- 1: Faydalı, -1: Faydalı Değil
+        vote INTEGER NOT NULL, -- 1: Helpful, -1: Not Helpful
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (review_id, user_id),
         FOREIGN KEY (review_id) REFERENCES reviews(id),
         FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Collections
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        is_public BOOLEAN DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+    """)
+
+    # Collection Items
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        anime_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (collection_id, anime_id),
+        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes(id) ON DELETE CASCADE
     )
     """)
 
@@ -419,7 +445,7 @@ def init_database():
     return True
 
 def get_anime_by_mal_id(mal_id: int):
-    """MAL ID ile anime'yi getir."""
+    """Get anime by MAL ID."""
     conn = get_connection()
     if not conn:
         return None
@@ -461,9 +487,8 @@ def create_user(username, email, password_hash):
         cursor.close()
         conn.close()
 
-# Basit placeholder fonksiyonları
 def serialize_for_json(data):
-    """JSON serileştirme için basit versiyon."""
+    """Simple version for JSON serialization."""
     if isinstance(data, list):
         return [serialize_for_json(i) for i in data]
     if isinstance(data, sqlite3.Row):
@@ -473,7 +498,7 @@ def serialize_for_json(data):
     return data
 
 def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False, parent_id=None):
-    """Yorum ekle."""
+    """Add comment."""
     conn = get_connection()
     if not conn:
         return None
@@ -506,7 +531,7 @@ def add_comment(user_id, anime_id, episode_number, content, is_spoiler=False, pa
     return comment_id
 
 def get_comments(anime_id, episode_number):
-    """Bölüm yorumlarını getir (Threaded)."""
+    """Get episode comments (Threaded)."""
     conn = get_connection()
     if not conn:
         return []
@@ -543,7 +568,7 @@ def get_episode_comments(anime_id, episode_number):
     return get_comments(anime_id, episode_number)
 
 def add_notification(user_id, type, message, link=None):
-    """Bildirim ekle."""
+    """Add notification."""
     conn = get_connection()
     if not conn:
         return None
@@ -559,7 +584,7 @@ def add_notification(user_id, type, message, link=None):
     return notif_id
 
 def get_unread_notifications(user_id, limit=20):
-    """Okunmamış bildirimleri getir."""
+    """Get unread notifications."""
     conn = get_connection()
     if not conn:
         return []
@@ -576,7 +601,7 @@ def get_unread_notifications(user_id, limit=20):
     return [dict(row) for row in rows]
 
 def mark_notifications_read(user_id, notification_ids=None):
-    """Bildirimleri okundu olarak işaretle."""
+    """Mark notifications as read."""
     conn = get_connection()
     if not conn:
         return False
@@ -592,7 +617,7 @@ def mark_notifications_read(user_id, notification_ids=None):
     return True
 
 def delete_comment(comment_id, user_id):
-    """Yorum sil."""
+    """Delete comment."""
     conn = get_connection()
     if not conn:
         return False
@@ -605,7 +630,7 @@ def delete_comment(comment_id, user_id):
     return affected > 0
 
 def get_trending_anime(limit=10, days=7):
-    """Trend anime'leri getir."""
+    """Get trending anime."""
     conn = get_connection()
     if not conn:
         return []
@@ -624,13 +649,13 @@ def get_trending_anime(limit=10, days=7):
     return results
 
 def get_personalized_recommendations(user_id, limit=5):
-    """Kişiselleştirilmiş öneriler (Tür bazlı)."""
+    """Personalized recommendations (Genre-based)."""
     conn = get_connection()
     if not conn:
         return []
     cursor = conn.cursor()
 
-    # Kullanıcının en çok izlediği/beğendiği 3 türü bul
+    # Find the top 3 genres the user watches/likes most
     cursor.execute("""
         SELECT g.id, g.name, COUNT(*) as count
         FROM watch_history wh
@@ -644,14 +669,14 @@ def get_personalized_recommendations(user_id, limit=5):
     top_genres = cursor.fetchall()
 
     if not top_genres:
-        # Veri yoksa rastgele döndür
+        # Fallback to random if no data
         cursor.execute("SELECT * FROM animes ORDER BY RANDOM() LIMIT ?", (limit,))
         results = cursor.fetchall()
     else:
         genre_ids = [row["id"] for row in top_genres]
         placeholders = ",".join(["?"] * len(genre_ids))
 
-        # Bu türlere sahip ama kullanıcının henüz izlemediği yüksek puanlı anime'leri getir
+        # Get high-rated anime with these genres that the user hasn't watched yet
         cursor.execute(f"""
             SELECT DISTINCT a.* FROM animes a
             JOIN anime_genres ag ON a.id = ag.anime_id
@@ -662,7 +687,7 @@ def get_personalized_recommendations(user_id, limit=5):
         """, (*genre_ids, user_id, limit))
         results = cursor.fetchall()
 
-        # Eğer yeterli sonuç çıkmazsa rastgele ile tamamla
+        # Fill with random if not enough results
         if len(results) < limit:
             needed = limit - len(results)
             existing_ids = [row["id"] for row in results]
@@ -683,7 +708,7 @@ def get_personalized_recommendations(user_id, limit=5):
     return results
 
 def discover_animes(filters, limit=24, offset=0):
-    """Anime keşfet (Gelişmiş Filtreleme)."""
+    """Discover anime (Advanced Filtering)."""
     conn = get_connection()
     if not conn:
         return []
@@ -750,7 +775,6 @@ def discover_animes(filters, limit=24, offset=0):
     sort = filters.get("sort", "popularity")
     if sort == "popularity":
         # Popularity (Rank) should be ASC, but Members should be DESC.
-        # Let's use members count as it's more direct for "Most Popular".
         query += " ORDER BY a.members DESC NULLS LAST, a.popularity ASC NULLS LAST"
     elif sort == "score":
         query += " ORDER BY a.score DESC NULLS LAST"
@@ -775,7 +799,6 @@ def discover_animes(filters, limit=24, offset=0):
     conn.close()
     return results
 
-# Diğer basit placeholder fonksiyonları
 def get_user_by_id(user_id):
     conn = get_connection()
     if not conn:
@@ -788,7 +811,7 @@ def get_user_by_id(user_id):
     return result
 
 def log_activity(user_id, type, anime_id=None, target_user_id=None, message=None, cursor=None):
-    """Kullanıcı aktivitesini kaydet."""
+    """Log user activity."""
     query = """
         INSERT INTO user_activity (user_id, type, anime_id, target_user_id, message)
         VALUES (?, ?, ?, ?, ?)
@@ -809,18 +832,18 @@ def log_activity(user_id, type, anime_id=None, target_user_id=None, message=None
     finally: conn.close()
 
 def get_user_stats(user_id):
-    """Kullanıcı istatistiklerini hesapla."""
+    """Calculate user statistics."""
     conn = get_connection()
     if not conn: return {}
     cursor = conn.cursor()
 
-    # İzlenen anime sayısı ve toplam izlenen bölüm
+    # Number of watched anime and total episodes watched
     cursor.execute("SELECT COUNT(*), SUM(episode_number) FROM watch_history WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
     total_watched = row[0]
     total_episodes = row[1] or 0
 
-    # Favori sayısı, Takipçi ve Takip edilen
+    # Favorites count, Followers and Following
     cursor.execute("""
         SELECT
             (SELECT COUNT(*) FROM favorites WHERE user_id = ?),
@@ -832,7 +855,7 @@ def get_user_stats(user_id):
     followers = row[1]
     following = row[2]
 
-    # İzleme listesi dağılımı
+    # Watchlist distribution
     cursor.execute("SELECT status, COUNT(*) as count FROM watchlists WHERE user_id = ? GROUP BY status", (user_id,))
     watchlist_counts = {row["status"]: row["count"] for row in cursor.fetchall()}
 
@@ -849,7 +872,7 @@ def get_user_stats(user_id):
     }
 
 def toggle_favorite(user_id, mal_id):
-    """Favoriye ekle/çıkar."""
+    """Toggle favorite."""
     anime = get_anime_by_mal_id(mal_id)
     if not anime: return None
 
@@ -940,7 +963,7 @@ def is_following(follower_id, followed_id):
     return res is not None
 
 def get_social_feed(user_id, limit=50):
-    """Takip edilen kişilerin aktivitelerini getir."""
+    """Get activities of followed users."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -959,7 +982,7 @@ def get_social_feed(user_id, limit=50):
     return res
 
 def get_global_activity(limit=50):
-    """Tüm kullanıcıların son aktivitelerini getir."""
+    """Get latest activities of all users."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -976,7 +999,7 @@ def get_global_activity(limit=50):
     return res
 
 def get_top_watchers(limit=10):
-    """En çok izleyen kullanıcıları getir."""
+    """Get top watchers."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -1058,14 +1081,14 @@ def get_user_watch_history(user_id, limit=50):
     return [dict(row) for row in results]
 
 def get_anime_full_details(mal_id: int):
-    """Anime'nin tüm detaylarını getir (bölümler, türler ile birlikte)."""
+    """Get full details of an anime (including episodes and genres)."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Ana anime bilgilerini al
+    # Get main anime info
     cursor.execute("SELECT * FROM animes WHERE mal_id = ?", (mal_id,))
     anime_row = cursor.fetchone()
 
@@ -1074,10 +1097,10 @@ def get_anime_full_details(mal_id: int):
         conn.close()
         return None
 
-    # sqlite3.Row'u dict'e çevir
+    # Convert sqlite3.Row to dict
     anime = dict(anime_row)
 
-    # Bölümleri al
+    # Get episodes
     cursor.execute("""
         SELECT e.*, COUNT(vl.id) as video_count
         FROM episodes e
@@ -1088,7 +1111,7 @@ def get_anime_full_details(mal_id: int):
     """, (anime["id"],))
     anime["episodes_list"] = [dict(row) for row in cursor.fetchall()]
 
-    # Türleri al
+    # Get genres
     cursor.execute("""
         SELECT g.name
         FROM genres g
@@ -1103,19 +1126,19 @@ def get_anime_full_details(mal_id: int):
     return anime
 
 def insert_or_update_anime(anime_data):
-    """Anime'yi ekle veya güncelle."""
+    """Insert or update anime."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut anime'yi kontrol et
+    # Check for existing anime first
     cursor.execute("SELECT id FROM animes WHERE mal_id = ?", (anime_data["mal_id"],))
     existing = cursor.fetchone()
 
     if existing:
-        # Güncelle
+        # Update
         cursor.execute("""
             UPDATE animes SET
                 title = ?, title_english = ?, title_japanese = ?,
@@ -1138,7 +1161,7 @@ def insert_or_update_anime(anime_data):
         ))
         anime_id = existing["id"]
     else:
-        # Yeni ekle
+        # Insert new
         cursor.execute("""
             INSERT INTO animes (
                 mal_id, title, title_english, title_japanese,
@@ -1166,26 +1189,26 @@ def insert_or_update_anime(anime_data):
     return anime_id
 
 def insert_anime_titles(anime_id, titles):
-    """Anime başlıklarını ekle."""
-    # Basit versiyon - şimdilik sadece ana başlığı kullan
+    """Insert anime titles."""
+    # Simple version - just use main title for now
     pass
 
 def insert_or_get_genre(name):
-    """Türü ekle veya mevcut olanı getir."""
+    """Insert or get genre."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut türü kontrol et
+    # Check existing genre first
     cursor.execute("SELECT id FROM genres WHERE name = ?", (name,))
     existing = cursor.fetchone()
 
     if existing:
         genre_id = existing["id"]
     else:
-        # Yeni tür ekle
+        # Insert new genre
         cursor.execute("INSERT INTO genres (name) VALUES (?)", (name,))
         genre_id = cursor.lastrowid
         conn.commit()
@@ -1195,14 +1218,14 @@ def insert_or_get_genre(name):
     return genre_id
 
 def link_anime_genre(anime_id, genre_id):
-    """Anime ve tür arasında ilişki oluştur."""
+    """Create relationship between anime and genre."""
     conn = get_connection()
     if not conn:
         return False
 
     cursor = conn.cursor()
 
-    # Önce mevcut ilişkiyi kontrol et
+    # Check existing relation first
     cursor.execute("SELECT 1 FROM anime_genres WHERE anime_id = ? AND genre_id = ?", (anime_id, genre_id))
     existing = cursor.fetchone()
 
@@ -1216,7 +1239,7 @@ def link_anime_genre(anime_id, genre_id):
 
 def sync_anime_genres(anime_id, genres_list):
     """
-    Anime türlerini toplu olarak senkronize et.
+    Sync anime genres in bulk.
     genres_list: [{"name": "Action", ...}, ...]
     """
     conn = get_connection()
@@ -1226,7 +1249,7 @@ def sync_anime_genres(anime_id, genres_list):
     cursor = conn.cursor()
 
     try:
-        # 1. Mevcut türleri cache'le
+        # 1. Cache existing genres
         cursor.execute("SELECT id, name FROM genres")
         genre_map = {row["name"]: row["id"] for row in cursor.fetchall()}
 
@@ -1245,7 +1268,7 @@ def sync_anime_genres(anime_id, genres_list):
                     genre_id = cursor.lastrowid
                     genre_map[name] = genre_id
                 except sqlite3.IntegrityError:
-                    # Başka process eklemiş olabilir
+                    # Another process might have added it
                     cursor.execute("SELECT id FROM genres WHERE name = ?", (name,))
                     res = cursor.fetchone()
                     if res:
@@ -1256,7 +1279,7 @@ def sync_anime_genres(anime_id, genres_list):
 
             anime_genre_links.append((anime_id, genre_id))
 
-        # 2. Toplu link ekle
+        # 2. Add links in bulk
         if anime_genre_links:
             cursor.executemany("""
                 INSERT OR IGNORE INTO anime_genres (anime_id, genre_id)
@@ -1266,28 +1289,28 @@ def sync_anime_genres(anime_id, genres_list):
 
         return True
     except Error as e:
-        print(f"[DB] sync_anime_genres hatası: {e}")
+        print(f"[DB] sync_anime_genres error: {e}")
         return False
     finally:
         cursor.close()
         conn.close()
 
 def insert_or_get_theme(name):
-    """Temayı ekle veya mevcut olanı getir."""
+    """Insert or get theme."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut temayı kontrol et
+    # Check existing theme first
     cursor.execute("SELECT id FROM themes WHERE name = ?", (name,))
     existing = cursor.fetchone()
 
     if existing:
         theme_id = existing["id"]
     else:
-        # Yeni tema ekle
+        # Insert new theme
         cursor.execute("INSERT INTO themes (name) VALUES (?)", (name,))
         theme_id = cursor.lastrowid
         conn.commit()
@@ -1297,14 +1320,14 @@ def insert_or_get_theme(name):
     return theme_id
 
 def link_anime_theme(anime_id, theme_id):
-    """Anime ve tema arasında ilişki oluştur."""
+    """Create relationship between anime and theme."""
     conn = get_connection()
     if not conn:
         return False
 
     cursor = conn.cursor()
 
-    # Önce mevcut ilişkiyi kontrol et
+    # Check existing relation first
     cursor.execute("SELECT 1 FROM anime_themes WHERE anime_id = ? AND theme_id = ?", (anime_id, theme_id))
     existing = cursor.fetchone()
 
@@ -1317,21 +1340,21 @@ def link_anime_theme(anime_id, theme_id):
     return True
 
 def insert_or_get_studio(name):
-    """Stüdyoyu ekle veya mevcut olanı getir."""
+    """Insert or get studio."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut stüdyoyu kontrol et
+    # Check existing studio first
     cursor.execute("SELECT id FROM studios WHERE name = ?", (name,))
     existing = cursor.fetchone()
 
     if existing:
         studio_id = existing["id"]
     else:
-        # Yeni stüdyo ekle
+        # Insert new studio
         cursor.execute("INSERT INTO studios (name) VALUES (?)", (name,))
         studio_id = cursor.lastrowid
         conn.commit()
@@ -1341,14 +1364,14 @@ def insert_or_get_studio(name):
     return studio_id
 
 def link_anime_studio(anime_id, studio_id):
-    """Anime ve stüdyo arasında ilişki oluştur."""
+    """Create relationship between anime and studio."""
     conn = get_connection()
     if not conn:
         return False
 
     cursor = conn.cursor()
 
-    # Önce mevcut ilişkiyi kontrol et
+    # Check existing relation first
     cursor.execute("SELECT 1 FROM anime_studios WHERE anime_id = ? AND studio_id = ?", (anime_id, studio_id))
     existing = cursor.fetchone()
 
@@ -1361,21 +1384,21 @@ def link_anime_studio(anime_id, studio_id):
     return True
 
 def insert_or_get_producer(name):
-    """Yapımcıyı ekle veya mevcut olanı getir."""
+    """Insert or get producer."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut yapımcıyı kontrol et
+    # Check existing producer first
     cursor.execute("SELECT id FROM producers WHERE name = ?", (name,))
     existing = cursor.fetchone()
 
     if existing:
         producer_id = existing["id"]
     else:
-        # Yeni yapımcı ekle
+        # Insert new producer
         cursor.execute("INSERT INTO producers (name) VALUES (?)", (name,))
         producer_id = cursor.lastrowid
         conn.commit()
@@ -1385,14 +1408,14 @@ def insert_or_get_producer(name):
     return producer_id
 
 def link_anime_producer(anime_id, producer_id, role):
-    """Anime ve yapımcı arasında ilişki oluştur."""
+    """Create relationship between anime and producer."""
     conn = get_connection()
     if not conn:
         return False
 
     cursor = conn.cursor()
 
-    # Önce mevcut ilişkiyi kontrol et
+    # Check existing relation first
     cursor.execute("SELECT 1 FROM anime_producers WHERE anime_id = ? AND producer_id = ? AND role = ?", (anime_id, producer_id, role))
     existing = cursor.fetchone()
 
@@ -1405,21 +1428,21 @@ def link_anime_producer(anime_id, producer_id, role):
     return True
 
 def get_source_id(source_name):
-    """Kaynak adından kaynak ID'sini getir, yoksa oluştur."""
+    """Get source ID from source name, create if not exists."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut kaynağı kontrol et
+    # Check existing source first
     cursor.execute("SELECT id FROM sources WHERE name = ?", (source_name,))
     existing = cursor.fetchone()
 
     if existing:
         source_id = existing["id"]
     else:
-        # Yeni kaynak ekle
+        # Insert new source
         cursor.execute("INSERT INTO sources (name) VALUES (?)", (source_name,))
         source_id = cursor.lastrowid
         conn.commit()
@@ -1429,19 +1452,19 @@ def get_source_id(source_name):
     return source_id
 
 def insert_or_update_anime_source(anime_id, source_id, source_anime_id, source_slug, source_title):
-    """Anime-kaynak eşleşmesini ekle veya güncelle."""
+    """Insert or update anime-source mapping."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut eşleşmeyi kontrol et
+    # Check existing mapping first
     cursor.execute("SELECT id FROM anime_sources WHERE anime_id = ? AND source_id = ?", (anime_id, source_id))
     existing = cursor.fetchone()
 
     if existing:
-        # Güncelle
+        # Update
         cursor.execute("""
             UPDATE anime_sources SET
                 source_anime_id = ?, source_slug = ?, source_title = ?
@@ -1449,7 +1472,7 @@ def insert_or_update_anime_source(anime_id, source_id, source_anime_id, source_s
         """, (source_anime_id, source_slug, source_title, anime_id, source_id))
         anime_source_id = existing["id"]
     else:
-        # Yeni ekle
+        # Insert new
         cursor.execute("""
             INSERT INTO anime_sources (anime_id, source_id, source_anime_id, source_slug, source_title)
             VALUES (?, ?, ?, ?, ?)
@@ -1462,19 +1485,19 @@ def insert_or_update_anime_source(anime_id, source_id, source_anime_id, source_s
     return anime_source_id
 
 def insert_or_update_episode(anime_id, episode_number, title):
-    """Bölümü ekle veya güncelle."""
+    """Insert or update episode."""
     conn = get_connection()
     if not conn:
         return None
 
     cursor = conn.cursor()
 
-    # Önce mevcut bölümü kontrol et
+    # Check existing episode first
     cursor.execute("SELECT id FROM episodes WHERE anime_id = ? AND episode_number = ?", (anime_id, episode_number))
     existing = cursor.fetchone()
 
     if existing:
-        # Güncelle
+        # Update
         cursor.execute("""
             UPDATE episodes SET
                 title = ?, aired = CURRENT_DATE
@@ -1482,7 +1505,7 @@ def insert_or_update_episode(anime_id, episode_number, title):
         """, (title, anime_id, episode_number))
         episode_id = existing["id"]
     else:
-        # Yeni ekle
+        # Insert new
         cursor.execute("""
             INSERT INTO episodes (anime_id, episode_number, title, aired)
             VALUES (?, ?, ?, CURRENT_DATE)
@@ -1495,7 +1518,7 @@ def insert_or_update_episode(anime_id, episode_number, title):
     return episode_id
 
 def get_anime_sources(mal_id: int):
-    """Anime'nin mevcut kaynaklarını getir."""
+    """Get current sources for an anime."""
     conn = get_connection()
     if not conn:
         return []
@@ -1515,7 +1538,7 @@ def get_anime_sources(mal_id: int):
     return results
 
 def get_all_mal_ids():
-    """Tüm anime'lerin MAL ID'lerini getir."""
+    """Get MAL IDs of all anime."""
     conn = get_connection()
     if not conn:
         return []
@@ -1528,7 +1551,7 @@ def get_all_mal_ids():
     return [row["mal_id"] for row in results]
 
 def get_genres():
-    """Tüm türleri getir."""
+    """Get all genres."""
     conn = get_connection()
     if not conn:
         return []
@@ -1541,7 +1564,7 @@ def get_genres():
     return results
 
 def get_anime_by_title(title_query, limit=50):
-    """Başlığa göre anime ara."""
+    """Search anime by title."""
     conn = get_connection()
     if not conn:
         return []
@@ -1566,7 +1589,7 @@ def get_anime_by_title(title_query, limit=50):
     return results
 
 def get_live_search_results(query, limit=5):
-    """Live search için hızlı sonuçlar."""
+    """Fast results for live search."""
     conn = get_connection()
     if not conn:
         return []
@@ -1590,7 +1613,7 @@ def get_live_search_results(query, limit=5):
     return [dict(row) for row in rows]
 
 def insert_video_link(episode_id, source_id, video_url, quality, fansub):
-    """Video linkini ekle."""
+    """Add video link."""
     conn = get_connection()
     if not conn:
         return None
@@ -1610,7 +1633,7 @@ def insert_video_link(episode_id, source_id, video_url, quality, fansub):
         conn.close()
 
 def delete_video_links_for_episode(anime_id, episode_number):
-    """Bölümün video linklerini sil."""
+    """Delete video links for an episode."""
     conn = get_connection()
     if not conn:
         return
@@ -1626,7 +1649,7 @@ def delete_video_links_for_episode(anime_id, episode_number):
         conn.close()
 
 def remove_dead_video_link(video_id):
-    """Video linkini pasif yap."""
+    """Make video link inactive."""
     conn = get_connection()
     if not conn:
         return False
@@ -1640,7 +1663,7 @@ def remove_dead_video_link(video_id):
         conn.close()
 
 def get_video_links(anime_id: int, episode_number: int = None):
-    """Anime'nin video linklerini getir. Episode number verilirse sadece o bölümün linklerini döndür."""
+    """Get video links for an anime. If episode number is provided, return only for that episode."""
     conn = get_connection()
     if not conn:
         return []
@@ -1648,7 +1671,7 @@ def get_video_links(anime_id: int, episode_number: int = None):
     cursor = conn.cursor()
     
     if episode_number:
-        # Belirli bölümün video linkleri
+        # Video links for specific episode
         cursor.execute("""
             SELECT vl.*, e.episode_number, e.title as episode_title, s.name as source_name
             FROM video_links vl
@@ -1658,7 +1681,7 @@ def get_video_links(anime_id: int, episode_number: int = None):
             ORDER BY vl.quality DESC, vl.fansub
         """, (anime_id, episode_number))
     else:
-        # Tüm video linkleri
+        # All video links
         cursor.execute("""
             SELECT vl.*, e.episode_number, e.title as episode_title, s.name as source_name
             FROM video_links vl
@@ -1674,7 +1697,7 @@ def get_video_links(anime_id: int, episode_number: int = None):
     return results
 
 def get_episode_by_number(anime_id: int, episode_number: int):
-    """Anime ID ve bölüm numarasına göre bölümü getir."""
+    """Get episode by anime ID and episode number."""
     conn = get_connection()
     if not conn:
         return None
@@ -1792,6 +1815,137 @@ def delete_review(review_id, user_id):
     finally:
         cursor.close()
         conn.close()
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COLLECTION OPERATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def create_collection(user_id, name, description=None, is_public=True):
+    """Create a new collection."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO collections (user_id, name, description, is_public)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, name, description, int(is_public)))
+        conn.commit()
+        return cursor.lastrowid
+    except sqlite3.Error:
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+def get_user_collections(user_id, only_public=False):
+    """Get user collections."""
+    conn = get_connection()
+    if not conn: return []
+    cursor = conn.cursor()
+    query = "SELECT c.*, (SELECT COUNT(*) FROM collection_items WHERE collection_id = c.id) as item_count FROM collections c WHERE user_id = ?"
+    if only_public:
+        query += " AND is_public = 1"
+    query += " ORDER BY created_at DESC"
+
+    cursor.execute(query, (user_id,))
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return rows
+
+def get_collection_details(collection_id):
+    """Get collection details and items."""
+    conn = get_connection()
+    if not conn: return None
+    cursor = conn.cursor()
+
+    # Collection info
+    cursor.execute("""
+        SELECT c.*, u.username
+        FROM collections c
+        JOIN users u ON c.user_id = u.id
+        WHERE c.id = ?
+    """, (collection_id,))
+    collection = cursor.fetchone()
+    if not collection:
+        cursor.close()
+        conn.close()
+        return None
+
+    col_dict = dict(collection)
+
+    # Anime list
+    cursor.execute("""
+        SELECT a.* FROM animes a
+        JOIN collection_items ci ON a.id = ci.anime_id
+        WHERE ci.collection_id = ?
+        ORDER BY ci.created_at DESC
+    """, (collection_id,))
+    col_dict["animes"] = [dict(row) for row in cursor.fetchall()]
+
+    cursor.close()
+    conn.close()
+    return col_dict
+
+def add_to_collection(collection_id, anime_id):
+    """Add anime to collection."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT OR IGNORE INTO collection_items (collection_id, anime_id)
+            VALUES (?, ?)
+        """, (collection_id, anime_id))
+        conn.commit()
+        return True
+    except sqlite3.Error:
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
+def remove_from_collection(collection_id, anime_id):
+    """Remove anime from collection."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM collection_items WHERE collection_id = ? AND anime_id = ?", (collection_id, anime_id))
+    conn.commit()
+    affected = cursor.rowcount
+    cursor.close()
+    conn.close()
+    return affected > 0
+
+def delete_collection(collection_id, user_id):
+    """Delete collection."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM collections WHERE id = ? AND user_id = ?", (collection_id, user_id))
+    affected = cursor.rowcount
+    if affected > 0:
+        cursor.execute("DELETE FROM collection_items WHERE collection_id = ?", (collection_id,))
+        conn.commit()
+    cursor.close()
+    conn.close()
+    return affected > 0
+
+def update_collection(collection_id, user_id, name, description, is_public):
+    """Update collection."""
+    conn = get_connection()
+    if not conn: return False
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE collections SET name = ?, description = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND user_id = ?
+    """, (name, description, int(is_public), collection_id, user_id))
+    conn.commit()
+    affected = cursor.rowcount
+    cursor.close()
+    conn.close()
+    return affected > 0
 
 if __name__ == "__main__":
     print("Initializing database...")

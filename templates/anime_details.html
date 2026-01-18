@@ -37,6 +37,25 @@
                     </svg>
                     Watch Now
                 </a>
+
+                {% if session.user_id %}
+                <div class="relative mt-2" id="collection-dropdown-container">
+                    <button onclick="toggleCollectionDropdown()" class="w-full py-3 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-lg transition border border-gray-700 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+                        </svg>
+                        Add to Collection
+                    </button>
+                    <div id="collection-dropdown" class="absolute left-0 right-0 mt-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl hidden z-20 overflow-hidden">
+                        <div id="collections-list-dropdown" class="max-h-60 overflow-y-auto divide-y divide-gray-800">
+                            <div class="p-4 text-center text-xs text-gray-500">Loading your collections...</div>
+                        </div>
+                        <a href="/collections" class="block p-3 text-center text-xs font-bold text-purple-400 hover:bg-purple-600/10 transition border-t border-gray-800">
+                            + Create New Collection
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -100,6 +119,57 @@
         </div>
     </div>
 </div>
+
+<!-- Anime Universe (Relations) -->
+{% if relations %}
+<section class="mt-12 px-4 md:px-8">
+    <div class="flex items-center gap-4 mb-8">
+        <h2 class="text-2xl md:text-3xl font-black text-white border-l-4 border-purple-600 pl-4 uppercase tracking-tighter">Anime Universe</h2>
+        <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">Related Series</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for rel in relations %}
+        <div class="bg-gray-800/40 rounded-xl border border-gray-700/50 p-4 hover:border-purple-500/50 transition group">
+            <h4 class="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-2">{{ rel.relation }}</h4>
+            <div class="space-y-2">
+                {% for entry in rel.entry %}
+                <div class="flex items-center justify-between gap-4">
+                    {% if entry.type == 'anime' %}
+                    <a href="/anime/{{ entry.mal_id }}" class="text-sm font-bold text-gray-200 hover:text-purple-400 transition line-clamp-1">{{ entry.name }}</a>
+                    <span class="text-[10px] bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded uppercase font-bold">{{ entry.type }}</span>
+                    {% else %}
+                    <span class="text-sm font-bold text-gray-500 line-clamp-1">{{ entry.name }}</span>
+                    <span class="text-[10px] bg-gray-900 text-gray-600 px-1.5 py-0.5 rounded uppercase font-bold">{{ entry.type }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Recommendations -->
+{% if related_recommendations %}
+<section class="mt-12 px-4 md:px-8">
+    <div class="flex items-center gap-4 mb-8">
+        <h2 class="text-2xl md:text-3xl font-black text-white border-l-4 border-indigo-600 pl-4 uppercase tracking-tighter">You Might Also Like</h2>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {% for rec in related_recommendations %}
+        <a href="/anime/{{ rec.entry.mal_id }}" class="group block">
+            <div class="aspect-[2/3] rounded-lg overflow-hidden border border-gray-700 group-hover:border-indigo-500 transition mb-2">
+                <img src="{{ rec.entry.images.jpg.image_url }}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" alt="{{ rec.entry.title }}">
+            </div>
+            <h4 class="text-xs font-bold text-gray-300 group-hover:text-indigo-400 transition line-clamp-2 h-8">{{ rec.entry.title }}</h4>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
 <!-- Sources Section -->
 <section class="mt-8 px-4 md:px-8">
@@ -636,5 +706,64 @@
             showNotification('Login required!', 'error');
         }
     }
+
+    // Collection Dropdown Logic
+    async function toggleCollectionDropdown() {
+        const dropdown = document.getElementById('collection-dropdown');
+        const list = document.getElementById('collections-list-dropdown');
+
+        if (dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('hidden');
+
+            try {
+                const resp = await fetch('/api/collections');
+                const data = await resp.json();
+
+                if (data.success && data.collections.length > 0) {
+                    list.innerHTML = data.collections.map(col => `
+                        <button onclick="addToCollection(${col.id}, {{ anime.mal_id }})" class="w-full text-left p-3 hover:bg-white/5 transition flex items-center justify-between group">
+                            <span class="text-sm text-gray-300 group-hover:text-white truncate">${escapeHTML(col.name)}</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600 group-hover:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div class="p-4 text-center text-xs text-gray-500 italic">No collections found.</div>';
+                }
+            } catch (e) {
+                list.innerHTML = '<div class="p-4 text-center text-xs text-red-500">Error loading collections.</div>';
+            }
+        } else {
+            dropdown.classList.add('hidden');
+        }
+    }
+
+    async function addToCollection(colId, malId) {
+        try {
+            const resp = await fetch(`/api/collections/${colId}/items`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mal_id: malId })
+            });
+            const data = await resp.json();
+            if (data.success) {
+                showNotification('Added to collection!', 'success');
+                document.getElementById('collection-dropdown').classList.add('hidden');
+            } else {
+                showNotification(data.error || 'Failed to add', 'error');
+            }
+        } catch (e) {
+            showNotification('An error occurred', 'error');
+        }
+    }
+
+    // Close dropdown on click outside
+    document.addEventListener('click', (e) => {
+        const container = document.getElementById('collection-dropdown-container');
+        if (container && !container.contains(e.target)) {
+            document.getElementById('collection-dropdown')?.classList.add('hidden');
+        }
+    });
 </script>
 {% endblock %}
