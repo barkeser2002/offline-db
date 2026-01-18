@@ -3,18 +3,63 @@ SQLite Veritabanı İşlemleri
 """
 
 import sqlite3
+import threading
 from sqlite3 import Error
 from config import DB_PATH
 
+# Thread-local storage for database connections
+_local = threading.local()
+
+class ConnectionWrapper:
+    """
+    Wraps a sqlite3 connection to prevent accidental closing
+    while allowing access to all other methods.
+    """
+    def __init__(self, conn):
+        self.conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+    def close(self):
+        """
+        Don't actually close the connection, just rollback any uncommitted transaction
+        to ensure a clean state for the next user.
+        """
+        try:
+            self.conn.rollback()
+        except sqlite3.Error:
+            pass
+
+    def __enter__(self):
+        self.conn.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self.conn.__exit__(exc_type, exc_val, exc_tb)
+
 def get_connection():
-    """Veritabanı bağlantısı oluştur."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row  # Dict-like access için
-        return conn
-    except Error as e:
-        print(f"[DB] Bağlantı hatası: {e}")
-        return None
+    """Veritabanı bağlantısı oluştur (Thread-local pooling)."""
+    if not hasattr(_local, "connection") or _local.connection is None:
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            _local.connection = conn
+        except Error as e:
+            print(f"[DB] Bağlantı hatası: {e}")
+            return None
+
+    return ConnectionWrapper(_local.connection)
+
+def close_thread_connection():
+    """Explicitly close the current thread's connection."""
+    if hasattr(_local, "connection") and _local.connection:
+        try:
+            _local.connection.close()
+        except sqlite3.Error:
+            pass
+        finally:
+            _local.connection = None
 
 def init_database():
     """

@@ -18,6 +18,10 @@ app.secret_key = "senpai-v4-secret-key" # In production this should be in .env
 # Veritabanını başlat
 db.init_database()
 
+@app.teardown_appcontext
+def close_connection(exception):
+    db.close_thread_connection()
+
 app.register_blueprint(ui_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(user_bp)
