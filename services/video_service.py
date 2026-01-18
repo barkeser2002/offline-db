@@ -150,6 +150,15 @@ def ensure_episode_videos(mal_id: int, episode_number: int, anime_db_id: int, fo
     episode = db.get_episode_by_number(anime_db_id, episode_number)
     if not episode:
         episode_id = db.insert_or_update_episode(anime_db_id, episode_number, f"Episode {episode_number}")
+
+        # Notify users watching this anime about the new episode
+        try:
+            users_watching = db.get_users_watching_anime(anime_db_id)
+            anime_title = db.get_anime_title_by_id(anime_db_id)
+            for u_id in users_watching:
+                db.add_notification(u_id, 'update', f"New episode of {anime_title} is available: Episode {episode_number}", f"/player?mal_id={mal_id}&ep={episode_number}")
+        except Exception as e:
+            print(f"[VideoService] Error sending notifications: {e}")
     else:
         episode_id = episode["id"]
 

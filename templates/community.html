@@ -25,6 +25,7 @@
                     <tr>
                         <th class="px-6 py-4">Rank</th>
                         <th class="px-6 py-4">User</th>
+                        <th class="px-6 py-4">Level</th>
                         <th class="px-6 py-4">Episodes Watched</th>
                         <th class="px-6 py-4">Anime Count</th>
                         <th class="px-6 py-4 text-right">Profile</th>
@@ -44,6 +45,11 @@
                             <div class="flex items-center gap-3">
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ watcher.username }}" class="w-10 h-10 rounded-lg bg-gray-700 border border-gray-600" alt="">
                                 <span class="font-bold text-blue-400">{{ watcher.username }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="inline-flex items-center px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                                LVL {{ watcher.level }}
                             </div>
                         </td>
                         <td class="px-6 py-4 font-mono text-indigo-400">{{ watcher.total_episodes }}</td>
