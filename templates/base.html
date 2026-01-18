@@ -3,106 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Anime Platform{% endblock %}</title>
+    <title>{% block title %}AniScrap - Next Gen Anime{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Video.js for HLS support -->
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Video.js -->
     <link href="https://vjs.zencdn.net/8.6.1/video-js.css" rel="stylesheet" />
     <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script>
+
     <style>
-        .anime-card { transition: transform 0.2s; }
-        .anime-card:hover { transform: translateY(-5px); }
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-card: #13131f;
+            --primary: #8b5cf6;
+            --secondary: #06b6d4;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-deep);
+            color: #e2e8f0;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* Glass Effect */
+        .glass {
+            background: rgba(19, 19, 31, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Utilities */
+        .text-gradient {
+            background: linear-gradient(to right, #c084fc, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .nav-link {
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .anime-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .anime-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 10px 40px -10px rgba(139, 92, 246, 0.3);
+            z-index: 10;
+        }
+
         .video-js .vjs-big-play-button { display: none !important; }
-        .video-js .vjs-control-bar { background: rgba(0,0,0,0.7) !important; }
+        .video-js .vjs-control-bar { background: rgba(0,0,0,0.8) !important; }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
+<body class="min-h-screen flex flex-col">
 
-    <nav class="bg-gray-800 border-b border-gray-700 p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <a href="/" class="text-2xl font-bold text-blue-500">Anime Platform</a>
+    <nav class="glass sticky top-0 z-50 transition-all duration-300">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <!-- Logo -->
+            <a href="/" class="flex items-center gap-2 group">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-white font-bold text-lg group-hover:rotate-12 transition">A</div>
+                <span class="text-2xl font-extrabold tracking-tight text-gradient">AniScrap</span>
+            </a>
 
-            <div class="hidden md:flex ml-8 space-x-6">
-                <a href="/discover" class="text-gray-300 hover:text-white flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+            <!-- Desktop Nav -->
+            <div class="hidden md:flex ml-10 space-x-8">
+                <a href="/discover" class="nav-link text-gray-300 hover:text-white font-medium flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     Discovery
                 </a>
-                <a href="/schedule" class="text-gray-300 hover:text-white flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                <a href="/schedule" class="nav-link text-gray-300 hover:text-white font-medium flex items-center gap-2">
+                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     Schedule
                 </a>
-                <a href="/community" class="text-gray-300 hover:text-white flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
+                <a href="/community" class="nav-link text-gray-300 hover:text-white font-medium flex items-center gap-2">
+                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                     Community
                 </a>
             </div>
 
-            <div class="hidden md:flex flex-grow max-w-md mx-4 relative group">
-                <form action="/search" method="get" class="w-full flex">
-                    <input type="search" name="q" id="search-input" placeholder="Search anime..." class="w-full bg-gray-700 border border-gray-600 rounded-l-lg py-1 px-4 focus:outline-none focus:border-blue-500 text-sm" autocomplete="off">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 rounded-r-lg px-4 py-1 text-sm">Search</button>
+            <!-- Search Bar -->
+            <div class="hidden lg:flex flex-grow max-w-lg mx-8 relative group">
+                <form action="/search" method="get" class="w-full relative">
+                    <input type="search" name="q" id="search-input" placeholder="Search anime..."
+                           class="w-full bg-[#1c1c2e] text-gray-200 border border-gray-700/50 rounded-full py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all shadow-inner text-sm" autocomplete="off">
+                    <svg class="w-4 h-4 text-gray-500 absolute left-3.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </form>
                 <!-- Live Search Results -->
-                <div id="search-results" class="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl hidden z-50 overflow-hidden">
+                <div id="search-results" class="absolute top-full left-0 right-0 mt-2 bg-[#1c1c2e] border border-gray-700 rounded-xl shadow-2xl hidden z-50 overflow-hidden backdrop-blur-md">
                     <div id="search-results-list" class="flex flex-col"></div>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-4">
+            <!-- User Menu -->
+            <div class="flex items-center gap-4">
                 {% if session.user_id %}
                     <!-- Notifications -->
-                    <div class="relative group" id="notification-bell">
-                        <button class="text-gray-300 hover:text-white relative p-2 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <span id="notif-count" class="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+                    <div class="relative" id="notification-bell">
+                        <button class="text-gray-400 hover:text-white relative p-2 transition hover:bg-white/5 rounded-full">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="notif-count" class="absolute top-1.5 right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full hidden shadow-lg animate-pulse">0</span>
                         </button>
-                        <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-lg shadow-2xl hidden z-50 overflow-hidden">
-                            <div class="p-3 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
-                                <span class="font-bold text-sm">Notifications</span>
-                                <button onclick="markAllRead()" class="text-xs text-blue-400 hover:text-blue-300">Mark all as read</button>
+                        <div id="notification-dropdown" class="absolute right-0 mt-3 w-80 bg-[#1c1c2e] border border-gray-700/50 rounded-xl shadow-2xl hidden z-50 overflow-hidden ring-1 ring-white/5">
+                            <div class="p-3 border-b border-gray-700/50 flex justify-between items-center bg-[#151520]">
+                                <span class="font-bold text-sm text-gray-200">Notifications</span>
+                                <button onclick="markAllRead()" class="text-xs text-purple-400 hover:text-purple-300 font-medium">Mark all read</button>
                             </div>
-                            <div id="notif-list" class="max-h-96 overflow-y-auto">
-                                <div class="p-8 text-center text-gray-500 text-sm">No new notifications</div>
+                            <div id="notif-list" class="max-h-80 overflow-y-auto">
+                                <div class="p-8 text-center text-gray-500 text-xs">No new notifications</div>
                             </div>
                         </div>
                     </div>
 
-                    <a href="/profile" class="flex items-center space-x-2 group">
-                        <div class="w-8 h-8 rounded bg-blue-600 overflow-hidden border-2 border-gray-700 group-hover:border-blue-400 transition">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ session.username }}" alt="Avatar" class="w-full h-full">
+                    <a href="/profile" class="flex items-center gap-3 pl-2 pr-1 py-1 rounded-full hover:bg-white/5 transition border border-transparent hover:border-white/5">
+                        <span class="text-sm font-semibold text-gray-200 hidden lg:block">{{ session.username }}</span>
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-cyan-500 p-[2px]">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ session.username }}" alt="Avatar" class="w-full h-full rounded-full bg-[#1c1c2e]">
                         </div>
-                        <span class="text-gray-300 group-hover:text-blue-400 font-semibold transition hidden lg:inline">{{ session.username }}</span>
                     </a>
-                    <button onclick="logout()" class="text-sm bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white px-3 py-1 rounded border border-red-500/50 transition">Logout</button>
+                    <button onclick="logout()" class="text-gray-400 hover:text-red-400 p-2 rounded-full hover:bg-red-500/10 transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    </button>
                 {% else %}
-                    <a href="/login" class="text-sm hover:text-blue-400">Login</a>
-                    <a href="/register" class="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded">Register</a>
+                    <a href="/login" class="text-sm font-medium text-gray-300 hover:text-white transition">Login</a>
+                    <a href="/register" class="text-sm font-bold bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white px-5 py-2 rounded-full shadow-lg shadow-purple-900/20 transition transform hover:scale-105">Get Started</a>
                 {% endif %}
             </div>
         </div>
     </nav>
 
-    <main class="container mx-auto p-4">
+    <main class="flex-grow container mx-auto p-4 md:p-6 lg:p-8">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Global Notifications -->
-    <div id="notification-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+    <div id="notification-container" class="fixed bottom-6 right-6 z-[60] flex flex-col gap-3"></div>
 
-    <footer class="bg-gray-800 border-t border-gray-700 p-6 mt-8">
-        <div class="container mx-auto text-center text-gray-400 text-sm">
-            &copy; 2024 Anime Platform - Senpai v4.0 Evolution
+    <footer class="bg-[#050508] border-t border-gray-800 py-10 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                 <div class="w-6 h-6 rounded bg-gradient-to-br from-purple-600 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">A</div>
+                 <span class="text-xl font-bold text-gray-200">AniScrap</span>
+            </div>
+            <p class="text-gray-500 text-sm max-w-md mx-auto">
+                The next generation anime discovery platform. Built for speed, designed for immersion.
+            </p>
+            <div class="mt-6 text-xs text-gray-600">
+                &copy; 2024 AniScrap • Senpai v4.0 Evolution
+            </div>
         </div>
     </footer>
 
+    <!-- Scripts (Same logic as before, just kept inline for simplicity) -->
     <script>
         async function logout() {
             const resp = await fetch('/api/auth/logout', { method: 'POST' });
@@ -120,21 +202,21 @@
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
 
-            const bgColors = {
-                'info': 'bg-blue-600',
-                'success': 'bg-green-600',
-                'error': 'bg-red-600',
-                'warning': 'bg-yellow-600'
+            const borderColors = {
+                'info': 'border-blue-500',
+                'success': 'border-green-500',
+                'error': 'border-red-500',
+                'warning': 'border-yellow-500'
             };
 
-            toast.className = `${bgColors[type] || 'bg-gray-700'} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-10 opacity-0 flex items-center`;
+            toast.className = `bg-[#1c1c2e] text-gray-100 border-l-4 ${borderColors[type] || 'border-gray-500'} pl-4 pr-6 py-4 rounded-r shadow-2xl transform transition-all duration-500 translate-x-full flex items-center min-w-[300px] backdrop-blur-md`;
 
             const span = document.createElement('span');
-            span.className = 'text-sm font-semibold';
+            span.className = 'text-sm font-medium';
             span.textContent = message;
 
             const btn = document.createElement('button');
-            btn.className = 'ml-4 hover:text-gray-200';
+            btn.className = 'ml-auto text-gray-500 hover:text-white transition text-lg leading-none';
             btn.innerHTML = '&times;';
             btn.onclick = () => toast.remove();
 
@@ -143,15 +225,13 @@
 
             container.appendChild(toast);
 
-            // Animation
-            setTimeout(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
-            }, 10);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full');
+            });
 
-            // Auto remove
             setTimeout(() => {
-                toast.classList.add('translate-y-10', 'opacity-0');
-                setTimeout(() => toast.remove(), 300);
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
             }, 5000);
         }
 
@@ -172,30 +252,33 @@
                 }
 
                 searchTimeout = setTimeout(async () => {
-                    const resp = await fetch(`/api/search/live?q=${encodeURIComponent(query)}`);
-                    const data = await resp.json();
+                    try {
+                        const resp = await fetch(`/api/search/live?q=${encodeURIComponent(query)}`);
+                        const data = await resp.json();
 
-                    if (data.results && data.results.length > 0) {
-                        searchResultsList.innerHTML = data.results.map(anime => {
-                            const safeTitle = escapeHTML(anime.title);
-                            return `
-                                <a href="/anime/${anime.mal_id}" class="flex items-center gap-3 p-2 hover:bg-gray-700 transition border-b border-gray-700/50 last:border-0">
-                                    <img src="${anime.cover_local || anime.cover_url}" class="w-10 h-14 object-cover rounded shadow" alt="">
-                                    <div class="overflow-hidden">
-                                        <div class="text-sm font-bold text-white truncate">${safeTitle}</div>
-                                        <div class="text-xs text-gray-400">${anime.year || '?'} • ${anime.type || 'TV'} • ⭐ ${anime.score || 'N/A'}</div>
-                                    </div>
-                                </a>
-                            `;
-                        }).join('');
-                        searchResults.classList.remove('hidden');
-                    } else {
-                        searchResults.classList.add('hidden');
+                        if (data.results && data.results.length > 0) {
+                            searchResultsList.innerHTML = data.results.map(anime => {
+                                const safeTitle = escapeHTML(anime.title);
+                                return `
+                                    <a href="/anime/${anime.mal_id}" class="flex items-center gap-4 p-3 hover:bg-white/5 transition border-b border-gray-700/50 last:border-0 group">
+                                        <img src="${anime.cover_local || anime.cover_url}" class="w-10 h-14 object-cover rounded shadow-md group-hover:scale-105 transition" alt="">
+                                        <div class="overflow-hidden">
+                                            <div class="text-sm font-bold text-gray-200 truncate group-hover:text-purple-400 transition">${safeTitle}</div>
+                                            <div class="text-xs text-gray-500 mt-1">${anime.year || '?'} • ${anime.type || 'TV'} • <span class="text-yellow-500">⭐ ${anime.score || 'N/A'}</span></div>
+                                        </div>
+                                    </a>
+                                `;
+                            }).join('');
+                            searchResults.classList.remove('hidden');
+                        } else {
+                            searchResults.classList.add('hidden');
+                        }
+                    } catch(err) {
+                        console.error(err);
                     }
                 }, 300);
             });
 
-            // Close search results when clicking outside
             document.addEventListener('click', (e) => {
                 if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                     searchResults.classList.add('hidden');
@@ -234,15 +317,15 @@
                             notifList.innerHTML = data.notifications.map(n => {
                                 const safeMsg = escapeHTML(n.message);
                                 return `
-                                    <a href="${n.link || '#'}" class="block p-4 hover:bg-gray-700 transition border-b border-gray-700/50 last:border-0" onclick="markRead(${n.id})">
-                                        <div class="text-sm text-gray-200">${safeMsg}</div>
-                                        <div class="text-[10px] text-gray-500 mt-1">${new Date(n.created_at).toLocaleString()}</div>
+                                    <a href="${n.link || '#'}" class="block p-4 hover:bg-white/5 transition border-b border-gray-700/50 last:border-0" onclick="markRead(${n.id})">
+                                        <div class="text-sm text-gray-300">${safeMsg}</div>
+                                        <div class="text-[10px] text-gray-600 mt-1 font-mono">${new Date(n.created_at).toLocaleString()}</div>
                                     </a>
                                 `;
                             }).join('');
                         } else {
                             notifCount.classList.add('hidden');
-                            notifList.innerHTML = '<div class="p-8 text-center text-gray-500 text-sm">No new notifications</div>';
+                            notifList.innerHTML = '<div class="p-8 text-center text-gray-600 text-xs uppercase tracking-widest">No new notifications</div>';
                         }
                     }
                 } catch (e) {}
@@ -257,7 +340,7 @@
                 checkNotifications();
             }
 
-            async function markAllRead() {
+            window.markAllRead = async function() {
                 await fetch('/api/notifications/read', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -266,9 +349,8 @@
                 checkNotifications();
             }
 
-            // Initial check and interval
             checkNotifications();
-            setInterval(checkNotifications, 30000); // Every 30 seconds
+            setInterval(checkNotifications, 30000);
         }
     </script>
     {% block scripts %}{% endblock %}
