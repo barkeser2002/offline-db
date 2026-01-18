@@ -2012,13 +2012,36 @@ def get_episode_stream(mal_id: int, episode_number: int, source_name: str):
                 episode_url = f"https://animecix.tv/watch/{episode_slug}"
                 streams = adapter.get_episode_streams(episode_url)
             elif source_name == "anizle":
-                # Anizle için episode slug kullan
-                episode_slug = f"{source_slug}-{episode_number}"
-                streams = adapter.get_episode_streams(episode_slug)
+                # Anizle için episode slug kullan (birden fazla varyasyon dene)
+                slugs_to_try = [
+                    f"{source_slug}-{episode_number}-bolum",
+                    f"{source_slug}-{episode_number}",
+                    f"{source_slug}-bolum-{episode_number}"
+                ]
+
+                for slug in slugs_to_try:
+                    try:
+                        fetched_streams = adapter.get_episode_streams(slug)
+                        if fetched_streams and len(fetched_streams) > 0:
+                            streams = fetched_streams
+                            break
+                    except Exception:
+                        continue
             elif source_name == "tranime":
-                # TRAnime için episode slug kullan
-                episode_slug = f"{source_slug}-{episode_number}"
-                streams = adapter.get_episode_streams(episode_slug)
+                # TRAnime için episode slug kullan (birden fazla varyasyon dene)
+                slugs_to_try = [
+                    f"{source_slug}-{episode_number}-bolum-izle",
+                    f"{source_slug}-{episode_number}"
+                ]
+
+                for slug in slugs_to_try:
+                    try:
+                        fetched_streams = adapter.get_episode_streams(slug)
+                        if fetched_streams and len(fetched_streams) > 0:
+                            streams = fetched_streams
+                            break
+                    except Exception:
+                        continue
             elif source_name == "turkanime":
                 # TurkAnime için episode slug kullan
                 episode_slug = f"{source_slug}-{episode_number}"
