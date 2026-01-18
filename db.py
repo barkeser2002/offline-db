@@ -762,23 +762,23 @@ def get_user_stats(user_id):
     if not conn: return {}
     cursor = conn.cursor()
 
-    # İzlenen anime sayısı
-    cursor.execute("SELECT COUNT(*) FROM watch_history WHERE user_id = ?", (user_id,))
-    total_watched = cursor.fetchone()[0]
+    # İzlenen anime sayısı ve toplam izlenen bölüm
+    cursor.execute("SELECT COUNT(*), SUM(episode_number) FROM watch_history WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    total_watched = row[0]
+    total_episodes = row[1] or 0
 
-    # Toplam izlenen bölüm (tahmini)
-    cursor.execute("SELECT SUM(episode_number) FROM watch_history WHERE user_id = ?", (user_id,))
-    total_episodes = cursor.fetchone()[0] or 0
-
-    # Favori sayısı
-    cursor.execute("SELECT COUNT(*) FROM favorites WHERE user_id = ?", (user_id,))
-    total_favorites = cursor.fetchone()[0]
-
-    # Takipçi ve Takip edilen
-    cursor.execute("SELECT COUNT(*) FROM follows WHERE followed_id = ?", (user_id,))
-    followers = cursor.fetchone()[0]
-    cursor.execute("SELECT COUNT(*) FROM follows WHERE follower_id = ?", (user_id,))
-    following = cursor.fetchone()[0]
+    # Favori sayısı, Takipçi ve Takip edilen
+    cursor.execute("""
+        SELECT
+            (SELECT COUNT(*) FROM favorites WHERE user_id = ?),
+            (SELECT COUNT(*) FROM follows WHERE followed_id = ?),
+            (SELECT COUNT(*) FROM follows WHERE follower_id = ?)
+    """, (user_id, user_id, user_id))
+    row = cursor.fetchone()
+    total_favorites = row[0]
+    followers = row[1]
+    following = row[2]
 
     # İzleme listesi dağılımı
     cursor.execute("SELECT status, COUNT(*) as count FROM watchlists WHERE user_id = ? GROUP BY status", (user_id,))
