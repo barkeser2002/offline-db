@@ -15,6 +15,53 @@
     <script src="https://vjs.zencdn.net/8.6.1/video.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/videojs-contrib-hls@5.15.0/dist/videojs-contrib-hls.min.js"></script>
 
+    <script>
+        // Global Utility Functions
+        function escapeHTML(str) {
+            if (!str) return "";
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        }
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const borderColors = {
+                'info': 'border-blue-500',
+                'success': 'border-green-500',
+                'error': 'border-red-500',
+                'warning': 'border-yellow-500'
+            };
+
+            toast.className = `bg-[#1c1c2e] text-gray-100 border-l-4 ${borderColors[type] || 'border-gray-500'} pl-4 pr-6 py-4 rounded-r shadow-2xl transform transition-all duration-500 translate-x-full flex items-center min-w-[300px] backdrop-blur-md`;
+
+            const span = document.createElement('span');
+            span.className = 'text-sm font-medium';
+            span.textContent = message;
+
+            const btn = document.createElement('button');
+            btn.className = 'ml-auto text-gray-500 hover:text-white transition text-lg leading-none';
+            btn.innerHTML = '&times;';
+            btn.onclick = () => toast.remove();
+
+            toast.appendChild(span);
+            toast.appendChild(btn);
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+    </script>
+
     <style>
         :root {
             --bg-deep: #0a0a0f;
@@ -184,55 +231,11 @@
         </div>
     </footer>
 
-    <!-- Scripts (Same logic as before, just kept inline for simplicity) -->
+    <!-- Global Scripts -->
     <script>
         async function logout() {
             const resp = await fetch('/api/auth/logout', { method: 'POST' });
             if (resp.ok) window.location.href = '/';
-        }
-
-        function escapeHTML(str) {
-            if (!str) return "";
-            const p = document.createElement('p');
-            p.textContent = str;
-            return p.innerHTML;
-        }
-
-        function showNotification(message, type = 'info') {
-            const container = document.getElementById('notification-container');
-            const toast = document.createElement('div');
-
-            const borderColors = {
-                'info': 'border-blue-500',
-                'success': 'border-green-500',
-                'error': 'border-red-500',
-                'warning': 'border-yellow-500'
-            };
-
-            toast.className = `bg-[#1c1c2e] text-gray-100 border-l-4 ${borderColors[type] || 'border-gray-500'} pl-4 pr-6 py-4 rounded-r shadow-2xl transform transition-all duration-500 translate-x-full flex items-center min-w-[300px] backdrop-blur-md`;
-
-            const span = document.createElement('span');
-            span.className = 'text-sm font-medium';
-            span.textContent = message;
-
-            const btn = document.createElement('button');
-            btn.className = 'ml-auto text-gray-500 hover:text-white transition text-lg leading-none';
-            btn.innerHTML = '&times;';
-            btn.onclick = () => toast.remove();
-
-            toast.appendChild(span);
-            toast.appendChild(btn);
-
-            container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-x-full');
-            });
-
-            setTimeout(() => {
-                toast.classList.add('translate-x-full', 'opacity-0');
-                setTimeout(() => toast.remove(), 500);
-            }, 5000);
         }
 
         // --- Live Search ---

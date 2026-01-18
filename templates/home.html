@@ -46,8 +46,6 @@
         </div>
     </section>
 
-    <!-- Content Sections Helper (Macro-like structure via include not possible easily without separate files, so repetition is okay for now) -->
-
     <!-- Trending Section -->
     <section class="mb-16 hidden" id="trending-section">
         <div class="flex items-center justify-between mb-8">
@@ -179,7 +177,20 @@
         </div>
     </section>
 
-    <!-- Local Trending -->
+    <!-- Community Live -->
+    <section class="mb-16">
+        <div class="flex items-center justify-between mb-8">
+             <h2 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <span class="w-1.5 h-8 rounded-full bg-gradient-to-b from-blue-400 to-cyan-500 block"></span>
+                Community Live
+            </h2>
+            <a href="/community" class="text-xs font-bold text-blue-400 hover:text-blue-300 uppercase tracking-widest">View All Activity</a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="home-activity-feed">
+             <!-- Populated via JS -->
+        </div>
+    </section>
+
     {% if local_trending %}
     <section class="mb-16">
         <div class="flex items-center justify-between mb-8">
@@ -252,7 +263,6 @@
 <script>
     function createCard(anime, type = 'standard') {
         const cover = anime.cover_local ? `/covers/${anime.mal_id}.jpg` : anime.cover_url;
-        // Adjust for different API responses structure if needed
         const score = anime.score || 'N/A';
         const title = anime.title;
         const mal_id = anime.mal_id;
@@ -294,9 +304,9 @@
             const resp = await fetch('/api/social/trending?limit=6');
             const data = await resp.json();
 
-            if (data && data.length > 0) {
+            if (data && data.success && data.trending.length > 0) {
                 section.classList.remove('hidden');
-                container.innerHTML = data.map(anime => createCard(anime, 'trending')).join('');
+                container.innerHTML = data.trending.map(anime => createCard(anime, 'trending')).join('');
             }
         } catch (e) {
             console.error('Error loading trending:', e);
@@ -319,7 +329,36 @@
         }
     }
 
+    async function loadHomeActivity() {
+        const container = document.getElementById('home-activity-feed');
+        try {
+            const resp = await fetch('/api/social/global-feed?limit=6');
+            const data = await resp.json();
+
+            if (data.success && data.feed.length > 0) {
+                container.innerHTML = data.feed.map(act => {
+                    const safeUsername = typeof escapeHTML !== 'undefined' ? escapeHTML(act.username) : act.username;
+                    const msg = (act.message || '').replace(act.username, '').trim();
+                    return `
+                        <div class="glass p-4 rounded-xl border border-white/5 flex items-center gap-3 hover:border-blue-500/30 transition group">
+                            <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center text-sm border border-blue-500/10">
+                                ${act.type === 'watch' ? '👁️' : act.type === 'favorite' ? '❤️' : '⚡'}
+                            </div>
+                            <div class="overflow-hidden">
+                                <p class="text-[13px] text-gray-300 truncate">
+                                    <span class="font-bold text-blue-400">${safeUsername}</span> ${msg}
+                                </p>
+                                <p class="text-[10px] text-gray-600 font-mono mt-0.5">${new Date(act.created_at).toLocaleTimeString()}</p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        } catch (e) {}
+    }
+
     loadTrending();
     loadPersonalizedRecommendations();
+    loadHomeActivity();
 </script>
 {% endblock %}
