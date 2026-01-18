@@ -109,3 +109,8 @@ cover
 covers
 
 .env
+
+# Database and screenshots
+*.sqlite
+*.png
+verification/

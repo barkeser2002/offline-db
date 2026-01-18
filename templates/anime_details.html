@@ -120,6 +120,137 @@
     </div>
 </div>
 
+<!-- Characters & Staff Intelligence Hub -->
+{% if anime.characters or anime.staff %}
+<section class="mt-16 px-4 md:px-8">
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center gap-4">
+            <h2 class="text-2xl md:text-3xl font-black text-white border-l-4 border-cyan-500 pl-4 uppercase tracking-tighter">Production Intelligence</h2>
+            <span class="text-xs text-gray-500 uppercase tracking-widest font-bold">Characters & Cast</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="scrollHub('characters', -300)" class="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition border border-gray-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <button onclick="scrollHub('characters', 300)" class="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition border border-gray-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Characters Grid -->
+    <div id="hub-characters" class="flex gap-4 overflow-x-auto pb-6 custom-scrollbar snap-x no-scrollbar">
+        {% for char in anime.characters %}
+        <div onclick="openCharacterModal({{ char.mal_id }})" class="flex-shrink-0 w-80 bg-gray-800/40 rounded-2xl border border-gray-700/50 overflow-hidden flex snap-start group hover:border-cyan-500/50 transition-all duration-300 cursor-pointer">
+            <!-- Character Info -->
+            <div class="w-1/2 relative overflow-hidden">
+                <img src="{{ char.image_url }}" class="w-full h-40 object-cover transition duration-500 group-hover:scale-110" alt="{{ char.name }}">
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent"></div>
+                <div class="absolute bottom-2 left-2">
+                    <p class="text-[10px] font-black text-cyan-500 uppercase tracking-widest">{{ char.role }}</p>
+                    <p class="text-xs font-bold text-white leading-tight truncate w-32">{{ char.name }}</p>
+                </div>
+            </div>
+            <!-- Voice Actor Info -->
+            <div class="w-1/2 p-3 flex flex-col justify-end bg-gray-900/40 relative">
+                {% if char.va_name %}
+                <div class="flex flex-col items-end text-right">
+                    <img src="{{ char.va_image }}" class="w-12 h-12 rounded-full object-cover mb-2 border-2 border-gray-700 group-hover:border-cyan-500 transition shadow-lg" alt="{{ char.va_name }}">
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Voice Actor</p>
+                    <p class="text-[11px] font-bold text-gray-300 leading-tight">{{ char.va_name }}</p>
+                    <p class="text-[8px] text-gray-600 uppercase">{{ char.language }}</p>
+                </div>
+                {% else %}
+                <div class="flex flex-col items-end text-right opacity-30">
+                    <div class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center mb-2">?</div>
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-widest">N/A</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Staff Row -->
+    {% if anime.staff %}
+    <div class="mt-8 border-t border-gray-800 pt-8">
+        <h3 class="text-sm font-black text-gray-500 uppercase tracking-[0.3em] mb-6">Key Staff members</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {% for person in anime.staff[:6] %}
+            <div class="flex items-center gap-3 bg-gray-800/30 p-2 rounded-xl border border-gray-700/30">
+                <img src="{{ person.image_url }}" class="w-10 h-10 rounded-lg object-cover" alt="{{ person.name }}">
+                <div class="overflow-hidden">
+                    <p class="text-[11px] font-bold text-white truncate">{{ person.name }}</p>
+                    <p class="text-[9px] text-gray-500 truncate leading-none mt-1">{{ person.position }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+<script>
+    function scrollHub(id, amount) {
+        document.getElementById('hub-' + id).scrollBy({ left: amount, behavior: 'smooth' });
+    }
+
+    async function openCharacterModal(malId) {
+        const modal = document.getElementById('character-modal');
+        const name = document.getElementById('char-modal-name');
+        const kanji = document.getElementById('char-modal-kanji');
+        const img = document.getElementById('char-modal-img');
+        const about = document.getElementById('char-modal-about');
+        const vas = document.getElementById('char-modal-vas');
+
+        // Loading state
+        name.textContent = 'Loading...';
+        kanji.textContent = '';
+        about.textContent = '';
+        vas.innerHTML = '';
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+
+        try {
+            const resp = await fetch(`/api/character/${malId}`);
+            const data = await resp.json();
+
+            name.textContent = data.name;
+            kanji.textContent = data.name_kanji;
+            img.src = data.images.jpg.image_url;
+            about.textContent = data.about || 'No description available.';
+
+            if (data.voices && data.voices.length > 0) {
+                vas.innerHTML = data.voices.map(v => `
+                    <div class="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/5">
+                        <img src="${v.person.images.jpg.image_url}" class="w-8 h-8 rounded-full object-cover" alt="">
+                        <div>
+                            <p class="text-[10px] font-bold text-white leading-tight">${v.person.name}</p>
+                            <p class="text-[8px] text-gray-500 uppercase">${v.language}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                vas.innerHTML = '<p class="text-[10px] text-gray-600 italic">No voice actors found.</p>';
+            }
+        } catch (e) {
+            name.textContent = 'Error';
+            about.textContent = 'Failed to load character details.';
+        }
+    }
+
+    function closeCharacterModal() {
+        document.getElementById('character-modal').classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+</script>
+{% endif %}
+
 <!-- Anime Universe (Relations) -->
 {% if relations %}
 <section class="mt-12 px-4 md:px-8">
@@ -267,6 +398,42 @@
 </section>
 
 <!-- Review Modal -->
+<!-- Character Profile Modal -->
+<div id="character-modal" class="fixed inset-0 z-[110] hidden">
+    <div class="absolute inset-0 bg-black/90 backdrop-blur-xl" onclick="closeCharacterModal()"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-4xl px-4">
+        <div class="bg-[#0f0f1a] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+            <!-- Character Image -->
+            <div class="w-full md:w-2/5 h-64 md:h-auto relative">
+                <img id="char-modal-img" src="" class="w-full h-full object-cover" alt="">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#0f0f1a] via-transparent to-transparent"></div>
+            </div>
+            <!-- Character Content -->
+            <div class="w-full md:w-3/5 p-8 overflow-y-auto custom-scrollbar">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 id="char-modal-name" class="text-3xl font-black text-white leading-tight"></h2>
+                        <p id="char-modal-kanji" class="text-gray-500 italic"></p>
+                    </div>
+                    <button onclick="closeCharacterModal()" class="text-gray-500 hover:text-white transition p-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="text-[10px] font-black text-cyan-500 uppercase tracking-widest mb-2">About Character</h4>
+                        <p id="char-modal-about" class="text-sm text-gray-400 leading-relaxed whitespace-pre-wrap"></p>
+                    </div>
+                    <div id="char-modal-vas-container">
+                        <h4 class="text-[10px] font-black text-purple-500 uppercase tracking-widest mb-3">All Voice Actors</h4>
+                        <div id="char-modal-vas" class="grid grid-cols-2 gap-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="review-modal" class="fixed inset-0 z-[100] hidden">
     <div class="absolute inset-0 bg-black/80 backdrop-blur-md" onclick="closeReviewModal()"></div>
     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl px-4">
