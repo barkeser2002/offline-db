@@ -1143,6 +1143,64 @@ def link_anime_genre(anime_id, genre_id):
     conn.close()
     return True
 
+def sync_anime_genres(anime_id, genres_list):
+    """
+    Anime türlerini toplu olarak senkronize et.
+    genres_list: [{"name": "Action", ...}, ...]
+    """
+    conn = get_connection()
+    if not conn:
+        return False
+
+    cursor = conn.cursor()
+
+    try:
+        # 1. Mevcut türleri cache'le
+        cursor.execute("SELECT id, name FROM genres")
+        genre_map = {row["name"]: row["id"] for row in cursor.fetchall()}
+
+        anime_genre_links = []
+
+        for g in genres_list:
+            name = g.get("name")
+            if not name:
+                continue
+
+            if name in genre_map:
+                genre_id = genre_map[name]
+            else:
+                try:
+                    cursor.execute("INSERT INTO genres (name) VALUES (?)", (name,))
+                    genre_id = cursor.lastrowid
+                    genre_map[name] = genre_id
+                except sqlite3.IntegrityError:
+                    # Başka process eklemiş olabilir
+                    cursor.execute("SELECT id FROM genres WHERE name = ?", (name,))
+                    res = cursor.fetchone()
+                    if res:
+                        genre_id = res["id"]
+                        genre_map[name] = genre_id
+                    else:
+                        continue
+
+            anime_genre_links.append((anime_id, genre_id))
+
+        # 2. Toplu link ekle
+        if anime_genre_links:
+            cursor.executemany("""
+                INSERT OR IGNORE INTO anime_genres (anime_id, genre_id)
+                VALUES (?, ?)
+            """, anime_genre_links)
+            conn.commit()
+
+        return True
+    except Error as e:
+        print(f"[DB] sync_anime_genres hatası: {e}")
+        return False
+    finally:
+        cursor.close()
+        conn.close()
+
 def insert_or_get_theme(name):
     """Temayı ekle veya mevcut olanı getir."""
     conn = get_connection()
