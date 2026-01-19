@@ -1,0 +1,793 @@
+# TARGET REPO: barkeser2002/offline-db
+# MISSION: PROJECT OUROBOROS - AUTONOMOUS EVOLUTION
+# MODE: ITERATIVE IMPROVEMENT & MAINTENANCE
+# FREQUENCY: RUN_CYCLE_X (Continuous)
+        
+**ROLE:**
+You are the **Lead AI Developer & QA Engineer** for "AniScrap". The project is already live/initialized.
+Your goal is not to restart, but to **EVOLVE**. You are responsible for the project's daily health, security, and feature expansion.
+        
+**PROTOCOL (THE LOOP):**
+Every time this prompt runs, you must execute exactly **ONE** of the following "Focus Modes". Choose the mode based on the current state of the repository.
+        
+---
+
+### DECISION MATRIX (CHOOSE ONE):
+
+**MODE A: "THE MEDIC" (Priority: High)**
+*Condition:* If you detect any syntax errors, failed tests, or `FIXME`/`TODO` comments in the code.
+*Action:*
+1. Scan the codebase for errors or messy code.
+2. Refactor the specific file.
+3. Add Unit Tests (`tests/`) to prevent recurrence.
+4. **Commit Msg:** `fix(core): auto-repair & stability improvements`
+
+**MODE B: "THE SECURITY GUARD" (Priority: Medium)**
+*Condition:* If code is stable but security vulnerabilities exist.
+*Action:*
+1. Audit `views.py` and `settings.py`.
+2. Ensure no API Keys are hardcoded (move to `.env` or DB).
+3. Check if Rate Limiting is active on API endpoints.
+4. Update `requirements.txt` to safer versions.
+5. **Commit Msg:** `sec(harden): security audit & vulnerability patch`
+
+**MODE C: "THE ARCHITECT" (Priority: Normal)**
+*Condition:* If code is healthy, **ADD A NEW FEATURE** from the "Innovation List" below.
+*Action:* Pick ONE item from the list and implement it fully.
+1. **Chat System:** Add a WebSocket-based chat for WatchParties.
+2. **Notification Bell:** Real-time notifications for new episodes.
+3. **Admin Analytics:** Add a graph showing "Bandwidth Saved" (due to H.265).
+4. **User Badges:** Add logic to award badges (e.g., "Binge Watcher").
+5. **SEO Booster:** Auto-generate `sitemap.xml` for all anime pages.
+6. **Performance:** Implement Redis caching for the Homepage query.
+7. **Commit Msg:** `feat(auto): implemented [feature_name]`
+
+---
+
+### STRICT EXECUTION RULES:
+
+1. **DO NOT DELETE EXISTING WORK:** Never wipe `settings.py` or `models.py`. Only append or refactor.
+2. **INCREMENTAL CHANGES:** Do not try to rewrite the whole app in one run. Change 3-5 files maximum per run to keep PRs reviewable.
+3. **SELF-VALIDATION:** Before pushing, run a syntax check. If it fails, fix it immediately.
+4. **PR DESCRIPTION:** Your PR body must explicitly state:
+   - "Current Focus Mode: [A/B/C]"
+   - "Changes Made:"
+   - "Impact on System:"
+
+### FINAL COMMAND:
+Analyze the repository. Determine the best **Mode** (A, B, or C). Execute the changes. **Open a Pull Request.**
+
+**START SCANNING.**
+
+
+
+Content of the latest commit (in the format of `git show`):
+```
+commit a933b617efea4e14a4758ff3dd3b2cc9ef3a0379
+Author: Barış Keser <45911502+barkeser2002@users.noreply.github.com>
+Date:   Mon Jan 19 12:56:05 2026 +0300
+
+    Update AI Agent action in workflow file
+
+diff --git a/.github/workflows/ouroboros.yml b/.github/workflows/ouroboros.yml
+index 99fc9c6..206df6f 100644
+--- a/.github/workflows/ouroboros.yml
++++ b/.github/workflows/ouroboros.yml
+@@ -13,7 +13,7 @@ jobs:
+         uses: actions/checkout@v3
+ 
+       - name: Summon AI Agent
+-        uses: google-labs-code/jules-invoke@v1
++        uses: BeksOmega/jules-action@v1.0.0
+         with:
+           jules_api_key: ${{ secrets.JULES_API_KEY }}
+           prompt: |
+@@ -84,4 +84,4 @@ jobs:
+         with:
+           title: "🤖 Ouroboros Auto-Update"
+           body: "AI Agent has updated the codebase based on autonomous scan."
+-          branch: "auto-evolution-patch"
+\ No newline at end of file
++          branch: "auto-evolution-patch"
+```
+
+
+Log of the last 20 commits (in the format of `git log --stat`):
+```
+commit a933b617efea4e14a4758ff3dd3b2cc9ef3a0379
+Author: Barış Keser <45911502+barkeser2002@users.noreply.github.com>
+Date:   Mon Jan 19 12:56:05 2026 +0300
+
+    Update AI Agent action in workflow file
+
+ .github/workflows/ouroboros.yml | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+commit af4c9461e8ed39f0316d5d87cb9ca0399808f634
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Mon Jan 19 09:52:12 2026 +0000
+
+    Refactor legacy codebase into AniScrap Django platform (#45)
+    
+    - Initialized 'aniscrap_core' project.
+    - Implemented 'users', 'content', 'billing', 'scraper_module', 'core' apps.
+    - Added models for Anime, Episode, VideoFile (HLS/Encrypted), User, Wallet, etc.
+    - Implemented Celery tasks for Video Encoding (H.265/HLS) and Revenue Distribution.
+    - Integrated Shopier mock payment flow.
+    - Configured Unfold Admin Dashboard.
+    - Refactored Jikan scraper client.
+    - Added 'init_aniscrap' management command.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ analytics/admin.py                                 |    14 -
+ analytics/apps.py                                  |     5 -
+ analytics/migrations/0001_initial.py               |    76 -
+ analytics/models.py                                |    30 -
+ {config => aniscrap_core}/__init__.py              |     2 +
+ {config => aniscrap_core}/asgi.py                  |     2 +-
+ {config => aniscrap_core}/celery.py                |     4 +-
+ {config => aniscrap_core}/settings.py              |    22 +-
+ {config => aniscrap_core}/urls.py                  |     0
+ {config => aniscrap_core}/wsgi.py                  |     2 +-
+ {analytics => billing}/__init__.py                 |     0
+ billing/admin.py                                   |     3 +
+ billing/apps.py                                    |     5 +
+ {analytics => billing}/migrations/__init__.py      |     0
+ billing/models.py                                  |    29 +
+ billing/tasks.py                                   |    96 +
+ {analytics => billing}/tests.py                    |     0
+ billing/views.py                                   |    44 +
+ community/admin.py                                 |    11 -
+ community/apps.py                                  |     5 -
+ community/migrations/0001_initial.py               |    77 -
+ community/models.py                                |    22 -
+ content/admin.py                                   |    31 +-
+ content/models.py                                  |    81 +-
+ content/tasks.py                                   |   129 +-
+ content/urls.py                                    |     2 +-
+ content/views.py                                   |    24 +-
+ core/admin.py                                      |    19 +-
+ core/dashboard.py                                  |    62 +-
+ core/management/commands/init_aniscrap.py          |    30 +-
+ core/models.py                                     |    52 +-
+ core/templatetags/ad_tags.py                       |    19 +-
+ core/utils.py                                      |    32 +
+ legacy/anime_ids.json                              | 94949 -------------------
+ legacy/api.py                                      |    48 -
+ legacy/blueprints/api.py                           |  2324 -
+ legacy/blueprints/collections.py                   |   157 -
+ legacy/blueprints/reviews.py                       |    96 -
+ legacy/blueprints/social.py                        |   116 -
+ legacy/blueprints/ui.py                            |   552 -
+ legacy/blueprints/user.py                          |   208 -
+ legacy/config.py                                   |    61 -
+ legacy/convert_to_myisam.sql                       |    67 -
+ legacy/db.py                                       |  2917 -
+ legacy/main.py                                     |   881 -
+ legacy/migrate_to_innodb.sql                       |    14 -
+ legacy/requirements.txt                            |    29 -
+ legacy/services/video_service.py                   |   213 -
+ legacy/templates/anime.html                        |   118 -
+ legacy/templates/anime_details.html                |   936 -
+ legacy/templates/base.html                         |   365 -
+ legacy/templates/collection_view.html              |   178 -
+ legacy/templates/collections.html                  |   149 -
+ legacy/templates/community.html                    |   146 -
+ legacy/templates/discover.html                     |   196 -
+ legacy/templates/home.html                         |   364 -
+ legacy/templates/login.html                        |    49 -
+ legacy/templates/player.html                       |   562 -
+ legacy/templates/profile.html                      |   274 -
+ legacy/templates/public_profile.html               |   210 -
+ legacy/templates/register.html                     |    54 -
+ legacy/templates/schedule.html                     |   190 -
+ legacy/templates/search.html                       |    38 -
+ legacy/templates/season.html                       |    46 -
+ legacy/templates/watchlist.html                    |    96 -
+ legacy/update-anime-ids.py                         |   254 -
+ legacy/updated_mal_ids.json                        |     1 -
+ manage.py                                          |     2 +-
+ requirements.txt                                   |    29 +-
+ {community => scraper_module}/__init__.py          |     0
+ {legacy => scraper_module}/adapters/__init__.py    |     0
+ {legacy => scraper_module}/adapters/adapter.py     |     0
+ .../adapters/adapter_template.py                   |     0
+ {legacy => scraper_module}/adapters/animecix.py    |     0
+ {legacy => scraper_module}/adapters/animely.py     |     0
+ {legacy => scraper_module}/adapters/anizle.py      |     0
+ .../adapters/common/__init__.py                    |     0
+ .../adapters/common/cf_bypass.py                   |     0
+ .../adapters/common/utils.py                       |     0
+ {legacy => scraper_module}/adapters/tranime.py     |     0
+ {legacy => scraper_module}/adapters/turkanime.py   |     0
+ .../adapters/turkanime_bypass.py                   |     0
+ scraper_module/admin.py                            |     3 +
+ scraper_module/apps.py                             |     5 +
+ .../management/commands}/__init__.py               |     0
+ .../management/commands/sync_metadata.py           |    44 +
+ .../migrations}/__init__.py                        |     0
+ scraper_module/models.py                           |     3 +
+ .../services/jikan.py                              |    56 +-
+ {community => scraper_module}/tests.py             |     0
+ {analytics => scraper_module}/views.py             |     0
+ templates/home.html                                |    47 +-
+ templates/player.html                              |   102 +-
+ legacy/anime_id_edits.json => users/__init__.py    |     0
+ users/admin.py                                     |    23 +
+ users/apps.py                                      |     5 +
+ users/migrations/__init__.py                       |     0
+ users/models.py                                    |    25 +
+ users/tests.py                                     |     3 +
+ {community => users}/views.py                      |     0
+ 100 files changed, 696 insertions(+), 107439 deletions(-)
+
+commit 5f9a9a1fb2b2f2b14c5f6a157f3c7c45c94e9695
+Author: Barış Keser <45911502+barkeser2002@users.noreply.github.com>
+Date:   Mon Jan 19 12:49:33 2026 +0300
+
+    feat: add Project Ouroboros workflow for autonomous AI development
+
+ .github/workflows/ouroboros.yml | 87 +++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 87 insertions(+)
+
+commit d6b995c87b9dc85f305d26f2c181066d83b696f2
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 21:23:59 2026 +0000
+
+    Transform AniScrap to Django: Secure Video Pipeline, Admin Dashboard, and HLS Encryption (#44)
+    
+    - **Architecture:** Migrated from Flask to Django 6.0.
+    - **Security:** Implemented AES-128 HLS encryption with secure key serving (`KeyServeView`).
+    - **Video Pipeline:** Added Celery task `encode_episode` for FFmpeg H.265 transcoding.
+    - **Admin:** Integrated `django-unfold` for a modern "Cockpit" dashboard with server stats.
+    - **Frontend:** Created dark-themed Tailwind UI with Plyr/HLS.js player.
+    - **Database:** Configured for MySQL with `pymysql` (supports SQLite fallback).
+    - **Ads:** Implemented dynamic AdSlot management system.
+    - **Legacy:** Archived old codebase to `legacy/`.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ .gitignore                                         |    4 +
+ adapters/common/__init__.py                        |    1 -
+ {services => analytics}/__init__.py                |    0
+ analytics/admin.py                                 |   14 +
+ analytics/apps.py                                  |    5 +
+ analytics/migrations/0001_initial.py               |   76 ++
+ .../migrations/__init__.py                         |    0
+ analytics/models.py                                |   30 +
+ analytics/tests.py                                 |    3 +
+ analytics/views.py                                 |    3 +
+ anime_db.sqlite                                    |  Bin 311296 -> 0 bytes
+ community/__init__.py                              |    0
+ community/admin.py                                 |   11 +
+ community/apps.py                                  |    5 +
+ community/migrations/0001_initial.py               |   77 ++
+ community/migrations/__init__.py                   |    0
+ community/models.py                                |   22 +
+ community/tests.py                                 |    3 +
+ community/views.py                                 |    3 +
+ config/__init__.py                                 |    6 +
+ config/asgi.py                                     |   16 +
+ config/celery.py                                   |   20 +
+ config/settings.py                                 |  188 ++++
+ config/urls.py                                     |   10 +
+ config/wsgi.py                                     |   16 +
+ content/__init__.py                                |    0
+ content/admin.py                                   |   19 +
+ content/apps.py                                    |    5 +
+ content/migrations/0001_initial.py                 |  119 +++
+ content/migrations/__init__.py                     |    0
+ content/models.py                                  |   55 +
+ content/tasks.py                                   |  103 ++
+ content/tests.py                                   |   19 +
+ content/urls.py                                    |    8 +
+ content/views.py                                   |   29 +
+ core/__init__.py                                   |    0
+ core/admin.py                                      |    7 +
+ core/apps.py                                       |    5 +
+ core/context_processors.py                         |    9 +
+ core/dashboard.py                                  |   40 +
+ core/management/__init__.py                        |    0
+ core/management/commands/__init__.py               |    0
+ core/management/commands/init_aniscrap.py          |   27 +
+ core/migrations/0001_initial.py                    |   41 +
+ core/migrations/__init__.py                        |    0
+ core/models.py                                     |   22 +
+ core/templatetags/__init__.py                      |    0
+ core/templatetags/ad_tags.py                       |   13 +
+ core/tests.py                                      |    3 +
+ core/views.py                                      |    3 +
+ covers/1.jpg                                       |  Bin 35865 -> 0 bytes
+ covers/100.jpg                                     |  Bin 32249 -> 0 bytes
+ covers/1004.jpg                                    |  Bin 19043 -> 0 bytes
+ covers/1006.jpg                                    |  Bin 67712 -> 0 bytes
+ covers/1025.jpg                                    |  Bin 56939 -> 0 bytes
+ covers/1048.jpg                                    |  Bin 29158 -> 0 bytes
+ covers/1051.jpg                                    |  Bin 20894 -> 0 bytes
+ covers/106.jpg                                     |  Bin 22683 -> 0 bytes
+ covers/1079.jpg                                    |  Bin 39455 -> 0 bytes
+ covers/1084.jpg                                    |  Bin 12896 -> 0 bytes
+ covers/1097.jpg                                    |  Bin 44085 -> 0 bytes
+ covers/1098.jpg                                    |  Bin 135183 -> 0 bytes
+ covers/1111.jpg                                    |  Bin 41917 -> 0 bytes
+ covers/1124.jpg                                    |  Bin 22118 -> 0 bytes
+ covers/1132.jpg                                    |  Bin 147580 -> 0 bytes
+ covers/1133.jpg                                    |  Bin 28278 -> 0 bytes
+ covers/1144.jpg                                    |  Bin 24682 -> 0 bytes
+ covers/1156.jpg                                    |  Bin 65319 -> 0 bytes
+ covers/1157.jpg                                    |  Bin 107125 -> 0 bytes
+ covers/1161.jpg                                    |  Bin 40987 -> 0 bytes
+ covers/1163.jpg                                    |  Bin 230920 -> 0 bytes
+ covers/1169.jpg                                    |  Bin 37095 -> 0 bytes
+ covers/1171.jpg                                    |  Bin 26375 -> 0 bytes
+ covers/118.jpg                                     |  Bin 22056 -> 0 bytes
+ covers/1180.jpg                                    |  Bin 224160 -> 0 bytes
+ covers/1181.jpg                                    |  Bin 35422 -> 0 bytes
+ covers/1191.jpg                                    |  Bin 31802 -> 0 bytes
+ covers/122.jpg                                     |  Bin 56917 -> 0 bytes
+ covers/1248.jpg                                    |  Bin 60756 -> 0 bytes
+ covers/1249.jpg                                    |  Bin 72213 -> 0 bytes
+ covers/1251.jpg                                    |  Bin 204932 -> 0 bytes
+ covers/1264.jpg                                    |  Bin 69891 -> 0 bytes
+ covers/1276.jpg                                    |  Bin 31043 -> 0 bytes
+ covers/1277.jpg                                    |  Bin 175282 -> 0 bytes
+ covers/1293.jpg                                    |  Bin 29445 -> 0 bytes
+ covers/1346.jpg                                    |  Bin 17034 -> 0 bytes
+ covers/1372.jpg                                    |  Bin 32511 -> 0 bytes
+ covers/1397.jpg                                    |  Bin 48860 -> 0 bytes
+ covers/1412.jpg                                    |  Bin 24741 -> 0 bytes
+ covers/142.jpg                                     |  Bin 39106 -> 0 bytes
+ covers/1453.jpg                                    |  Bin 28037 -> 0 bytes
+ covers/1455.jpg                                    |  Bin 52754 -> 0 bytes
+ covers/1456.jpg                                    |  Bin 26626 -> 0 bytes
+ covers/1465.jpg                                    |  Bin 73445 -> 0 bytes
+ covers/1486.jpg                                    |  Bin 49878 -> 0 bytes
+ covers/1496.jpg                                    |  Bin 216275 -> 0 bytes
+ covers/1548.jpg                                    |  Bin 38487 -> 0 bytes
+ covers/155.jpg                                     |  Bin 17890 -> 0 bytes
+ covers/1618.jpg                                    |  Bin 41732 -> 0 bytes
+ covers/1660.jpg                                    |  Bin 106744 -> 0 bytes
+ covers/168.jpg                                     |  Bin 169630 -> 0 bytes
+ covers/1772.jpg                                    |  Bin 130026 -> 0 bytes
+ covers/1799.jpg                                    |  Bin 115127 -> 0 bytes
+ covers/1822.jpg                                    |  Bin 94673 -> 0 bytes
+ covers/185.jpg                                     |  Bin 91647 -> 0 bytes
+ covers/1919.jpg                                    |  Bin 52334 -> 0 bytes
+ covers/1920.jpg                                    |  Bin 218603 -> 0 bytes
+ covers/1921.jpg                                    |  Bin 50264 -> 0 bytes
+ covers/1922.jpg                                    |  Bin 40472 -> 0 bytes
+ covers/1923.jpg                                    |  Bin 166446 -> 0 bytes
+ covers/1924.jpg                                    |  Bin 134972 -> 0 bytes
+ covers/1925.jpg                                    |  Bin 22394 -> 0 bytes
+ covers/1947.jpg                                    |  Bin 36707 -> 0 bytes
+ covers/1954.jpg                                    |  Bin 51556 -> 0 bytes
+ covers/199.jpg                                     |  Bin 46187 -> 0 bytes
+ covers/20.jpg                                      |  Bin 148731 -> 0 bytes
+ covers/2004.jpg                                    |  Bin 24651 -> 0 bytes
+ covers/202.jpg                                     |  Bin 32504 -> 0 bytes
+ covers/2098.jpg                                    |  Bin 117624 -> 0 bytes
+ covers/21.jpg                                      |  Bin 156465 -> 0 bytes
+ covers/2179.jpg                                    |  Bin 182432 -> 0 bytes
+ covers/219.jpg                                     |  Bin 24801 -> 0 bytes
+ covers/2204.jpg                                    |  Bin 46085 -> 0 bytes
+ covers/2225.jpg                                    |  Bin 132374 -> 0 bytes
+ covers/2291.jpg                                    |  Bin 32621 -> 0 bytes
+ covers/23279.jpg                                   |  Bin 36637 -> 0 bytes
+ covers/233.jpg                                     |  Bin 35781 -> 0 bytes
+ covers/2332.jpg                                    |  Bin 125154 -> 0 bytes
+ covers/2362.jpg                                    |  Bin 89501 -> 0 bytes
+ covers/2409.jpg                                    |  Bin 52933 -> 0 bytes
+ covers/298.jpg                                     |  Bin 36605 -> 0 bytes
+ covers/3006.jpg                                    |  Bin 24524 -> 0 bytes
+ covers/32.jpg                                      |  Bin 40173 -> 0 bytes
+ covers/321.jpg                                     |  Bin 24836 -> 0 bytes
+ covers/327.jpg                                     |  Bin 44578 -> 0 bytes
+ covers/328.jpg                                     |  Bin 34852 -> 0 bytes
+ covers/337.jpg                                     |  Bin 63817 -> 0 bytes
+ covers/360.jpg                                     |  Bin 31821 -> 0 bytes
+ covers/369.jpg                                     |  Bin 55129 -> 0 bytes
+ covers/378.jpg                                     |  Bin 24754 -> 0 bytes
+ covers/393.jpg                                     |  Bin 58976 -> 0 bytes
+ covers/424.jpg                                     |  Bin 34698 -> 0 bytes
+ covers/426.jpg                                     |  Bin 108379 -> 0 bytes
+ covers/433.jpg                                     |  Bin 130357 -> 0 bytes
+ covers/439.jpg                                     |  Bin 158927 -> 0 bytes
+ covers/45.jpg                                      |  Bin 159800 -> 0 bytes
+ covers/458.jpg                                     |  Bin 37717 -> 0 bytes
+ covers/46.jpg                                      |  Bin 26756 -> 0 bytes
+ covers/472.jpg                                     |  Bin 27616 -> 0 bytes
+ covers/51.jpg                                      |  Bin 123120 -> 0 bytes
+ covers/512.jpg                                     |  Bin 115918 -> 0 bytes
+ covers/513.jpg                                     |  Bin 33893 -> 0 bytes
+ covers/523.jpg                                     |  Bin 77842 -> 0 bytes
+ covers/527.jpg                                     |  Bin 162970 -> 0 bytes
+ covers/52991.jpg                                   |  Bin 177509 -> 0 bytes
+ covers/539.jpg                                     |  Bin 50840 -> 0 bytes
+ covers/53913.jpg                                   |  Bin 96620 -> 0 bytes
+ covers/543.jpg                                     |  Bin 54390 -> 0 bytes
+ covers/55.jpg                                      |  Bin 34376 -> 0 bytes
+ covers/555.jpg                                     |  Bin 144450 -> 0 bytes
+ covers/55825.jpg                                   |  Bin 120278 -> 0 bytes
+ covers/56009.jpg                                   |  Bin 124276 -> 0 bytes
+ covers/57658.jpg                                   |  Bin 131443 -> 0 bytes
+ covers/578.jpg                                     |  Bin 108268 -> 0 bytes
+ covers/57961.jpg                                   |  Bin 141231 -> 0 bytes
+ covers/58.jpg                                      |  Bin 15988 -> 0 bytes
+ covers/585.jpg                                     |  Bin 169644 -> 0 bytes
+ covers/58567.jpg                                   |  Bin 103808 -> 0 bytes
+ covers/59978.jpg                                   |  Bin 115246 -> 0 bytes
+ covers/60058.jpg                                   |  Bin 138747 -> 0 bytes
+ covers/604.jpg                                     |  Bin 58990 -> 0 bytes
+ covers/611.jpg                                     |  Bin 25268 -> 0 bytes
+ covers/61128.jpg                                   |  Bin 139406 -> 0 bytes
+ covers/61323.jpg                                   |  Bin 97889 -> 0 bytes
+ covers/615.jpg                                     |  Bin 33604 -> 0 bytes
+ covers/61607.jpg                                   |  Bin 92424 -> 0 bytes
+ covers/61987.jpg                                   |  Bin 111733 -> 0 bytes
+ covers/624.jpg                                     |  Bin 40906 -> 0 bytes
+ covers/62844.jpg                                   |  Bin 114176 -> 0 bytes
+ covers/633.jpg                                     |  Bin 34526 -> 0 bytes
+ covers/792.jpg                                     |  Bin 48697 -> 0 bytes
+ covers/796.jpg                                     |  Bin 46811 -> 0 bytes
+ covers/799.jpg                                     |  Bin 37814 -> 0 bytes
+ covers/868.jpg                                     |  Bin 26174 -> 0 bytes
+ covers/869.jpg                                     |  Bin 25560 -> 0 bytes
+ covers/906.jpg                                     |  Bin 86241 -> 0 bytes
+ covers/917.jpg                                     |  Bin 109202 -> 0 bytes
+ covers/967.jpg                                     |  Bin 36856 -> 0 bytes
+ covers/976.jpg                                     |  Bin 28356 -> 0 bytes
+ covers/980.jpg                                     |  Bin 39887 -> 0 bytes
+ covers/999.jpg                                     |  Bin 21349 -> 0 bytes
+ {adapters => legacy/adapters}/__init__.py          |   47 +-
+ {adapters => legacy/adapters}/adapter.py           |  113 +-
+ {adapters => legacy/adapters}/adapter_template.py  |  216 ++--
+ {adapters => legacy/adapters}/animecix.py          |   19 +-
+ {adapters => legacy/adapters}/animely.py           |   78 +-
+ {adapters => legacy/adapters}/anizle.py            |  124 ++-
+ legacy/adapters/common/__init__.py                 |    1 +
+ {adapters => legacy/adapters}/common/cf_bypass.py  |    6 +-
+ {adapters => legacy/adapters}/common/utils.py      |   15 +-
+ {adapters => legacy/adapters}/tranime.py           |  106 +-
+ {adapters => legacy/adapters}/turkanime.py         |  164 +--
+ {adapters => legacy/adapters}/turkanime_bypass.py  |  148 +--
+ legacy/anime_id_edits.json                         |    0
+ anime_ids.json => legacy/anime_ids.json            |    0
+ api.py => legacy/api.py                            |   12 +-
+ {blueprints => legacy/blueprints}/api.py           |  862 +++++++++------
+ {blueprints => legacy/blueprints}/collections.py   |   53 +-
+ {blueprints => legacy/blueprints}/reviews.py       |   22 +-
+ {blueprints => legacy/blueprints}/social.py        |   40 +-
+ {blueprints => legacy/blueprints}/ui.py            |  223 ++--
+ {blueprints => legacy/blueprints}/user.py          |   28 +-
+ config.py => legacy/config.py                      |    3 +-
+ .../convert_to_myisam.sql                          |    0
+ db.py => legacy/db.py                              | 1110 +++++++++++++++-----
+ jikan_client.py => legacy/jikan_client.py          |   21 +-
+ main.py => legacy/main.py                          |  294 ++++--
+ .../migrate_to_innodb.sql                          |    0
+ legacy/requirements.txt                            |   29 +
+ legacy/services/__init__.py                        |    0
+ {services => legacy/services}/video_service.py     |  107 +-
+ {templates => legacy/templates}/anime.html         |    0
+ {templates => legacy/templates}/anime_details.html |    0
+ legacy/templates/base.html                         |  365 +++++++
+ .../templates}/collection_view.html                |    0
+ {templates => legacy/templates}/collections.html   |    0
+ {templates => legacy/templates}/community.html     |    0
+ {templates => legacy/templates}/discover.html      |    0
+ legacy/templates/home.html                         |  364 +++++++
+ {templates => legacy/templates}/login.html         |    0
+ legacy/templates/player.html                       |  562 ++++++++++
+ {templates => legacy/templates}/profile.html       |    0
+ .../templates}/public_profile.html                 |    0
+ {templates => legacy/templates}/register.html      |    0
+ {templates => legacy/templates}/schedule.html      |    0
+ {templates => legacy/templates}/search.html        |    0
+ {templates => legacy/templates}/season.html        |    0
+ {templates => legacy/templates}/watchlist.html     |    0
+ update-anime-ids.py => legacy/update-anime-ids.py  |  109 +-
+ .../updated_mal_ids.json                           |    0
+ manage.py                                          |   22 +
+ requirements.txt                                   |   44 +-
+ templates/base.html                                |  379 +------
+ templates/home.html                                |  391 +------
+ templates/player.html                              |  593 +----------
+ 245 files changed, 5096 insertions(+), 2614 deletions(-)
+
+commit 5df90f7290d7eaf1f57ee46f02428eb2ffc57298
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 18:20:17 2026 +0000
+
+    fix(api): improve slug handling for anizle and tranime adapters (#43)
+    
+    - Update `get_episode_stream` in `blueprints/api.py` to iterate through multiple slug patterns for `anizle` (e.g., adding `-bolum`) to fix 404 errors when the default slug format is incorrect.
+    - Apply similar multi-pattern retry logic to `tranime` to align with `video_service.py` behavior.
+    - Ensure robust stream fetching by trying alternative URL structures before returning 404.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ blueprints/api.py | 35 +++++++++++++++++++++++++++++------
+ 1 file changed, 29 insertions(+), 6 deletions(-)
+
+commit a006a66d7ccb4585905269d5d4cece1996ab3127
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 15:18:35 2026 +0000
+
+    ✨ FEATURE: Universal Gamification & Social Evolution System (#42)
+    
+    - Implemented XP and Level tracking for users.
+    - Created Badge system with automated milestone awarding.
+    - Hooked XP rewards into watch history, comments, reviews, and follows.
+    - Added automated "New Episode" notifications for watching users.
+    - Redesigned user profiles and community leaderboard to showcase levels and badges.
+    - Improved template robustness for SQLite timestamp strings.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ anime_db.sqlite               | Bin 294912 -> 311296 bytes
+ db.py                         | 216 +++++++++++++++++++++++++++++++++++++++++-
+ services/video_service.py     |   9 ++
+ templates/community.html      |   6 ++
+ templates/profile.html        |  42 +++++++-
+ templates/public_profile.html |  23 ++++-
+ 6 files changed, 287 insertions(+), 9 deletions(-)
+
+commit 5216eac320607028872c8035a4775fc524852945
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 12:16:30 2026 +0000
+
+    feat: implement production intelligence hub (characters and staff system) (#41)
+    
+    - Add characters, people, and staff tables to SQLite schema
+    - Implement sync logic for characters/staff in main.py using Jikan API
+    - Add /api/character/<id> endpoint for detailed character bios
+    - Update anime details UI with horizontal character scroll and staff grid
+    - Implement interactive character profile modal with live data fetching
+    - Standardize db.py queries for Japanese voice actor priority
+    - Update .gitignore to exclude binaries and verification artifacts
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ .gitignore                   |   5 +
+ anime_db.sqlite              | Bin 0 -> 294912 bytes
+ blueprints/api.py            |   8 ++
+ db.py                        | 217 +++++++++++++++++++++++++++++++++++++++++++
+ jikan_client.py              |  10 ++
+ main.py                      |  54 +++++++++++
+ templates/anime_details.html | 167 +++++++++++++++++++++++++++++++++
+ 7 files changed, 461 insertions(+)
+
+commit 50fa721280a42d70c34e172f0da86a3458ceb4f7
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 09:22:58 2026 +0000
+
+    ✨ FEATURE: User Collections & Anime Universe Discovery System (#40)
+    
+    - Implemented full-stack User Collections (custom lists) system.
+    - Added "Anime Universe" section to details page (relations & recommendations).
+    - Updated db schema and added CRUD helpers in db.py.
+    - Created collections blueprint and integrated with UI.
+    - Standardized db.py and jikan_client.py comments to English.
+    - Verified with Playwright automated tests.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ api.py                         |   2 +
+ blueprints/collections.py      | 126 ++++++++++++++
+ blueprints/ui.py               |  10 +-
+ db.py                          | 384 +++++++++++++++++++++++++++++------------
+ jikan_client.py                |  50 +++---
+ templates/anime_details.html   | 129 ++++++++++++++
+ templates/base.html            |   4 +
+ templates/collection_view.html | 178 +++++++++++++++++++
+ templates/collections.html     | 149 ++++++++++++++++
+ 9 files changed, 896 insertions(+), 136 deletions(-)
+
+commit 521ebb380399498ba666a2e22ba9fa8590985c78
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 07:52:03 2026 +0000
+
+    ✨ FEATURE: Advanced Video Player, Social Ecosystem & Smart Recommendations (#39)
+    
+    This major update transforms the platform into a feature-rich anime ecosystem:
+    - Advanced Video Player: Added keyboard shortcuts (F, M, Space, Arrows, Digits), Skip Intro buttons, and Auto-Next functionality.
+    - Social Ecosystem: Implemented a global community activity feed and standardized the Social API (comments, trending, recommendations).
+    - Personalized Recommendations: Upgraded the suggestion engine to use genre-affinity logic based on user watch history.
+    - Core UI Enhancements: Centralized notification and sanitization utilities in base.html and overhauled Home/Community layouts.
+    - Standardized API: Unified backend response formats and optimized database queries for performance.
+    - Automated Migrations: Enhanced db.py to handle schema updates automatically on startup.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ anime_db.sqlite          |  Bin 192512 -> 0 bytes
+ blueprints/api.py        |    8 +-
+ blueprints/social.py     |   41 +-
+ db.py                    |   91 +++-
+ db.py.backup             | 1351 ----------------------------------------------
+ execute_migration.py     |   38 --
+ list_animes.py           |    7 -
+ migrate.py               |   36 --
+ pylint_report.txt        |   47 --
+ templates/base.html      |   93 ++--
+ templates/community.html |   44 +-
+ templates/home.html      |   51 +-
+ templates/player.html    |   84 ++-
+ verify_migration.py      |   45 --
+ 14 files changed, 330 insertions(+), 1606 deletions(-)
+
+commit 4114d4fc265a780435ce4de0bae8967e600ce12b
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:22:55 2026 +0000
+
+    Radical UI Overhaul: AniScrap Rebranding & Modern Design System (#38)
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ templates/base.html     | 272 +++++++++++++++++++-----------
+ templates/discover.html | 140 ++++++++--------
+ templates/home.html     | 435 ++++++++++++++++++++++++++----------------------
+ 3 files changed, 489 insertions(+), 358 deletions(-)
+
+commit a5141ff7a1e97d5c5c278378ce1c09d9cd49e65f
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:22:12 2026 +0000
+
+    Optimize get_user_stats database queries (#37)
+    
+    - Combined `watch_history` queries (COUNT and SUM) into a single SELECT
+    - Combined `favorites` and `follows` queries into a single SELECT with subqueries
+    - Reduced total query count from 6 to 3 per request
+    - Improved execution time by ~8% in benchmarks
+    - Reduced database round-trips and table scans
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ db.py | 34 +++++++++++++++++-----------------
+ 1 file changed, 17 insertions(+), 17 deletions(-)
+
+commit 5f5be6c44b8d248268e401b8b7bc28a06a893695
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:21:31 2026 +0000
+
+    feat(perf): Optimize anime genre synchronization (#36)
+    
+    Refactored db.py to include `sync_anime_genres` which uses batch processing
+    and caching to eliminate N+1 queries when syncing genres.
+    Updated blueprints/api.py to use this new function.
+    
+    Measured improvement: ~3.4x faster (0.73s -> 0.21s for 100 animes).
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ blueprints/api.py | 10 ++--------
+ db.py             | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 60 insertions(+), 8 deletions(-)
+
+commit 723ea534d6af762a222707f9d8002c2dfedf8892
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:19:41 2026 +0000
+
+    Implement thread-local database connection pooling in db.py (#35)
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ api.py |  4 ++++
+ db.py  | 61 +++++++++++++++++++++++++++++++++++++++++++++++++++++--------
+ 2 files changed, 57 insertions(+), 8 deletions(-)
+
+commit f97a7da78c00b9638532e12c8382d32370b54187
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:18:16 2026 +0000
+
+    feat(perf): Parallelize video source fetching (#34)
+    
+    Parallelized sequential API calls in `video_service.py` using `ThreadPoolExecutor`, reducing execution time by ~60% (2.5s -> 1.05s). Refactored fetching logic into `_fetch_source_links` for better maintainability.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ services/video_service.py | 225 +++++++++++++++++++++++++---------------------
+ 1 file changed, 123 insertions(+), 102 deletions(-)
+
+commit 48721f79b59f69b40e1e56d2e7c036a340853602
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sun Jan 18 00:05:42 2026 +0000
+
+    Update adapters and implement Blob URL encryption (#33)
+    
+    - Updated `adapters/animecix.py`, `adapters/anizle.py`, `adapters/tranime.py`
+    - Added `adapters/animely.py`
+    - Created `adapters/common/` with `cf_bypass.py` and `utils.py`
+    - Updated `services/video_service.py`
+    - Updated `templates/player.html` for Blob URL support
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ adapters/adapter.py          | 184 +++++++++++++++++++-
+ adapters/animecix.py         |  64 ++-----
+ adapters/anizle.py           | 400 +++++++++++++++++++++++++------------------
+ adapters/common/__init__.py  |   1 +
+ adapters/common/cf_bypass.py |  39 +++++
+ adapters/common/utils.py     |  43 +++++
+ adapters/tranime.py          | 322 +++++++++++++++++++++++++---------
+ anime_db.sqlite              | Bin 192512 -> 192512 bytes
+ services/video_service.py    |  42 ++++-
+ templates/player.html        |  27 ++-
+ 10 files changed, 807 insertions(+), 315 deletions(-)
+
+commit 21cd163743fa29ccc3869d318206d25e9e46e2c7
+Merge: f741651 8955b40
+Author: Barış Keser <45911502+barkeser2002@users.noreply.github.com>
+Date:   Sun Jan 18 02:51:55 2026 +0300
+
+    Merge pull request #32 from barkeser2002/fix-duplicate-function-main-4853307636921871503
+    
+    Remove Duplicate Function in main.py
+
+commit f74165129b4e2182b2d8f7930cbcc1c599f0f99a
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sat Jan 17 23:51:07 2026 +0000
+
+    fix: Remove hardcoded mock stream (#31)
+    
+    The code was previously forcing a mock video stream for testing purposes, which prevented the real stream fetching logic from executing.
+    
+    This change removes the temporary code block and restores the intended functionality of fetching real video streams from the various adapters.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ blueprints/api.py | 45 ++++++++++++++++++---------------------------
+ 1 file changed, 18 insertions(+), 27 deletions(-)
+
+commit 8955b403e9eea6690590e5f076527f71158b0c8f
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sat Jan 17 23:50:59 2026 +0000
+
+    fix(main): Remove duplicate update_anime_by_mal_id function
+    
+    The `update_anime_by_mal_id` function was defined twice in `main.py`. The second definition overwrote the first optimized version, forcing expensive external API calls even when not requested. This commit removes the duplicate function definition, ensuring the optimized version is used.
+
+ main.py | 99 -----------------------------------------------------------------
+ 1 file changed, 99 deletions(-)
+
+commit 2dbac677e95f18777498185de0b34a9cb84e46e2
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sat Jan 17 23:39:34 2026 +0000
+
+    feat: Implement Advanced Anime Discovery Engine with full-stack filtering (#30)
+    
+    - Migrated `animes` table to include `popularity`, `members`, `rating`, `favorites`, `title_japanese`, etc.
+    - Updated `db.py` to handle new fields in `insert_or_update_anime`.
+    - Implemented `db.discover_animes` with dynamic SQL for robust filtering (Genres, Year, Type, Status, Score) and sorting (Popularity, Score, Newest, Title).
+    - Updated `/discover` route to fetch initial results for better UX.
+    - Verified filtering logic and popularity sorting (Member count DESC).
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ anime_db.sqlite  | Bin 192512 -> 192512 bytes
+ blueprints/ui.py |   6 ++-
+ db.py            | 139 ++++++++++++++++++++++++++++++++++++++++++++++---------
+ 3 files changed, 121 insertions(+), 24 deletions(-)
+
+commit e054488d7337f4f7f71ea13451f4c1ea365b8714
+Author: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+Date:   Sat Jan 17 20:16:02 2026 +0000
+
+    ✨ FEATURE: Implemented Comprehensive User Review System (#29)
+    
+    - Added 'reviews' and 'review_votes' tables to SQLite database.
+    - Created 'blueprints/reviews.py' for review CRUD and voting API.
+    - Implemented full-stack review logic including scores, spoilers, and helpfulness voting.
+    - Enhanced 'anime_details.html' with a modern Reviews UI and submission modal.
+    - Integrated review activity into the user activity feed.
+    - Added XSS protection for user-generated review content.
+    
+    Co-authored-by: google-labs-jules[bot] <161369871+google-labs-jules[bot]@users.noreply.github.com>
+
+ anime_db.sqlite              | Bin 172032 -> 192512 bytes
+ api.py                       |   2 +
+ blueprints/reviews.py        |  92 +++++++++++++
+ db.py                        | 133 +++++++++++++++++++
+ templates/anime_details.html | 298 +++++++++++++++++++++++++++++++++++++++++++
+ 5 files changed, 525 insertions(+)
+```
