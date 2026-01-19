@@ -23,3 +23,26 @@ class WatchLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} watched {self.episode} for {self.duration}s"
+
+class Badge(models.Model):
+    slug = models.SlugField(unique=True, help_text=_("Unique identifier for the badge logic"))
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    icon_url = models.URLField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+class UserBadge(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
+    badge = models.ForeignKey(Badge, on_delete=models.CASCADE)
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'badge')
+        verbose_name = _("User Badge")
+        verbose_name_plural = _("User Badges")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.badge.name}"
