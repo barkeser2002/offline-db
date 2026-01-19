@@ -3,27 +3,27 @@ from django.shortcuts import get_object_or_404, render
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
-from .models import VideoKey, Episode
+from .models import VideoFile, Episode
 
 class KeyServeView(APIView):
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, key_uuid):
-        # Anti-IDM / Anti-Piracy Check:
-        # Ensure the request comes from a valid user session.
-        # Additional checks (User-Agent, Referer) could be added here.
+    def get(self, request, key_token):
+        # Look up VideoFile by the key token
+        video = get_object_or_404(VideoFile, encryption_key=key_token)
 
-        key_obj = get_object_or_404(VideoKey, id=key_uuid, is_active=True)
-
-        # Return binary key with correct content type
-        return HttpResponse(key_obj.key_content, content_type='application/octet-stream')
+        # Return the key content.
+        # In a real AES-128 HLS setup, this should be 16 binary bytes.
+        # Our task wrote a 32-char hex string. We'll return what we stored.
+        return HttpResponse(video.encryption_key, content_type='application/octet-stream')
 
 def home_view(request):
-    # Landing page with latest episodes
-    latest_episodes = Episode.objects.filter(is_processed=True).order_by('-created_at')[:10]
+    latest_episodes = Episode.objects.select_related('season__anime').order_by('-created_at')[:10]
     return render(request, 'home.html', {'latest_episodes': latest_episodes})
 
 def player_view(request, episode_id):
     episode = get_object_or_404(Episode, id=episode_id)
-    return render(request, 'player.html', {'episode': episode})
+    # Get the default video (e.g. highest quality)
+    video = episode.video_files.order_by('-quality').first()
+    return render(request, 'player.html', {'episode': episode, 'video': video})

@@ -1,65 +1,57 @@
 {% extends 'base.html' %}
+
 {% block content %}
-<link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
-<style>
-    .plyr {
-        --plyr-color-main: #ff0055;
-        border-radius: 0.5rem;
-    }
-</style>
-
 <div class="max-w-5xl mx-auto">
-    <div class="mb-4 flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold">{{ episode.anime.title }}</h1>
-            <p class="text-gray-400">Episode {{ episode.number }} <span class="mx-2">•</span> {{ episode.title }}</p>
-        </div>
-        <a href="/" class="text-sm text-gray-500 hover:text-white transition">&larr; Back to Home</a>
+    <div class="mb-4">
+        <h1 class="text-3xl font-bold text-white">{{ episode.season.anime.title }}</h1>
+        <h2 class="text-xl text-gray-400">Season {{ episode.season.number }} - Episode {{ episode.number }} {% if episode.title %}: {{ episode.title }}{% endif %}</h2>
     </div>
 
-    <div class="bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800 relative">
-        <video id="player" controls crossorigin playsinline class="w-full aspect-video">
-            <!-- Source injected via JS -->
-        </video>
+    <div class="relative w-full pb-[56.25%] bg-black rounded-xl overflow-hidden shadow-2xl border border-gray-800">
+        {% if video %}
+            <video id="player" playsinline controls class="absolute top-0 left-0 w-full h-full"></video>
+
+            <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
+            <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const video = document.getElementById('player');
+                    // Construct URL assuming standard media structure
+                    const source = "/media/videos/{{ episode.id }}/{{ video.quality }}/index.m3u8";
+
+                    if (Hls.isSupported()) {
+                        const hls = new Hls({
+                            xhrSetup: function(xhr, url) {
+                                // Prepare for key loading with cookies/auth if needed
+                                xhr.withCredentials = true;
+                            }
+                        });
+                        hls.loadSource(source);
+                        hls.attachMedia(video);
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = source;
+                    }
+
+                    const player = new Plyr(video, {
+                        controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+                    });
+                });
+            </script>
+        {% else %}
+            <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center text-red-500 font-bold bg-gray-900">
+                VIDEO SOURCE NOT FOUND
+            </div>
+        {% endif %}
     </div>
 
-    <!-- Player Bottom Ad -->
-    <div class="mt-4 flex justify-center">
-        {% load ad_tags %}
-        {% get_ad 'player_bottom' %}
-    </div>
-
-    <div class="mt-8 bg-gray-900 p-6 rounded-xl border border-gray-800">
-        <h2 class="text-xl font-bold mb-4">Description</h2>
-        <p class="text-gray-400">{{ episode.anime.description|default:"No description available." }}</p>
+    <div class="mt-6 p-4 bg-gray-800 rounded-lg">
+        <h3 class="font-bold text-lg mb-2">Details</h3>
+        <p class="text-gray-400">{{ episode.season.anime.synopsis|truncatewords:50 }}</p>
+        {% if video.fansub_group %}
+        <p class="mt-2 text-sm text-brand">Fansub: {{ video.fansub_group.name }}</p>
+        {% endif %}
     </div>
 </div>
-
-<script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const video = document.querySelector('#player');
-        const source = "{{ MEDIA_URL }}{{ episode.hls_playlist }}";
-
-        const defaultOptions = {
-            controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
-        };
-
-        if (Hls.isSupported()) {
-            const hls = new Hls({
-                xhrSetup: function(xhr, url) {
-                    xhr.withCredentials = true; // Send cookies for Key request
-                }
-            });
-            hls.loadSource(source);
-            hls.attachMedia(video);
-            window.hls = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = source;
-        }
-
-        const player = new Plyr(video, defaultOptions);
-    });
-</script>
 {% endblock %}

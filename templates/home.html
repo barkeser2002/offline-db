@@ -1,33 +1,30 @@
 {% extends 'base.html' %}
-{% block content %}
-<div class="mb-8">
-    <h1 class="text-3xl font-bold mb-2">Latest Updates</h1>
-    <p class="text-gray-400">Freshly encoded episodes just for you.</p>
-</div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
     {% for episode in latest_episodes %}
-    <a href="{% url 'watch' episode.id %}" class="group block bg-gray-900 border border-gray-800 rounded-xl overflow-hidden hover:border-brand hover:shadow-brand/20 hover:shadow-lg transition duration-300">
-        <div class="aspect-w-16 aspect-h-9 bg-gray-800 relative">
-            {% if episode.anime.cover_image %}
-                <img src="{{ episode.anime.cover_image.url }}" alt="{{ episode.anime.title }}" class="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition">
-            {% else %}
-                <div class="flex items-center justify-center h-full text-gray-600">
-                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <div class="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition transform shadow-lg border border-gray-700">
+        <a href="{% url 'watch' episode.id %}">
+            <div class="relative">
+                {% if episode.thumbnail %}
+                <img src="{{ episode.thumbnail }}" alt="{{ episode.title }}" class="w-full h-48 object-cover">
+                {% else %}
+                <div class="w-full h-48 bg-gray-900 flex items-center justify-center text-gray-600">No Image</div>
+                {% endif %}
+                <div class="absolute bottom-0 left-0 bg-black bg-opacity-70 px-2 py-1 text-xs text-white">
+                    {{ episode.season.anime.title }}
                 </div>
-            {% endif %}
-            <div class="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs font-mono">EP {{ episode.number }}</div>
-        </div>
-        <div class="p-4">
-            <h3 class="font-bold text-lg truncate group-hover:text-brand transition">{{ episode.anime.title }}</h3>
-            <p class="text-sm text-gray-400 mt-1">{{ episode.title|default:"Episode" }}</p>
-        </div>
-    </a>
-    {% empty %}
-    <div class="col-span-full text-center py-12 text-gray-500">
-        <p class="text-xl">No episodes available yet.</p>
-        <p class="text-sm">Check back later or import content via Admin.</p>
+            </div>
+            <div class="p-4">
+                <h3 class="text-lg font-bold text-white mb-1 truncate">
+                    {% if episode.title %}{{ episode.title }}{% else %}Episode {{ episode.number }}{% endif %}
+                </h3>
+                <p class="text-gray-400 text-sm">Season {{ episode.season.number }} | Ep {{ episode.number }}</p>
+            </div>
+        </a>
     </div>
+    {% empty %}
+    <p class="text-gray-400 col-span-4 text-center">No episodes available yet.</p>
     {% endfor %}
 </div>
 {% endblock %}

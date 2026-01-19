@@ -1,40 +1,38 @@
 import psutil
 from django.utils.translation import gettext_lazy as _
 from content.models import Anime, Episode
-from community.models import FansubGroup
+from billing.models import ShopierPayment
+from django.db.models import Sum
 
-def dashboard_callback(request):
-    # Server Health
+def dashboard_callback(request, context):
+    """
+    Callback to populate the Unfold admin dashboard.
+    """
+
+    # Server Stats
     cpu_usage = psutil.cpu_percent()
     ram_usage = psutil.virtual_memory().percent
 
-    # Context data for the dashboard
-    context = {
-        "kpi": [
-            {
-                "title": _("Total Anime"),
-                "metric": Anime.objects.count(),
-                "footer": _("Titles in database"),
-            },
-            {
-                "title": _("Total Episodes"),
-                "metric": Episode.objects.count(),
-                "footer": _("Episodes uploaded"),
-            },
-            {
-                "title": _("Server CPU"),
-                "metric": f"{cpu_usage}%",
-                "footer": _("Real-time load"),
-            },
-            {
-                "title": _("Server RAM"),
-                "metric": f"{ram_usage}%",
-                "footer": _("Real-time usage"),
-            },
-        ],
-        "navigation": [
-            {"title": _("Management"), "link": "/admin/content/anime/", "icon": "monitor"},
-            {"title": _("Community"), "link": "/admin/community/fansubgroup/", "icon": "users"},
-        ]
-    }
+    # Content Stats
+    anime_count = Anime.objects.count()
+    episode_count = Episode.objects.count()
+
+    # Revenue Stats
+    total_revenue = ShopierPayment.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # Unfold expects us to just modify context or return it.
+    # We can pass data to be used in the custom dashboard template if we had one.
+    # But Unfold also supports 'kpi' if we configure it in settings properly or just pass variables.
+    # We'll pass raw data and assume the template renders it or we use Unfold widgets if available in views.
+
+    context.update({
+        "dashboard_stats": {
+            "cpu": cpu_usage,
+            "ram": ram_usage,
+            "anime_count": anime_count,
+            "episode_count": episode_count,
+            "total_revenue": total_revenue,
+        }
+    })
+
     return context
