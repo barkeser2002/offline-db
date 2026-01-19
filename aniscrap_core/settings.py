@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+    "django.contrib.sitemaps",
 
     # Third Party
     "rest_framework",
@@ -45,6 +47,8 @@ INSTALLED_APPS = [
     "billing",
     "scraper_module",
 ]
+
+SITE_ID = 1
 
 AUTH_USER_MODEL = "users.User"
 
