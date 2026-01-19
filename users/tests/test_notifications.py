@@ -34,7 +34,8 @@ class NotificationAPITests(TestCase):
         self.notification = Notification.objects.create(
             user=self.user,
             title='Test Notification',
-            message='Hello World'
+            message='Hello World',
+            is_read=False
         )
 
         self.anime = Anime.objects.create(title='Test Anime API')
@@ -42,8 +43,46 @@ class NotificationAPITests(TestCase):
     def test_list_notifications(self):
         response = self.client.get('/api/users/notifications/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['title'], 'Test Notification')
+        # With pagination, results are in 'results'
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['title'], 'Test Notification')
+
+    def test_list_notifications_filtering(self):
+        # Create a read notification
+        Notification.objects.create(
+            user=self.user,
+            title='Read Notification',
+            message='Already read',
+            is_read=True
+        )
+
+        # Test filter is_read=true
+        response = self.client.get('/api/users/notifications/?is_read=true')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['title'], 'Read Notification')
+
+        # Test filter is_read=false
+        response = self.client.get('/api/users/notifications/?is_read=false')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['title'], 'Test Notification')
+
+    def test_unread_count(self):
+        # Initial count should be 1
+        response = self.client.get('/api/users/notifications/unread-count/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+        # Add another unread
+        Notification.objects.create(user=self.user, title='New', is_read=False)
+        response = self.client.get('/api/users/notifications/unread-count/')
+        self.assertEqual(response.data['count'], 2)
+
+        # Add a read one
+        Notification.objects.create(user=self.user, title='Read', is_read=True)
+        response = self.client.get('/api/users/notifications/unread-count/')
+        self.assertEqual(response.data['count'], 2)
 
     def test_mark_read(self):
         url = f'/api/users/notifications/{self.notification.id}/read/'
@@ -54,7 +93,7 @@ class NotificationAPITests(TestCase):
         self.assertTrue(self.notification.is_read)
 
     def test_mark_all_read(self):
-        Notification.objects.create(user=self.user, title='Another one', message='Hi')
+        Notification.objects.create(user=self.user, title='Another one', message='Hi', is_read=False)
         url = '/api/users/notifications/read-all/'
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
