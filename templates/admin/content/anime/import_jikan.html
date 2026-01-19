@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label='content' %}">Content</a>
+&rsaquo; <a href="{% url 'admin:content_anime_changelist' %}">Anime</a>
+&rsaquo; Import from Jikan
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Import Anime from Jikan.moe</h1>
+<p>Enter the MyAnimeList ID of the anime you want to import.</p>
+<form method="post">
+    {% csrf_token %}
+    <div style="margin-top: 20px;">
+        <label for="mal_id" style="font-weight: bold;">Jikan (MAL) ID:</label>
+        <input type="number" name="mal_id" id="mal_id" required style="padding: 5px; border: 1px solid #ccc;">
+        <input type="submit" value="Import" class="default" style="margin-left: 10px;">
+    </div>
+</form>
+{% endblock %}
