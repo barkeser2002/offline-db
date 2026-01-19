@@ -208,3 +208,4 @@ CONTACT_EMAIL = "info@bariskeser.com"
 
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
+SHOPIER_SECRET = os.getenv('SHOPIER_SECRET')
