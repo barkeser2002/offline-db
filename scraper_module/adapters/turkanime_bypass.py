@@ -46,7 +46,7 @@ except ImportError:
 import requests as std_requests
 
 # FlareSolverr entegrasyonu
-FLARESOLVERR_URL = os.environ.get(
+FLARESOLVERR_URL = os.getenv(
     "FLARESOLVERR_URL", "http://node-kyb.bariskeser.com:8191/v1"
 )
 

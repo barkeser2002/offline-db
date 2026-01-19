@@ -10,12 +10,12 @@ from celery.schedules import crontab
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-aniscrap-dev-key')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-aniscrap-dev-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # Application definition
@@ -104,7 +104,7 @@ WSGI_APPLICATION = "aniscrap_core.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-USE_SQLITE = os.environ.get('USE_SQLITE', 'False') == 'True'
+USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
 
 if USE_SQLITE:
     DATABASES = {
@@ -117,11 +117,11 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get('DB_NAME', 'aniscrap'),
-            "USER": os.environ.get('DB_USER', 'root'),
-            "PASSWORD": os.environ.get('DB_PASSWORD', ''),
-            "HOST": os.environ.get('DB_HOST', '127.0.0.1'),
-            "PORT": os.environ.get('DB_PORT', '3306'),
+            "NAME": os.getenv('DB_NAME', 'aniscrap'),
+            "USER": os.getenv('DB_USER', 'root'),
+            "PASSWORD": os.getenv('DB_PASSWORD', ''),
+            "HOST": os.getenv('DB_HOST', '127.0.0.1'),
+            "PORT": os.getenv('DB_PORT', '3306'),
             "OPTIONS": {
                 'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
                 'charset': 'utf8mb4',
@@ -177,7 +177,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 
 # Celery Configuration
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -187,11 +187,11 @@ CELERY_TIMEZONE = TIME_ZONE
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_USER', 'info@bariskeser.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD', 'secret')
+EMAIL_HOST_USER = os.getenv('EMAIL_USER', 'info@bariskeser.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD', 'secret')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Footer Details
@@ -215,4 +215,4 @@ UNFOLD = {
 }
 
 # CORS Configuration
-CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
+CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
