@@ -1,13 +1,13 @@
-django>=5.0
-celery
-redis
+django>=5.0.6
+celery>=5.3.0
+redis>=5.0.0
 pymysql
 psutil
-requests
+requests>=2.31.0
 libtorrent; sys_platform != 'win32'
 django-unfold
-djangorestframework
-django-cors-headers
+djangorestframework>=3.14.0
+django-cors-headers>=4.0.0
 django-celery-results
 django-import-export
 django-guardian
