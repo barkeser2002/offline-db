@@ -53,6 +53,7 @@ class VideoFile(models.Model):
     quality = models.CharField(max_length=10, choices=QUALITY_CHOICES)
     hls_path = models.CharField(max_length=500, help_text=_("Path to .m3u8 file"))
     encryption_key = models.CharField(max_length=255, help_text=_("AES-128 Key"))
+    file_size_bytes = models.BigIntegerField(default=0, help_text=_("Total size of HLS assets in bytes"))
     is_hardcoded = models.BooleanField(default=False, help_text=_("Disables Subtitle uploads if True"))
     created_at = models.DateTimeField(auto_now_add=True)
 

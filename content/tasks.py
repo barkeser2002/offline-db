@@ -67,6 +67,13 @@ def encode_episode(episode_id, source_url, quality='1080p'):
                 f.write("#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:10\n#EXT-X-MEDIA-SEQUENCE:0\n#EXTINF:10.000000,\nsegment_000.ts\n#EXT-X-ENDLIST")
 
         # 4. Save to Database
+        # Calculate Total File Size (for Analytics)
+        total_size = 0
+        for root, dirs, files in os.walk(output_dir):
+            for file in files:
+                if file.endswith('.ts') or file.endswith('.m3u8'):
+                    total_size += os.path.getsize(os.path.join(root, file))
+
         # Note: We save the key in the database securely, the file on disk might be needed during segmentation but generally we serve it via DB.
         # The prompt says "Saves keys to a secure internal method."
         # We store the key in VideoFile model.
@@ -76,6 +83,7 @@ def encode_episode(episode_id, source_url, quality='1080p'):
             quality=quality,
             hls_path=hls_output,
             encryption_key=encryption_key,
+            file_size_bytes=total_size,
             is_hardcoded=False # Default
         )
 
