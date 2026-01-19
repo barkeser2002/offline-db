@@ -1,11 +1,13 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import ShopierPayment
 from users.models import User
 
 @csrf_exempt
+@require_POST
 def shopier_callback(request):
     """
     Callback for Shopier payment.
