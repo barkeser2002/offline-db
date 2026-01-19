@@ -2,10 +2,12 @@ from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, render
 from django.core.cache import cache
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
-from .models import VideoFile, Episode, Anime
+from .models import VideoFile, Episode, Anime, Subscription
 
 class KeyServeView(APIView):
     authentication_classes = [SessionAuthentication]
@@ -41,3 +43,16 @@ def anime_detail(request, pk):
     # Prefetch seasons and episodes for efficient rendering
     seasons = anime.seasons.prefetch_related('episodes').order_by('number')
     return render(request, 'anime_detail.html', {'anime': anime, 'seasons': seasons})
+
+class SubscribeAnimeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        anime = get_object_or_404(Anime, pk=pk)
+        subscription, created = Subscription.objects.get_or_create(user=request.user, anime=anime)
+
+        if not created:
+            subscription.delete()
+            return Response({'status': 'unsubscribed'})
+
+        return Response({'status': 'subscribed'})
