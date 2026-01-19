@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle
-from .models import VideoFile, Episode
+from .models import VideoFile, Episode, Anime
 
 class KeyServeView(APIView):
     authentication_classes = [SessionAuthentication]
@@ -35,3 +35,9 @@ def player_view(request, episode_id):
     # Get the default video (e.g. highest quality)
     video = episode.video_files.order_by('-quality').first()
     return render(request, 'player.html', {'episode': episode, 'video': video})
+
+def anime_detail(request, pk):
+    anime = get_object_or_404(Anime, pk=pk)
+    # Prefetch seasons and episodes for efficient rendering
+    seasons = anime.seasons.prefetch_related('episodes').order_by('number')
+    return render(request, 'anime_detail.html', {'anime': anime, 'seasons': seasons})
