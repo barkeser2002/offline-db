@@ -26,6 +26,34 @@
             <a href="/" class="text-2xl font-bold text-brand tracking-widest">ANISCRAP</a>
             <div class="flex items-center space-x-4">
                 {% if user.is_authenticated %}
+                    <!-- Notification Bell -->
+                    <div class="relative" id="notification-container">
+                        <button id="notification-btn" class="relative p-2 text-gray-300 hover:text-white transition focus:outline-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            <!-- Badge -->
+                            <span id="notification-badge" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/4 -translate-y-1/4 bg-brand rounded-full hidden">
+                                0
+                            </span>
+                        </button>
+
+                        <!-- Dropdown -->
+                        <div id="notification-dropdown" class="absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-xl overflow-hidden z-50 hidden transition-all transform origin-top-right">
+                            <div class="p-3 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+                                <h3 class="text-sm font-semibold text-white">Notifications</h3>
+                                <button id="mark-all-read" class="text-xs text-brand hover:text-white transition">Mark all read</button>
+                            </div>
+                            <div id="notification-list" class="max-h-64 overflow-y-auto">
+                                <!-- Items will be injected here -->
+                                <div class="p-4 text-center text-gray-500 text-sm">Loading...</div>
+                            </div>
+                            <div class="p-2 border-t border-gray-700 text-center bg-gray-800">
+                                <a href="#" class="text-xs text-gray-400 hover:text-white transition">View All</a>
+                            </div>
+                        </div>
+                    </div>
+
                     <span class="text-gray-300">Welcome, {{ user.username }}</span>
                 {% else %}
                     <a href="/admin/" class="text-gray-300 hover:text-white transition">Login</a>
@@ -34,6 +62,8 @@
             </div>
         </div>
     </nav>
+
+    {% csrf_token %}
 
     <main class="container mx-auto flex-grow p-6">
 {% load ad_tags %}
@@ -56,5 +86,144 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('notification-btn');
+            const dropdown = document.getElementById('notification-dropdown');
+            const list = document.getElementById('notification-list');
+            const badge = document.getElementById('notification-badge');
+            const markAllBtn = document.getElementById('mark-all-read');
+
+            // Get CSRF Token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            const csrftoken = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            // Toggle Dropdown
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+                if (!dropdown.classList.contains('hidden')) {
+                    fetchNotifications();
+                }
+            });
+
+            // Close on click outside
+            document.addEventListener('click', function(e) {
+                if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+
+            // Poll for unread count
+            function pollUnread() {
+                fetch('/api/users/notifications/unread-count/')
+                    .then(response => {
+                        if(response.status === 401 || response.status === 403) return null;
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data && data.count > 0) {
+                            badge.textContent = data.count > 99 ? '99+' : data.count;
+                            badge.classList.remove('hidden');
+                        } else {
+                            badge.classList.add('hidden');
+                        }
+                    })
+                    .catch(err => console.error('Poll Error:', err));
+            }
+
+            // Fetch Notification List
+            function fetchNotifications() {
+                list.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">Loading...</div>';
+                fetch('/api/users/notifications/')
+                    .then(response => response.json())
+                    .then(data => {
+                        list.innerHTML = '';
+                        if (data.results && data.results.length > 0) {
+                            data.results.forEach(notif => {
+                                const item = document.createElement('div');
+                                item.className = `p-3 border-b border-gray-700 hover:bg-gray-800 transition cursor-pointer ${notif.is_read ? 'opacity-60' : 'bg-gray-800 bg-opacity-50'}`;
+
+                                // Create elements safely to avoid XSS
+                                const title = document.createElement('h4');
+                                title.className = 'text-sm font-bold text-white mb-1';
+                                title.textContent = notif.title;
+
+                                const msg = document.createElement('p');
+                                msg.className = 'text-xs text-gray-400';
+                                msg.textContent = notif.message;
+
+                                const dateSpan = document.createElement('span');
+                                dateSpan.className = 'text-xs text-gray-600 block mt-1';
+                                dateSpan.textContent = new Date(notif.created_at).toLocaleDateString();
+
+                                item.appendChild(title);
+                                item.appendChild(msg);
+                                item.appendChild(dateSpan);
+
+                                item.addEventListener('click', () => {
+                                    if(!notif.is_read) markRead(notif.id);
+                                    if(notif.link) window.location.href = notif.link;
+                                });
+                                list.appendChild(item);
+                            });
+                        } else {
+                            list.innerHTML = '<div class="p-4 text-center text-gray-500 text-sm">No notifications</div>';
+                        }
+                    })
+                    .catch(err => {
+                        list.innerHTML = '<div class="p-4 text-center text-red-500 text-sm">Error loading data</div>';
+                    });
+            }
+
+            // Mark single as read
+            function markRead(id) {
+                fetch(`/api/users/notifications/${id}/read/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(() => {
+                    pollUnread(); // Update badge
+                });
+            }
+
+            // Mark all as read
+            markAllBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                fetch('/api/users/notifications/read-all/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                }).then(() => {
+                    pollUnread();
+                    fetchNotifications();
+                });
+            });
+
+            // Initial Poll and Interval (every 60s)
+            {% if user.is_authenticated %}
+                pollUnread();
+                setInterval(pollUnread, 60000);
+            {% endif %}
+        });
+    </script>
 </body>
 </html>
