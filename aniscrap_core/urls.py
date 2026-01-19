@@ -13,6 +13,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # SEO
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    # Users API
+    path('api/users/', include('users.urls')),
     # Content
     path('', include('content.urls')),
     # Billing

@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import KeyServeView, player_view, home_view, anime_detail
+from .views import KeyServeView, player_view, home_view, anime_detail, SubscribeAnimeAPIView
 
 urlpatterns = [
     path('', home_view, name='home'),
     path('anime/<int:pk>/', anime_detail, name='anime_detail'),
+    path('api/anime/<int:pk>/subscribe/', SubscribeAnimeAPIView.as_view(), name='anime-subscribe'),
     path('watch/<int:episode_id>/', player_view, name='watch'),
     path('api/key/<str:key_token>/', KeyServeView.as_view(), name='video-key'),
 ]
