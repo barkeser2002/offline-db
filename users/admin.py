@@ -1,10 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from unfold.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin
 from .models import User, Wallet, WatchLog
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin, ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     fieldsets = BaseUserAdmin.fieldsets + (
         (None, {'fields': ('is_premium',)}),
     )
@@ -15,7 +15,6 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 class WalletAdmin(ModelAdmin):
     list_display = ('user', 'balance')
     search_fields = ('user__username',)
-    list_select_related = ('user',)
     list_select_related = ('user',)
 
 @admin.register(WatchLog)

@@ -12,3 +12,4 @@ django-celery-results
 django-import-export
 django-guardian
 django-simple-history
+python-dotenv

@@ -21,16 +21,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 # Application definition
 
 INSTALLED_APPS = [
-    # Admin UI - Unfold (Must be before django.contrib.admin)
-    "unfold",
-    "unfold.contrib.filters",
-    "unfold.contrib.forms",
-    "unfold.contrib.inlines",
-    "unfold.contrib.import_export",
-    "unfold.contrib.guardian",
-    "unfold.contrib.simple_history",
-
-    # Dependencies for Unfold contrib
+    # Dependencies for Unfold contrib (Kept for compatibility if used elsewhere, but Unfold removed)
     "import_export",
     "guardian",
     "simple_history",
@@ -199,20 +190,6 @@ SITE_NAME = "AniScrap"
 SITE_AUTHOR = "Barış Keser"
 CONTACT_EMAIL = "info@bariskeser.com"
 
-
-# Unfold UI Customization
-UNFOLD = {
-    "SITE_TITLE": "AniScrap Admin",
-    "SITE_HEADER": "AniScrap Cockpit",
-    "SITE_URL": "/",
-    "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
-    "STYLES": [
-        lambda request: "https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css",
-    ],
-    "SCRIPTS": [
-        lambda request: "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js",
-    ],
-}
 
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
