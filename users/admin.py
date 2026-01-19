@@ -15,6 +15,8 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 class WalletAdmin(ModelAdmin):
     list_display = ('user', 'balance')
     search_fields = ('user__username',)
+    list_select_related = ('user',)
+    list_select_related = ('user',)
 
 @admin.register(WatchLog)
 class WatchLogAdmin(ModelAdmin):
