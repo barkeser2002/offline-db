@@ -1,15 +1,38 @@
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from .models import Notification
 from .serializers import NotificationSerializer
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class NotificationListAPIView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        return Notification.objects.filter(user=self.request.user)
+        queryset = Notification.objects.filter(user=self.request.user)
+        is_read_param = self.request.query_params.get('is_read')
+
+        if is_read_param is not None:
+            if is_read_param.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_read=True)
+            elif is_read_param.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_read=False)
+
+        return queryset
+
+class UnreadNotificationCountAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return Response({'count': count})
 
 class MarkNotificationReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
