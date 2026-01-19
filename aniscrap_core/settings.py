@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "guardian",
     "simple_history",
 
+    "unfold",  # Added Unfold Theme
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -213,3 +214,11 @@ CONTACT_EMAIL = "info@bariskeser.com"
 # CORS Configuration
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
 SHOPIER_SECRET = os.getenv('SHOPIER_SECRET')
+
+
+# Unfold Admin Theme Configuration
+UNFOLD = {
+    "DASHBOARD_CALLBACK": "core.dashboard.dashboard_callback",
+    "SITE_TITLE": "AniScrap Admin",
+    "SITE_HEADER": "AniScrap Admin",
+}
