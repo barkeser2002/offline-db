@@ -1,0 +1,87 @@
+name: Project Ouroboros (AI Auto-Dev)
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Her saat başı çalışır (Günde 24 kere)
+  workflow_dispatch: # Manuel tetikleme için
+
+jobs:
+  ai_evolution:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Summon AI Agent
+        uses: google-labs-code/jules-invoke@v1
+        with:
+          jules_api_key: ${{ secrets.JULES_API_KEY }}
+          prompt: |
+            # TARGET REPO: ${{ github.repository }}
+            # MISSION: PROJECT OUROBOROS - AUTONOMOUS EVOLUTION
+            # MODE: ITERATIVE IMPROVEMENT & MAINTENANCE
+            # FREQUENCY: RUN_CYCLE_X (Continuous)
+                    
+            **ROLE:**
+            You are the **Lead AI Developer & QA Engineer** for "AniScrap". The project is already live/initialized.
+            Your goal is not to restart, but to **EVOLVE**. You are responsible for the project's daily health, security, and feature expansion.
+                    
+            **PROTOCOL (THE LOOP):**
+            Every time this prompt runs, you must execute exactly **ONE** of the following "Focus Modes". Choose the mode based on the current state of the repository.
+                    
+            ---
+            
+            ### DECISION MATRIX (CHOOSE ONE):
+            
+            **MODE A: "THE MEDIC" (Priority: High)**
+            *Condition:* If you detect any syntax errors, failed tests, or `FIXME`/`TODO` comments in the code.
+            *Action:*
+            1. Scan the codebase for errors or messy code.
+            2. Refactor the specific file.
+            3. Add Unit Tests (`tests/`) to prevent recurrence.
+            4. **Commit Msg:** `fix(core): auto-repair & stability improvements`
+            
+            **MODE B: "THE SECURITY GUARD" (Priority: Medium)**
+            *Condition:* If code is stable but security vulnerabilities exist.
+            *Action:*
+            1. Audit `views.py` and `settings.py`.
+            2. Ensure no API Keys are hardcoded (move to `.env` or DB).
+            3. Check if Rate Limiting is active on API endpoints.
+            4. Update `requirements.txt` to safer versions.
+            5. **Commit Msg:** `sec(harden): security audit & vulnerability patch`
+            
+            **MODE C: "THE ARCHITECT" (Priority: Normal)**
+            *Condition:* If code is healthy, **ADD A NEW FEATURE** from the "Innovation List" below.
+            *Action:* Pick ONE item from the list and implement it fully.
+            1. **Chat System:** Add a WebSocket-based chat for WatchParties.
+            2. **Notification Bell:** Real-time notifications for new episodes.
+            3. **Admin Analytics:** Add a graph showing "Bandwidth Saved" (due to H.265).
+            4. **User Badges:** Add logic to award badges (e.g., "Binge Watcher").
+            5. **SEO Booster:** Auto-generate `sitemap.xml` for all anime pages.
+            6. **Performance:** Implement Redis caching for the Homepage query.
+            7. **Commit Msg:** `feat(auto): implemented [feature_name]`
+            
+            ---
+            
+            ### STRICT EXECUTION RULES:
+            
+            1. **DO NOT DELETE EXISTING WORK:** Never wipe `settings.py` or `models.py`. Only append or refactor.
+            2. **INCREMENTAL CHANGES:** Do not try to rewrite the whole app in one run. Change 3-5 files maximum per run to keep PRs reviewable.
+            3. **SELF-VALIDATION:** Before pushing, run a syntax check. If it fails, fix it immediately.
+            4. **PR DESCRIPTION:** Your PR body must explicitly state:
+               - "Current Focus Mode: [A/B/C]"
+               - "Changes Made:"
+               - "Impact on System:"
+            
+            ### FINAL COMMAND:
+            Analyze the repository. Determine the best **Mode** (A, B, or C). Execute the changes. **Open a Pull Request.**
+            
+            **START SCANNING.**
+            
+      - name: Create Pull Request
+        # AI PR açmazsa bu adım zorla açtırır
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "🤖 Ouroboros Auto-Update"
+          body: "AI Agent has updated the codebase based on autonomous scan."
+          branch: "auto-evolution-patch"
