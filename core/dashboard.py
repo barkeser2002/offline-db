@@ -1,3 +1,4 @@
+import json
 import psutil
 from datetime import timedelta
 from django.utils import timezone
@@ -39,10 +40,19 @@ def dashboard_callback(request, context):
     # Revenue Stats
     total_revenue = ShopierPayment.objects.filter(status='success').aggregate(Sum('amount'))['amount__sum'] or 0
 
-    # Unfold expects us to just modify context or return it.
-    # We can pass data to be used in the custom dashboard template if we had one.
-    # But Unfold also supports 'kpi' if we configure it in settings properly or just pass variables.
-    # We'll pass raw data and assume the template renders it or we use Unfold widgets if available in views.
+    # Chart.js Data Structure
+    bandwidth_chart_json = json.dumps({
+        "labels": chart_labels,
+        "datasets": [
+            {
+                "label": str(_("Bandwidth Saved (GB)")),
+                "data": chart_data,
+                "backgroundColor": "rgba(59, 130, 246, 0.5)",
+                "borderColor": "rgba(59, 130, 246, 1)",
+                "borderWidth": 1
+            }
+        ]
+    })
 
     context.update({
         "dashboard_stats": {
@@ -51,10 +61,7 @@ def dashboard_callback(request, context):
             "anime_count": anime_count,
             "episode_count": episode_count,
             "bandwidth_saved_gb": bandwidth_saved_gb,
-            "bandwidth_chart": {
-                "labels": chart_labels,
-                "data": chart_data
-            },
+            "bandwidth_chart": bandwidth_chart_json,
             "total_revenue": total_revenue,
         }
     })
