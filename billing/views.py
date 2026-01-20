@@ -56,6 +56,10 @@ def shopier_callback(request):
     """
     Callback for Shopier payment.
     Expects POST data with transaction_id and status.
+
+    Note: Rate limiting is not applied here as this is a server-to-server webhook
+    that must handle bursts of legitimate payment notifications. Security is provided
+    by HMAC signature verification in verify_shopier_signature().
     """
     # Verify signature
     if not verify_shopier_signature(request.POST):
