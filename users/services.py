@@ -104,6 +104,16 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 9. Marathoner: Watched 50 episodes in total.
+    try:
+        marathoner_badge = Badge.objects.get(slug='marathoner')
+        if not UserBadge.objects.filter(user=user, badge=marathoner_badge).exists():
+            watched_count = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+            if watched_count >= 50:
+                UserBadge.objects.get_or_create(user=user, badge=marathoner_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
