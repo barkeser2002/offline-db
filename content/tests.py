@@ -4,7 +4,11 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework.test import APIClient
 import uuid
+import shutil
+import os
+from django.conf import settings
 from .models import Anime, Season, Episode, VideoFile
+from .tasks import encode_episode
 
 User = get_user_model()
 
@@ -88,3 +92,29 @@ class CacheTests(TestCase):
         cached_episodes = cache.get('home_latest_episodes')
         # Should now have at least 2 episodes
         self.assertGreaterEqual(len(cached_episodes), 2)
+
+class TaskTests(TestCase):
+    def setUp(self):
+        self.anime = Anime.objects.create(title="Task Anime")
+        self.season = Season.objects.create(anime=self.anime, number=1)
+        self.episode = Episode.objects.create(season=self.season, number=1)
+
+    def test_encode_episode_mock(self):
+        # Register cleanup first
+        output_dir = os.path.join(settings.MEDIA_ROOT, 'videos', str(self.episode.id))
+
+        def cleanup():
+            if os.path.exists(output_dir):
+                shutil.rmtree(output_dir)
+        self.addCleanup(cleanup)
+
+        # Ensure we are not using real libtorrent
+        # The mock logic in tasks.py should handle this
+        result = encode_episode(self.episode.id, "magnet:?xt=urn:btih:dummy")
+        self.assertIn("Successfully encoded", result)
+
+        # Check if VideoFile was created
+        self.assertTrue(VideoFile.objects.filter(episode=self.episode).exists())
+        video = VideoFile.objects.get(episode=self.episode)
+        self.assertEqual(video.quality, '1080p')
+        self.assertTrue(video.hls_path.endswith('index.m3u8'))
