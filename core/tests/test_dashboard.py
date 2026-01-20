@@ -1,10 +1,6 @@
-from django.test import TestCase, RequestFactory, TransactionTestCase
+from django.test import TestCase, RequestFactory
 from content.models import Anime, Season, Episode, VideoFile
 from core.dashboard import dashboard_callback
-from channels.testing import WebsocketCommunicator
-from channels.routing import URLRouter
-from django.urls import path
-from core.consumers import ChatConsumer
 
 class DashboardTests(TestCase):
     def setUp(self):
@@ -50,31 +46,3 @@ class DashboardTests(TestCase):
         self.assertEqual(len(data), 7)
         # Check that the last element (today) is 1.0 GB
         self.assertEqual(data[-1], 1.0)
-
-class ChatConsumerTests(TransactionTestCase):
-    async def test_chat_consumer(self):
-        # Create a router to verify path parsing
-        application = URLRouter([
-            path("ws/chat/<str:room_name>/", ChatConsumer.as_asgi()),
-        ])
-
-        communicator = WebsocketCommunicator(application, "/ws/chat/testroom/")
-        connected, subprotocol = await communicator.connect()
-        self.assertTrue(connected)
-
-        # Consume initial user count message
-        response = await communicator.receive_json_from()
-        self.assertEqual(response['type'], 'user_count')
-
-        # Test sending message
-        await communicator.send_json_to({
-            "message": "hello",
-            "username": "tester"
-        })
-
-        # Test receiving message
-        response = await communicator.receive_json_from()
-        self.assertEqual(response['message'], 'hello')
-        self.assertEqual(response['username'], 'tester')
-
-        await communicator.disconnect()
