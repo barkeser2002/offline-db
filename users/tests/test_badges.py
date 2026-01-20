@@ -237,3 +237,29 @@ class BadgeSystemTests(TestCase):
 
         # Signal should trigger check_badges -> award badge
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=collector_badge).exists())
+
+    def test_season_completist_badge(self):
+        season_completist_badge, _ = Badge.objects.get_or_create(
+            slug='season-completist',
+            defaults={'name': 'Season Completist', 'description': 'Completed an entire season'}
+        )
+
+        # We have self.season with 10 episodes (self.episodes)
+        # Watch 9 episodes
+        for i in range(9):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=self.episodes[i],
+                duration=1200
+            )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
+
+        # Watch 10th episode
+        WatchLog.objects.create(
+            user=self.user,
+            episode=self.episodes[9],
+            duration=1200
+        )
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
