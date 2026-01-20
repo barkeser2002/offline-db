@@ -54,3 +54,16 @@ class SiteSettings(models.Model):
     def get_solo(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+class ChatMessage(models.Model):
+    room_name = models.CharField(max_length=255)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='chat_messages')
+    username = models.CharField(max_length=255, help_text=_("Username used at the time of messaging"))
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.username} in {self.room_name}: {self.message[:20]}"
