@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 from users.models import User, Badge, UserBadge, WatchLog
-from content.models import Anime, Season, Episode
+from content.models import Anime, Season, Episode, Subscription
 from core.models import ChatMessage
 from users.services import check_badges
 
@@ -216,3 +216,24 @@ class BadgeSystemTests(TestCase):
         )
 
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
+
+    def test_collector_badge(self):
+        collector_badge, _ = Badge.objects.get_or_create(
+            slug='collector',
+            defaults={'name': 'Collector', 'description': 'Subscribed to 10 different anime'}
+        )
+
+        # Subscribe to 9 different animes
+        for i in range(9):
+            anime = Anime.objects.create(title=f"Anime {i}")
+            Subscription.objects.create(user=self.user, anime=anime)
+
+        # Should not have badge yet
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=collector_badge).exists())
+
+        # Subscribe to 10th anime
+        anime_10 = Anime.objects.create(title="Anime 10")
+        Subscription.objects.create(user=self.user, anime=anime_10)
+
+        # Signal should trigger check_badges -> award badge
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=collector_badge).exists())
