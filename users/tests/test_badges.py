@@ -144,6 +144,33 @@ class BadgeSystemTests(TestCase):
         # Check badge awarded (signal should have triggered)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
 
+    def test_social_butterfly_badge(self):
+        social_butterfly_badge, _ = Badge.objects.get_or_create(
+            slug='social-butterfly',
+            defaults={'name': 'Social Butterfly', 'description': 'Participated in 5 different chat rooms.'}
+        )
+
+        # Chat in 4 distinct rooms
+        for i in range(4):
+            ChatMessage.objects.create(
+                user=self.user,
+                username=self.user.username,
+                room_name=f'room_{i}',
+                message='Hello'
+            )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
+
+        # Chat in 5th distinct room
+        ChatMessage.objects.create(
+            user=self.user,
+            username=self.user.username,
+            room_name='room_final',
+            message='Hello'
+        )
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
+
     def test_early_bird_badge(self):
         early_bird_badge, _ = Badge.objects.get_or_create(
             slug='early-bird',

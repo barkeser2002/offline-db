@@ -85,3 +85,13 @@ def check_chat_badges(user):
                  UserBadge.objects.get_or_create(user=user, badge=commentator_badge)
     except Badge.DoesNotExist:
         pass
+
+    # 6. Social Butterfly: Participated in 5 different chat rooms.
+    try:
+        social_butterfly_badge = Badge.objects.get(slug='social-butterfly')
+        if not UserBadge.objects.filter(user=user, badge=social_butterfly_badge).exists():
+            distinct_rooms = ChatMessage.objects.filter(user=user).values('room_name').distinct().count()
+            if distinct_rooms >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=social_butterfly_badge)
+    except Badge.DoesNotExist:
+        pass
