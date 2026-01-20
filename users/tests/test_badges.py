@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from unittest.mock import patch
 from users.models import User, Badge, UserBadge, WatchLog
 from content.models import Anime, Season, Episode
 from users.services import check_badges
@@ -72,3 +73,43 @@ class BadgeSystemTests(TestCase):
 
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.veteran_badge).exists())
+
+    @patch('django.utils.timezone.now')
+    def test_night_owl_badge(self, mock_now):
+        # Set time to 3 AM UTC
+        fixed_now = datetime(2023, 1, 1, 3, 0, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = fixed_now
+
+        night_owl_badge, _ = Badge.objects.get_or_create(
+            slug='night-owl',
+            defaults={'name': 'Night Owl', 'description': 'Watched between 2 AM and 5 AM'}
+        )
+
+        # Create log (auto_now_add uses mock_now)
+        WatchLog.objects.create(
+            user=self.user,
+            episode=self.episodes[0],
+            duration=1200
+        )
+        # Signal runs check_badges automatically on create
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=night_owl_badge).exists())
+
+    @patch('django.utils.timezone.now')
+    def test_night_owl_badge_negative(self, mock_now):
+        # Set time to 10 AM UTC
+        fixed_now = datetime(2023, 1, 1, 10, 0, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = fixed_now
+
+        night_owl_badge, _ = Badge.objects.get_or_create(
+            slug='night-owl',
+            defaults={'name': 'Night Owl', 'description': 'Watched between 2 AM and 5 AM'}
+        )
+
+        WatchLog.objects.create(
+            user=self.user,
+            episode=self.episodes[0],
+            duration=1200
+        )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=night_owl_badge).exists())
