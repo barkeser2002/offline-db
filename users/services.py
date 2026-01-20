@@ -41,3 +41,15 @@ def check_badges(user):
                  UserBadge.objects.get_or_create(user=user, badge=veteran_badge)
     except Badge.DoesNotExist:
         pass
+
+    # 4. Night Owl: Watched an episode between 2 AM and 5 AM.
+    try:
+        night_owl_badge = Badge.objects.get(slug='night-owl')
+        if not UserBadge.objects.filter(user=user, badge=night_owl_badge).exists():
+            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
+            if last_log:
+                hour = last_log.watched_at.hour
+                if 2 <= hour < 5:
+                    UserBadge.objects.get_or_create(user=user, badge=night_owl_badge)
+    except Badge.DoesNotExist:
+        pass

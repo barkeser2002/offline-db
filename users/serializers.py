@@ -1,5 +1,17 @@
 from rest_framework import serializers
-from .models import Notification
+from .models import Notification, Badge, UserBadge
+
+class BadgeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Badge
+        fields = ['id', 'slug', 'name', 'description', 'icon_url']
+
+class UserBadgeSerializer(serializers.ModelSerializer):
+    badge = BadgeSerializer(read_only=True)
+
+    class Meta:
+        model = UserBadge
+        fields = ['id', 'badge', 'awarded_at']
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:

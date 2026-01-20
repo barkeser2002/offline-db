@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.throttling import ScopedRateThrottle
-from .models import Notification
-from .serializers import NotificationSerializer
+from .models import Notification, UserBadge
+from .serializers import NotificationSerializer, UserBadgeSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
@@ -55,3 +55,10 @@ class MarkAllNotificationsReadAPIView(APIView):
     def post(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
         return Response({'status': 'all marked as read'})
+
+class UserBadgeListAPIView(generics.ListAPIView):
+    serializer_class = UserBadgeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return UserBadge.objects.filter(user=self.request.user).select_related('badge')
