@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db.models import Count
 from .models import Badge, UserBadge, WatchLog
 from core.models import ChatMessage
+from content.models import Subscription
 
 def check_badges(user):
     """
@@ -69,6 +70,16 @@ def check_badges(user):
                 diff = watched_at - episode_created_at
                 if timedelta(seconds=0) <= diff <= timedelta(hours=1):
                     UserBadge.objects.get_or_create(user=user, badge=early_bird_badge)
+    except Badge.DoesNotExist:
+        pass
+
+    # 7. Collector: Subscribed to 10 different anime.
+    try:
+        collector_badge = Badge.objects.get(slug='collector')
+        if not UserBadge.objects.filter(user=user, badge=collector_badge).exists():
+            subscription_count = Subscription.objects.filter(user=user).count()
+            if subscription_count >= 10:
+                UserBadge.objects.get_or_create(user=user, badge=collector_badge)
     except Badge.DoesNotExist:
         pass
 
