@@ -40,12 +40,16 @@ class DashboardTests(TestCase):
 
         # Verify Graph Data
         self.assertIn('bandwidth_chart', stats)
-        chart = stats['bandwidth_chart']
+        import json
+        chart = json.loads(stats['bandwidth_chart'])
         self.assertIn('labels', chart)
-        self.assertIn('data', chart)
-        self.assertEqual(len(chart['data']), 7)
+        self.assertIn('datasets', chart)
+        datasets = chart['datasets']
+        self.assertEqual(len(datasets), 1)
+        data = datasets[0]['data']
+        self.assertEqual(len(data), 7)
         # Check that the last element (today) is 1.0 GB
-        self.assertEqual(chart['data'][-1], 1.0)
+        self.assertEqual(data[-1], 1.0)
 
 class ChatConsumerTests(TransactionTestCase):
     async def test_chat_consumer(self):

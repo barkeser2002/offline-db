@@ -1,0 +1,57 @@
+{% extends 'admin/base_site.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+    <!-- Top Row: KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- CPU Usage -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">CPU Usage</h3>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ dashboard_stats.cpu }}%</p>
+        </div>
+
+        <!-- RAM Usage -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">RAM Usage</h3>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ dashboard_stats.ram }}%</p>
+        </div>
+
+        <!-- Anime Count -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Anime</h3>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ dashboard_stats.anime_count }}</p>
+        </div>
+
+        <!-- Episode Count -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Episodes</h3>
+            <p class="mt-2 text-3xl font-semibold text-gray-900 dark:text-gray-100">{{ dashboard_stats.episode_count }}</p>
+        </div>
+    </div>
+
+    <!-- Second Row: Revenue & Bandwidth -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Revenue -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Revenue</h3>
+            <p class="mt-2 text-3xl font-semibold text-green-600 dark:text-green-400">${{ dashboard_stats.total_revenue }}</p>
+        </div>
+
+        <!-- Bandwidth Saved -->
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+            <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Bandwidth Saved (H.265)</h3>
+            <p class="mt-2 text-3xl font-semibold text-blue-600 dark:text-blue-400">{{ dashboard_stats.bandwidth_saved_gb }} GB</p>
+            <p class="text-xs text-gray-400 mt-1">Approx. 50% savings vs H.264</p>
+        </div>
+    </div>
+
+    <!-- Third Row: Chart -->
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border dark:border-gray-700">
+        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Bandwidth Savings (Last 7 Days)</h3>
+        <div class="relative h-64">
+             {% include "unfold/components/chart/bar.html" with data=dashboard_stats.bandwidth_chart height="250" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
