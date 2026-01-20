@@ -83,6 +83,27 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 8. Season Completist: Completed an entire season.
+    try:
+        season_completist_badge = Badge.objects.get(slug='season-completist')
+        # This badge can be awarded multiple times? Usually badges are unique per user-badge pair in this system.
+        # Assuming unique for now based on other badges.
+        if not UserBadge.objects.filter(user=user, badge=season_completist_badge).exists():
+            last_log = WatchLog.objects.filter(user=user).select_related('episode__season').order_by('-watched_at').first()
+            if last_log:
+                season = last_log.episode.season
+                total_episodes = season.episodes.count()
+                if total_episodes > 0:
+                    watched_count = WatchLog.objects.filter(
+                        user=user,
+                        episode__season=season
+                    ).values('episode').distinct().count()
+
+                    if watched_count >= total_episodes:
+                        UserBadge.objects.get_or_create(user=user, badge=season_completist_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
