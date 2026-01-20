@@ -245,3 +245,6 @@ UNFOLD = {
     "SITE_TITLE": "AniScrap Admin",
     "SITE_HEADER": "AniScrap Admin",
 }
+
+# Default Primary Key Field Type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
