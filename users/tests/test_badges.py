@@ -263,3 +263,35 @@ class BadgeSystemTests(TestCase):
         )
 
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
+
+    def test_marathoner_badge(self):
+        marathoner_badge, _ = Badge.objects.get_or_create(
+            slug='marathoner',
+            defaults={'name': 'Marathoner', 'description': 'Watched 50 episodes in total'}
+        )
+
+        # Create many episodes (we need at least 50 distinct episodes)
+        # We already have 10 in setUp. We need 40 more.
+        many_episodes = list(self.episodes)
+        for i in range(11, 51):
+            ep = Episode.objects.create(season=self.season, number=i)
+            many_episodes.append(ep)
+
+        # Watch 49 episodes
+        for i in range(49):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=many_episodes[i],
+                duration=1200
+            )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
+
+        # Watch 50th episode
+        WatchLog.objects.create(
+            user=self.user,
+            episode=many_episodes[49],
+            duration=1200
+        )
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
