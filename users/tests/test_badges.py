@@ -143,3 +143,49 @@ class BadgeSystemTests(TestCase):
 
         # Check badge awarded (signal should have triggered)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
+
+    def test_early_bird_badge(self):
+        early_bird_badge, _ = Badge.objects.get_or_create(
+            slug='early-bird',
+            defaults={'name': 'Early Bird', 'description': 'Watched within 1 hour'}
+        )
+
+        # Case 1: Watched late (2 hours after release)
+        episode_late = Episode.objects.create(
+            season=self.season,
+            number=100
+        )
+        # Manually set created_at
+        episode_late.created_at = timezone.now() - timedelta(hours=3)
+        episode_late.save()
+
+        WatchLog.objects.create(
+            user=self.user,
+            episode=episode_late,
+            duration=100
+        )
+
+        # Trigger check manually because our signal setup might be tricky with mock times in other tests
+        # But signals are synchronous, so it should have run.
+        # check_badges(self.user) # Redundant if signal works
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
+
+        # Case 2: Watched early (30 mins after release)
+        episode_early = Episode.objects.create(
+            season=self.season,
+            number=101
+        )
+        # Ensure created_at is strictly set (though auto_now_add handles it)
+        # We'll trust auto_now_add sets it to Now.
+
+        # We need to simulate that the Episode was created "just now" and we watched it "just now".
+        # Since logic compares (watched_at - created_at) <= 1h.
+
+        WatchLog.objects.create(
+            user=self.user,
+            episode=episode_early,
+            duration=100
+        )
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
