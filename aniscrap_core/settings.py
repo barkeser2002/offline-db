@@ -27,6 +27,8 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
+    "channels",
     # Dependencies for Unfold contrib (Kept for compatibility if used elsewhere, but Unfold removed)
     "import_export",
     "guardian",
@@ -102,6 +104,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "aniscrap_core.wsgi.application"
+ASGI_APPLICATION = "aniscrap_core.asgi.application"
 
 
 # Database
@@ -186,11 +189,24 @@ if os.getenv('USE_SQLITE', 'False') == 'True':
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
         }
     }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
 else:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
             "LOCATION": os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        }
+    }
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1')],
+            },
         }
     }
 
