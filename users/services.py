@@ -55,6 +55,23 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 5. Early Bird: Watched an episode within 1 hour of release.
+    try:
+        early_bird_badge = Badge.objects.get(slug='early-bird')
+        if not UserBadge.objects.filter(user=user, badge=early_bird_badge).exists():
+            last_log = WatchLog.objects.filter(user=user).select_related('episode').order_by('-watched_at').first()
+            if last_log:
+                episode_created_at = last_log.episode.created_at
+                watched_at = last_log.watched_at
+
+                # Check if watched within 1 hour (3600 seconds) of creation
+                # We use abs() just in case of slight clock skews, though usually watched_at > created_at
+                diff = watched_at - episode_created_at
+                if timedelta(seconds=0) <= diff <= timedelta(hours=1):
+                    UserBadge.objects.get_or_create(user=user, badge=early_bird_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
