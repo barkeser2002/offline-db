@@ -75,6 +75,13 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col items-end space-y-2 pointer-events-none">
+        <style>
+            #toast-container > div { pointer-events: auto; }
+        </style>
+    </div>
+
     <footer class="bg-black py-8 border-t border-gray-900 mt-12">
         <div class="container mx-auto text-center text-gray-500">
             <p class="mb-2">&copy; 2026 <strong>AniScrap</strong>. All rights reserved.</p>
@@ -218,10 +225,97 @@
                 });
             });
 
-            // Initial Poll and Interval (every 60s)
+            // Toast Function
+            window.showToast = function(data) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                // Initial state: hidden (translate-x)
+                toast.className = 'bg-gray-800 border-l-4 border-brand text-white px-4 py-3 rounded shadow-2xl w-80 transform transition-all duration-300 translate-x-[120%] opacity-0';
+
+                const content = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-sm text-brand mb-1">${data.title}</h4>
+                            <p class="text-xs text-gray-300">${data.message}</p>
+                        </div>
+                        <button class="text-gray-500 hover:text-white ml-2 focus:outline-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                `;
+                toast.innerHTML = content;
+
+                // Click to navigate
+                toast.addEventListener('click', (e) => {
+                    // If close button clicked, don't navigate
+                    if (e.target.closest('button')) {
+                        closeToast(toast);
+                        return;
+                    }
+                    if (data.link) window.location.href = data.link;
+                });
+
+                container.appendChild(toast);
+
+                // Animate In
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-x-[120%]', 'opacity-0');
+                });
+
+                // Auto Dismiss
+                setTimeout(() => {
+                    closeToast(toast);
+                }, 5000);
+            }
+
+            function closeToast(toast) {
+                toast.classList.add('translate-x-[120%]', 'opacity-0');
+                setTimeout(() => {
+                    if(toast.parentElement) toast.remove();
+                }, 300);
+            }
+
+            // Real-time & Polling Logic
             {% if user.is_authenticated %}
                 pollUnread();
+
+                // Backup Polling (Every 60s)
                 setInterval(pollUnread, 60000);
+
+                // WebSocket Connection
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = protocol + '//' + window.location.host + '/ws/notifications/';
+
+                function connectWs() {
+                    const notifSocket = new WebSocket(wsUrl);
+
+                    notifSocket.onmessage = function(e) {
+                        const data = JSON.parse(e.data);
+                        if (data.type === 'notification') {
+                            // Update Badge
+                            let count = parseInt(badge.textContent) || 0;
+                            if (badge.classList.contains('hidden')) count = 0;
+                            count++;
+                            badge.textContent = count > 99 ? '99+' : count;
+                            badge.classList.remove('hidden');
+
+                            // Show Toast
+                            showToast(data);
+
+                            // Refresh list if dropdown is open
+                            if (!document.getElementById('notification-dropdown').classList.contains('hidden')) {
+                                fetchNotifications();
+                            }
+                        }
+                    };
+
+                    notifSocket.onclose = function(e) {
+                        console.error('Notification socket closed. Reconnecting in 5s...');
+                        setTimeout(connectWs, 5000);
+                    };
+                }
+
+                connectWs();
             {% endif %}
         });
     </script>
