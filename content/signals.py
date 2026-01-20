@@ -2,6 +2,8 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.core.cache import cache
 from django.urls import reverse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from .models import Episode, Subscription
 
 @receiver(post_save, sender=Episode)
@@ -33,3 +35,17 @@ def notify_subscribers(sender, instance, created, **kwargs):
 
         if notifications:
             Notification.objects.bulk_create(notifications)
+
+            # Send real-time notifications via WebSockets
+            channel_layer = get_channel_layer()
+            for notification in notifications:
+                group_name = f"user_{notification.user.id}"
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {
+                        'type': 'notification_message',
+                        'title': notification.title,
+                        'message': notification.message,
+                        'link': notification.link,
+                    }
+                )
