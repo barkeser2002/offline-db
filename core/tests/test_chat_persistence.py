@@ -21,6 +21,10 @@ class ChatPersistenceTests(TransactionTestCase):
         connected1, subprotocol1 = await communicator1.connect()
         self.assertTrue(connected1)
 
+        # Consume initial user count
+        response_count = await communicator1.receive_json_from()
+        self.assertEqual(response_count['type'], 'user_count')
+
         await communicator1.send_json_to({
             "message": "Hello World",
             "username": "User1"
@@ -45,10 +49,16 @@ class ChatPersistenceTests(TransactionTestCase):
         connected2, subprotocol2 = await communicator2.connect()
         self.assertTrue(connected2)
 
-        # Should receive the history message immediately
-        response2 = await communicator2.receive_json_from()
-        self.assertEqual(response2['message'], 'Hello World')
-        self.assertEqual(response2['username'], 'User1')
-        self.assertIn('created_at', response2)
+        # Should receive the history message immediately, but might be interleaved with user_count
+        found_history = False
+        for _ in range(5):
+            response = await communicator2.receive_json_from()
+            if response.get('type') == 'chat_message' and response.get('message') == 'Hello World':
+                found_history = True
+                self.assertEqual(response['username'], 'User1')
+                self.assertIn('created_at', response)
+                break
+
+        self.assertTrue(found_history, "Did not receive history message")
 
         await communicator2.disconnect()

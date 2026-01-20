@@ -62,6 +62,10 @@ class ChatConsumerTests(TransactionTestCase):
         connected, subprotocol = await communicator.connect()
         self.assertTrue(connected)
 
+        # Consume initial user count message
+        response = await communicator.receive_json_from()
+        self.assertEqual(response['type'], 'user_count')
+
         # Test sending message
         await communicator.send_json_to({
             "message": "hello",
