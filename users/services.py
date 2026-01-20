@@ -2,6 +2,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Count
 from .models import Badge, UserBadge, WatchLog
+from core.models import ChatMessage
 
 def check_badges(user):
     """
@@ -51,5 +52,19 @@ def check_badges(user):
                 hour = last_log.watched_at.hour
                 if 2 <= hour < 5:
                     UserBadge.objects.get_or_create(user=user, badge=night_owl_badge)
+    except Badge.DoesNotExist:
+        pass
+
+def check_chat_badges(user):
+    """
+    Checks badges related to chat activity.
+    """
+    # 5. Commentator: Posted 50 chat messages.
+    try:
+        commentator_badge = Badge.objects.get(slug='commentator')
+        if not UserBadge.objects.filter(user=user, badge=commentator_badge).exists():
+            message_count = ChatMessage.objects.filter(user=user).count()
+            if message_count >= 50:
+                 UserBadge.objects.get_or_create(user=user, badge=commentator_badge)
     except Badge.DoesNotExist:
         pass

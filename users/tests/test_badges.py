@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 from users.models import User, Badge, UserBadge, WatchLog
 from content.models import Anime, Season, Episode
+from core.models import ChatMessage
 from users.services import check_badges
 
 class BadgeSystemTests(TestCase):
@@ -113,3 +114,32 @@ class BadgeSystemTests(TestCase):
         )
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=night_owl_badge).exists())
+
+    def test_commentator_badge(self):
+        commentator_badge, _ = Badge.objects.get_or_create(
+            slug='commentator',
+            defaults={'name': 'Commentator', 'description': 'Posted 50 chat messages'}
+        )
+
+        # Create 49 messages
+        for i in range(49):
+            ChatMessage.objects.create(
+                user=self.user,
+                username=self.user.username,
+                room_name='test_room',
+                message=f'Message {i}'
+            )
+
+        # Check badge not awarded
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
+
+        # Create 50th message
+        ChatMessage.objects.create(
+            user=self.user,
+            username=self.user.username,
+            room_name='test_room',
+            message='Message 50'
+        )
+
+        # Check badge awarded (signal should have triggered)
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
