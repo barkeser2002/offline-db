@@ -84,13 +84,13 @@ class BillingCallbackTests(TestCase):
 
     @override_settings(SHOPIER_SECRET=None, DEBUG=True)
     def test_callback_no_secret_debug_mode(self):
-        # Should pass verification in DEBUG mode if secret is missing
+        # Should fail verification even in DEBUG mode if secret is missing
         data = {
             'platform_order_id': 'ORD-12345',
             'status': 'success',
         }
         response = self.client.post(self.url, data)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 400)
 
     @override_settings(SHOPIER_SECRET=None, DEBUG=False)
     def test_callback_no_secret_production_mode(self):
