@@ -97,6 +97,7 @@ REST_FRAMEWORK = {
         'anon': '100/day',
         'user': '1000/day',
         'notifications': '600/hour',
+        'subscribe': '60/minute',
     }
 }
 

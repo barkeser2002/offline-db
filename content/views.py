@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.throttling import UserRateThrottle
+from rest_framework.throttling import UserRateThrottle, ScopedRateThrottle
 from .models import VideoFile, Episode, Anime, Subscription
 
 class KeyServeView(APIView):
@@ -46,6 +46,8 @@ def anime_detail(request, pk):
 
 class SubscribeAnimeAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'subscribe'
 
     def post(self, request, pk):
         anime = get_object_or_404(Anime, pk=pk)

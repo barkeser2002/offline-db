@@ -96,11 +96,74 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Toast Function
+            window.showToast = function(data) {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                // Initial state: hidden (translate-x)
+                toast.className = 'bg-gray-800 border-l-4 border-brand text-white px-4 py-3 rounded shadow-2xl w-80 transform transition-all duration-300 translate-x-[120%] opacity-0';
+
+                const flexDiv = document.createElement('div');
+                flexDiv.className = 'flex justify-between items-start';
+
+                const textDiv = document.createElement('div');
+
+                const title = document.createElement('h4');
+                title.className = 'font-bold text-sm text-brand mb-1';
+                title.textContent = data.title;
+
+                const message = document.createElement('p');
+                message.className = 'text-xs text-gray-300';
+                message.textContent = data.message;
+
+                textDiv.appendChild(title);
+                textDiv.appendChild(message);
+
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'text-gray-500 hover:text-white ml-2 focus:outline-none';
+                closeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+
+                flexDiv.appendChild(textDiv);
+                flexDiv.appendChild(closeBtn);
+                toast.appendChild(flexDiv);
+
+                // Click to navigate
+                toast.addEventListener('click', (e) => {
+                    // If close button clicked, don't navigate
+                    if (e.target.closest('button')) {
+                        closeToast(toast);
+                        return;
+                    }
+                    if (data.link) window.location.href = data.link;
+                });
+
+                container.appendChild(toast);
+
+                // Animate In
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-x-[120%]', 'opacity-0');
+                });
+
+                // Auto Dismiss
+                setTimeout(() => {
+                    closeToast(toast);
+                }, 5000);
+            }
+
+            function closeToast(toast) {
+                toast.classList.add('translate-x-[120%]', 'opacity-0');
+                setTimeout(() => {
+                    if(toast.parentElement) toast.remove();
+                }, 300);
+            }
+
             const btn = document.getElementById('notification-btn');
             const dropdown = document.getElementById('notification-dropdown');
             const list = document.getElementById('notification-list');
             const badge = document.getElementById('notification-badge');
             const markAllBtn = document.getElementById('mark-all-read');
+
+            if (!btn) return; // Stop if not authenticated/elements missing
 
             // Get CSRF Token
             function getCookie(name) {
@@ -225,55 +288,6 @@
                 });
             });
 
-            // Toast Function
-            window.showToast = function(data) {
-                const container = document.getElementById('toast-container');
-                const toast = document.createElement('div');
-                // Initial state: hidden (translate-x)
-                toast.className = 'bg-gray-800 border-l-4 border-brand text-white px-4 py-3 rounded shadow-2xl w-80 transform transition-all duration-300 translate-x-[120%] opacity-0';
-
-                const content = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-bold text-sm text-brand mb-1">${data.title}</h4>
-                            <p class="text-xs text-gray-300">${data.message}</p>
-                        </div>
-                        <button class="text-gray-500 hover:text-white ml-2 focus:outline-none">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
-                    </div>
-                `;
-                toast.innerHTML = content;
-
-                // Click to navigate
-                toast.addEventListener('click', (e) => {
-                    // If close button clicked, don't navigate
-                    if (e.target.closest('button')) {
-                        closeToast(toast);
-                        return;
-                    }
-                    if (data.link) window.location.href = data.link;
-                });
-
-                container.appendChild(toast);
-
-                // Animate In
-                requestAnimationFrame(() => {
-                    toast.classList.remove('translate-x-[120%]', 'opacity-0');
-                });
-
-                // Auto Dismiss
-                setTimeout(() => {
-                    closeToast(toast);
-                }, 5000);
-            }
-
-            function closeToast(toast) {
-                toast.classList.add('translate-x-[120%]', 'opacity-0');
-                setTimeout(() => {
-                    if(toast.parentElement) toast.remove();
-                }, 300);
-            }
 
             // Real-time & Polling Logic
             {% if user.is_authenticated %}
