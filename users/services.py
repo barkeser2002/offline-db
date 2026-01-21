@@ -230,6 +230,26 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 14. Genre Master: Watched 10 different anime from the same genre.
+    try:
+        genre_master_badge = Badge.objects.get(slug='genre-master')
+        if not UserBadge.objects.filter(user=user, badge=genre_master_badge).exists():
+            watched_anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
+
+            if watched_anime_ids:
+                from django.db.models import Q
+                from content.models import Genre
+
+                # Count distinct animes per genre for the animes the user has watched
+                qs = Genre.objects.filter(animes__id__in=watched_anime_ids).annotate(
+                    user_anime_count=Count('animes', filter=Q(animes__id__in=watched_anime_ids))
+                )
+
+                if qs.filter(user_anime_count__gte=10).exists():
+                     UserBadge.objects.get_or_create(user=user, badge=genre_master_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
