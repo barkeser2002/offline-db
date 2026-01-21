@@ -19,11 +19,13 @@ from base64 import b64decode
 import json
 from hashlib import md5
 from tempfile import NamedTemporaryFile
+import logging
+
+logger = logging.getLogger(__name__)
 
 try:
     from appdirs import user_cache_dir
 except ImportError:
-
     def user_cache_dir():
         return os.path.join(os.path.expanduser("~"), ".cache")
 
@@ -35,13 +37,13 @@ except ImportError:
         from Cryptodome.Cipher import AES
     except ImportError:
         AES = None
-        print("[TurkAnime] UYARI: pycryptodome yüklü değil!")
+        logger.warning("[TurkAnime] pycryptodome yüklü değil! Şifre çözme işlemleri başarısız olabilir.")
 
 try:
     from curl_cffi import requests as curl_requests
 except ImportError:
     curl_requests = None
-    print("[TurkAnime] UYARI: curl_cffi yüklü değil!")
+    logger.warning("[TurkAnime] curl_cffi yüklü değil! Cloudflare bypass yeteneği kısıtlı.")
 
 import requests as std_requests
 
@@ -83,7 +85,7 @@ def _flaresolverr_request(url: str, method: str = "GET") -> dict:
                 "status_code": data.get("solution", {}).get("status", 200),
             }
     except Exception as e:
-        print(f"[FlareSolverr] Hata: {e}")
+        logger.error(f"[FlareSolverr] Hata: {e}")
     return None
 
 
@@ -153,16 +155,16 @@ def fetch(path, headers={}):
                 session = sess
                 BASE_URL = resp.url
                 BASE_URL = BASE_URL[:-1] if BASE_URL.endswith("/") else BASE_URL
-                print(f"[TurkAnime] Bağlantı başarılı: {BASE_URL}")
+                logger.info(f"[TurkAnime] Bağlantı başarılı: {BASE_URL}")
                 break
 
         # curl_cffi başarısız olduysa FlareSolverr dene
         if session is None:
-            print(f"[TurkAnime] curl_cffi başarısız, FlareSolverr deneniyor...")
+            logger.info(f"[TurkAnime] curl_cffi başarısız, FlareSolverr deneniyor...")
             cf_session = _get_cf_session()
             if cf_session is not None:
                 session = cf_session
-                print(f"[TurkAnime] CF bypass başarılı (FlareSolverr)")
+                logger.info(f"[TurkAnime] CF bypass başarılı (FlareSolverr)")
             else:
                 # Son çare: Normal requests
                 session = std_requests.Session()
@@ -171,7 +173,7 @@ def fetch(path, headers={}):
                         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0"
                     }
                 )
-                print(
+                logger.warning(
                     f"[TurkAnime] UYARI: CF bypass yapılamadı, bazı özellikler çalışmayabilir"
                 )
 
@@ -247,7 +249,7 @@ def decrypt_cipher(key: bytes, data: bytes) -> str:
         - https://gist.github.com/ysfchn/e96304fb41375bad0fdf9a5e837da631
     """
     if AES is None:
-        print("[TurkAnime] AES modülü yüklü değil!")
+        logger.error("[TurkAnime] AES modülü yüklü değil!")
         return ""
 
     def salted_key(data: bytes, salt: bytes, output: int = 48):
@@ -376,7 +378,7 @@ def unmask_real_url(url_mask):
             if PLAYERJS_CSRF is None:
                 raise LookupError
         except:
-            print("ERROR: CSRF bulunamadı.")
+            logger.error("ERROR: CSRF bulunamadı.")
             return url_mask
 
     MASK = url_mask.split("/player/")[1]

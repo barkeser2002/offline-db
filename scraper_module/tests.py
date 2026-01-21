@@ -64,3 +64,17 @@ class JikanClientTests(TestCase):
             self.assertEqual(data['title'], 'Retry Success')
             self.assertEqual(mock_get.call_count, 2)
             mock_sleep.assert_called()
+
+class TurkAnimeAdapterTests(TestCase):
+    def test_dependencies_imported(self):
+        """
+        Verify that the TurkAnime adapter has all required dependencies installed.
+        This ensures AES and curl_cffi are available.
+        """
+        from scraper_module.adapters import turkanime_bypass
+
+        # Verify AES (pycryptodome) is available
+        self.assertIsNotNone(turkanime_bypass.AES, "pycryptodome dependency is missing or failed to import.")
+
+        # Verify curl_requests (curl_cffi) is available
+        self.assertIsNotNone(turkanime_bypass.curl_requests, "curl_cffi dependency is missing or failed to import.")
