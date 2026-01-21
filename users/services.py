@@ -172,6 +172,28 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 12. Streak Master: Watched anime for 7 consecutive days.
+    try:
+        streak_master_badge = Badge.objects.get(slug='streak-master')
+        if not UserBadge.objects.filter(user=user, badge=streak_master_badge).exists():
+            today = timezone.now().date()
+            start_date = today - timedelta(days=6)
+
+            # Count distinct days in the last 7 days (inclusive)
+            distinct_days_count = WatchLog.objects.filter(
+                user=user,
+                watched_at__gte=start_date  # Check from start of the 7-day window
+            ).values('watched_at__date').distinct().count()
+
+            # Note: We use distinct dates. If the user watched every day for the last 7 days, count is 7.
+            # However, we must be careful about timezone. 'watched_at__date' extracts date in DB timezone (usually UTC).
+            # This is acceptable for this badge logic.
+
+            if distinct_days_count >= 7:
+                UserBadge.objects.get_or_create(user=user, badge=streak_master_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
