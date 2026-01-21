@@ -12,11 +12,11 @@ class AnimeSitemap(Sitemap):
         return obj.created_at
 
 class EpisodeSitemap(Sitemap):
-    changefreq = "daily"
-    priority = 0.6
+    changefreq = "monthly"
+    priority = 0.5
 
     def items(self):
-        return Episode.objects.all().order_by('-created_at')
+        return Episode.objects.select_related('season__anime').all().order_by('-created_at')
 
     def lastmod(self, obj):
         return obj.created_at
