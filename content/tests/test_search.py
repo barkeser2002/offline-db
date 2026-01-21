@@ -1,9 +1,11 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.cache import cache
 from content.models import Anime, Genre
 
 class SearchTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.genre_action = Genre.objects.create(name="Action", slug="action")
         self.genre_comedy = Genre.objects.create(name="Comedy", slug="comedy")
@@ -54,3 +56,13 @@ class SearchTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "One Piece")
         self.assertNotContains(response, "Naruto") # Has Action but not "One"
+
+    def test_search_rate_limit(self):
+        # We set limit=20 in views.py
+        for i in range(20):
+            response = self.client.get(reverse('search'), {'q': 'Naruto'})
+            self.assertEqual(response.status_code, 200, f"Request {i+1} failed")
+
+        # 21st request should fail
+        response = self.client.get(reverse('search'), {'q': 'Naruto'})
+        self.assertEqual(response.status_code, 403)
