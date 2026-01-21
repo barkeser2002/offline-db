@@ -153,6 +153,25 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 11. Loyal Fan: Watched 10 episodes of the same anime.
+    try:
+        loyal_fan_badge = Badge.objects.get(slug='loyal-fan')
+        if not UserBadge.objects.filter(user=user, badge=loyal_fan_badge).exists():
+            # Get the anime of the last watched episode
+            last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+            if last_log:
+                anime = last_log.episode.season.anime
+                # Count episodes watched for this anime
+                watched_count = WatchLog.objects.filter(
+                    user=user,
+                    episode__season__anime=anime
+                ).values('episode').distinct().count()
+
+                if watched_count >= 10:
+                    UserBadge.objects.get_or_create(user=user, badge=loyal_fan_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
