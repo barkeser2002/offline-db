@@ -7,7 +7,30 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle, ScopedRateThrottle
-from .models import VideoFile, Episode, Anime, Subscription
+from .models import VideoFile, Episode, Anime, Subscription, Genre
+
+def search_view(request):
+    query = request.GET.get('q')
+    genre_name = request.GET.get('genre')
+
+    results = Anime.objects.all()
+
+    if query:
+        results = results.filter(title__icontains=query)
+
+    if genre_name:
+        results = results.filter(genres__name__iexact=genre_name)
+
+    results = results.order_by('-created_at')
+
+    context = {
+        'results': results,
+        'query': query,
+        'selected_genre': genre_name,
+        'genres': Genre.objects.all(),
+    }
+
+    return render(request, 'search_results.html', context)
 
 class KeyServeView(APIView):
     authentication_classes = [SessionAuthentication]
