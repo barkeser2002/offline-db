@@ -95,3 +95,16 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.user} subscribed to {self.anime}"
+
+class Review(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
+    anime = models.ForeignKey(Anime, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.PositiveSmallIntegerField(choices=[(i, str(i)) for i in range(1, 11)])
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'anime')
+
+    def __str__(self):
+        return f"{self.user} - {self.anime} ({self.rating}/10)"

@@ -3,12 +3,20 @@ from datetime import timedelta, datetime
 from django.db.models import Count
 from .models import Badge, UserBadge, WatchLog
 from core.models import ChatMessage
-from content.models import Subscription
+from content.models import Subscription, Review
 
 def check_badges(user):
     """
     Checks and awards badges to the user based on criteria.
     """
+    # 0. Critic: Wrote first review.
+    try:
+        critic_badge = Badge.objects.get(slug='critic')
+        if not UserBadge.objects.filter(user=user, badge=critic_badge).exists():
+            if Review.objects.filter(user=user).exists():
+                UserBadge.objects.get_or_create(user=user, badge=critic_badge)
+    except Badge.DoesNotExist:
+        pass
     # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
     try:
         binge_badge = Badge.objects.get(slug='binge-watcher')
