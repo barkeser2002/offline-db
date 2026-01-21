@@ -39,8 +39,8 @@ def check_badges(user):
     try:
         veteran_badge = Badge.objects.get(slug='veteran')
         if not UserBadge.objects.filter(user=user, badge=veteran_badge).exists():
-             if user.date_joined <= timezone.now() - timedelta(days=365):
-                 UserBadge.objects.get_or_create(user=user, badge=veteran_badge)
+            if user.date_joined <= timezone.now() - timedelta(days=365):
+                UserBadge.objects.get_or_create(user=user, badge=veteran_badge)
     except Badge.DoesNotExist:
         pass
 
@@ -124,7 +124,7 @@ def check_chat_badges(user):
         if not UserBadge.objects.filter(user=user, badge=commentator_badge).exists():
             message_count = ChatMessage.objects.filter(user=user).count()
             if message_count >= 50:
-                 UserBadge.objects.get_or_create(user=user, badge=commentator_badge)
+                UserBadge.objects.get_or_create(user=user, badge=commentator_badge)
     except Badge.DoesNotExist:
         pass
 
