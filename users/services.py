@@ -17,6 +17,16 @@ def check_badges(user):
                 UserBadge.objects.get_or_create(user=user, badge=critic_badge)
     except Badge.DoesNotExist:
         pass
+
+    # 0.5. Opinionated: Wrote 5 reviews.
+    try:
+        opinionated_badge = Badge.objects.get(slug='opinionated')
+        if not UserBadge.objects.filter(user=user, badge=opinionated_badge).exists():
+            if Review.objects.filter(user=user).count() >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=opinionated_badge)
+    except Badge.DoesNotExist:
+        pass
+
     # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
     try:
         binge_badge = Badge.objects.get(slug='binge-watcher')
