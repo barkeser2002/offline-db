@@ -132,6 +132,27 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 10. Genre Explorer: Watched anime from 5 different genres.
+    try:
+        genre_explorer_badge = Badge.objects.get(slug='genre-explorer')
+        if not UserBadge.objects.filter(user=user, badge=genre_explorer_badge).exists():
+            # Get all episodes watched by user
+            watched_episodes = WatchLog.objects.filter(user=user).select_related('episode__season__anime')
+
+            # Optimization: Filter distinct animes first.
+            distinct_anime_ids = watched_episodes.values_list('episode__season__anime_id', flat=True).distinct()
+
+            from content.models import Anime
+            # Count distinct genres across all watched animes
+            distinct_genres_count = Anime.objects.filter(
+                id__in=distinct_anime_ids
+            ).values('genres__id').distinct().count()
+
+            if distinct_genres_count >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=genre_explorer_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
