@@ -250,6 +250,21 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 15. Speedster: Watched 3 episodes in 1 hour.
+    try:
+        speedster_badge = Badge.objects.get(slug='speedster')
+        if not UserBadge.objects.filter(user=user, badge=speedster_badge).exists():
+            last_hour = timezone.now() - timedelta(hours=1)
+            count = WatchLog.objects.filter(
+                user=user,
+                watched_at__gte=last_hour
+            ).values('episode').distinct().count()
+
+            if count >= 3:
+                UserBadge.objects.get_or_create(user=user, badge=speedster_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
