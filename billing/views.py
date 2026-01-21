@@ -18,18 +18,12 @@ def verify_shopier_signature(post_data):
     Verifies the Shopier signature.
     Since the exact algorithm is not documented in the codebase, we use a generic HMAC-SHA256
     verification of the transaction ID and status with the secret key.
-
-    If SHOPIER_SECRET is not set, we log a warning (in a real app) and return False (or True if we want to allow skipping).
-    For security, we return False if secret is missing but we're in production.
     """
     secret = settings.SHOPIER_SECRET
     if not secret:
-        # If secret is not configured, we can't verify.
-        # In a real scenario, this should probably fail, but to avoid breaking existing dev envs without secret:
-        if settings.DEBUG:
-            logger.warning("SHOPIER_SECRET is missing. Skipping signature verification in DEBUG mode.")
-            return True
-        logger.error("SHOPIER_SECRET is missing in production. Signature verification failed.")
+        # Critical security check: Do not allow proceeding without a secret, even in DEBUG.
+        # This forces developers to configure the environment properly and prevents accidental deployments with insecure settings.
+        logger.error("SHOPIER_SECRET is missing. Signature verification failed.")
         return False
 
     signature = post_data.get('signature')
@@ -66,8 +60,13 @@ def shopier_callback(request):
     that must handle bursts of legitimate payment notifications. Security is provided
     by HMAC signature verification in verify_shopier_signature().
     """
+    # Log the IP address for security auditing
+    ip = request.META.get('REMOTE_ADDR')
+    logger.info(f"Shopier callback received from IP: {ip}")
+
     # Verify signature
     if not verify_shopier_signature(request.POST):
+        logger.warning(f"Invalid signature for Shopier callback from IP: {ip}")
         return HttpResponseBadRequest("Invalid signature")
 
     # Parse Shopier payload
