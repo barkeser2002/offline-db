@@ -2,9 +2,14 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto px-4">
-    <div class="mb-4">
-        <h1 class="text-3xl font-bold text-white">{{ episode.season.anime.title }}</h1>
-        <h2 class="text-xl text-gray-400">Season {{ episode.season.number }} - Episode {{ episode.number }} {% if episode.title %}: {{ episode.title }}{% endif %}</h2>
+    <div class="mb-4 flex justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-bold text-white">Watch Party: {{ episode.season.anime.title }}</h1>
+            <h2 class="text-xl text-gray-400">Host: {{ party.host.username }} | Episode {{ episode.number }}</h2>
+        </div>
+        <button onclick="navigator.clipboard.writeText(window.location.href); alert('Invite link copied!');" class="bg-brand text-white px-4 py-2 rounded hover:bg-brand-dark transition">
+            Copy Invite Link
+        </button>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -27,7 +32,6 @@
                             if (Hls.isSupported()) {
                                 const hls = new Hls({
                                     xhrSetup: function(xhr, url) {
-                                        // Prepare for key loading with cookies/auth if needed
                                         xhr.withCredentials = true;
                                     }
                                 });
@@ -50,18 +54,9 @@
             </div>
 
             <div class="mt-6 p-4 bg-gray-800 rounded-lg">
-                <h3 class="font-bold text-lg mb-2">Details</h3>
-                <p class="text-gray-400">{{ episode.season.anime.synopsis|truncatewords:50 }}</p>
-                {% if video.fansub_group %}
-                <p class="mt-2 text-sm text-brand">Fansub: {{ video.fansub_group.name }}</p>
-                {% endif %}
-
-                <div class="mt-4 pt-4 border-t border-gray-700">
-                    <h4 class="font-bold text-sm mb-2 text-white">Actions</h4>
-                    <a href="{% url 'create_watch_party' episode.id %}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition text-sm font-semibold">
-                        🎉 Start Watch Party
-                    </a>
-                </div>
+                <h3 class="font-bold text-lg mb-2">Party Details</h3>
+                <p class="text-gray-400">You are watching a private session of {{ episode.season.anime.title }}.</p>
+                <p class="mt-2 text-sm text-brand">UUID: {{ party.uuid }}</p>
             </div>
         </div>
 
@@ -69,7 +64,7 @@
         <div class="bg-gray-800 rounded-xl border border-gray-700 flex flex-col h-[600px] overflow-hidden">
             <div class="p-4 border-b border-gray-700 bg-gray-900 flex justify-between items-center">
                 <div>
-                    <h3 class="font-bold text-white">Watch Party Chat</h3>
+                    <h3 class="font-bold text-white">Party Chat</h3>
                     <p class="text-xs text-gray-400">Connected as {{ user.username|default:"Anonymous" }}</p>
                 </div>
                 <div class="flex items-center gap-1.5 px-2 py-1 bg-gray-800 rounded-lg border border-gray-700">
@@ -109,7 +104,8 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const roomId = "episode_{{ episode.id }}";
+        // Use the room_name passed from view
+        const roomId = "{{ room_name }}";
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const chatSocket = new WebSocket(
             protocol + '//' + window.location.host + '/ws/chat/' + roomId + '/'
@@ -118,7 +114,6 @@
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
 
-            // Handle user count updates
             if (data.type === 'user_count') {
                 const countElement = document.getElementById('online-count');
                 if (countElement) {
@@ -127,7 +122,6 @@
                 return;
             }
 
-            // Handle chat messages
             const messages = document.getElementById('chat-messages');
 
             const messageItem = document.createElement('div');
@@ -183,7 +177,6 @@
                 if (message) {
                     chatSocket.send(JSON.stringify({
                         'message': message,
-                        // username is handled by backend from session if auth, else 'Anonymous' or generic
                     }));
                     chatInput.value = '';
                 }

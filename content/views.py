@@ -1,13 +1,14 @@
 from django.http import HttpResponse, Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.core.cache import cache
+from django.contrib.auth.decorators import login_required
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle, ScopedRateThrottle
-from .models import VideoFile, Episode, Anime, Subscription, Genre
+from .models import VideoFile, Episode, Anime, Subscription, Genre, WatchParty
 from core.utils import rate_limit_ip
 
 @rate_limit_ip(limit=20, period=60)
@@ -83,3 +84,24 @@ class SubscribeAnimeAPIView(APIView):
             return Response({'status': 'unsubscribed'})
 
         return Response({'status': 'subscribed'})
+
+@login_required
+def create_watch_party(request, episode_id):
+    episode = get_object_or_404(Episode, id=episode_id)
+    party = WatchParty.objects.create(episode=episode, host=request.user)
+    return redirect('watch_party_detail', uuid=party.uuid)
+
+def watch_party_detail(request, uuid):
+    party = get_object_or_404(WatchParty, uuid=uuid)
+    episode = party.episode
+    video = episode.video_files.order_by('-quality').first()
+
+    room_name = f"party_{party.uuid}"
+
+    context = {
+        'episode': episode,
+        'video': video,
+        'party': party,
+        'room_name': room_name,
+    }
+    return render(request, 'watch_party.html', context)

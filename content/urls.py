@@ -1,5 +1,8 @@
 from django.urls import path
-from .views import KeyServeView, player_view, home_view, anime_detail, SubscribeAnimeAPIView, search_view
+from .views import (
+    KeyServeView, player_view, home_view, anime_detail,
+    SubscribeAnimeAPIView, search_view, create_watch_party, watch_party_detail
+)
 
 urlpatterns = [
     path('', home_view, name='home'),
@@ -8,4 +11,8 @@ urlpatterns = [
     path('api/anime/<int:pk>/subscribe/', SubscribeAnimeAPIView.as_view(), name='anime-subscribe'),
     path('watch/<int:episode_id>/', player_view, name='watch'),
     path('api/key/<str:key_token>/', KeyServeView.as_view(), name='video-key'),
+
+    # Watch Party
+    path('watch-party/create/<int:episode_id>/', create_watch_party, name='create_watch_party'),
+    path('watch-party/<uuid:uuid>/', watch_party_detail, name='watch_party_detail'),
 ]
