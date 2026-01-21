@@ -45,6 +45,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # Receive message from WebSocket
     async def receive(self, text_data):
+        # Rate Limit Check
+        if not await self.check_rate_limit():
+            await self.close()
+            return
+
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
 
@@ -127,3 +132,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def get_last_messages(self):
         messages = ChatMessage.objects.filter(room_name=self.room_name).order_by('-created_at')[:50]
         return [{'username': m.username, 'message': m.message, 'created_at': m.created_at} for m in reversed(list(messages))]
+
+    @sync_to_async
+    def check_rate_limit(self):
+        user = self.scope.get("user")
+        if user and user.is_authenticated:
+            key = f"chat_limit_user_{user.id}"
+        else:
+            # Use IP address for anonymous users
+            client = self.scope.get('client')
+            ip = client[0] if client else 'unknown'
+            key = f"chat_limit_ip_{ip}"
+
+        # Limit: 5 messages per 10 seconds
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout=10)
+            count = 1
+
+        return count <= 5
