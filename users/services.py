@@ -26,6 +26,24 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 1.1 Weekend Warrior: Watched 5+ episodes on a single weekend day.
+    try:
+        weekend_warrior_badge = Badge.objects.get(slug='weekend-warrior')
+        if not UserBadge.objects.filter(user=user, badge=weekend_warrior_badge).exists():
+            # Check if today is Saturday (5) or Sunday (6)
+            today = timezone.now().date()
+            if today.weekday() in [5, 6]:
+                # Count episodes watched TODAY
+                distinct_episodes_today = WatchLog.objects.filter(
+                    user=user,
+                    watched_at__date=today
+                ).values('episode').distinct().count()
+
+                if distinct_episodes_today >= 5:
+                    UserBadge.objects.get_or_create(user=user, badge=weekend_warrior_badge)
+    except Badge.DoesNotExist:
+        pass
+
     # 2. Supporter: Is Premium.
     try:
         supporter_badge = Badge.objects.get(slug='supporter')

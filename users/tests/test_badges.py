@@ -295,3 +295,54 @@ class BadgeSystemTests(TestCase):
         )
 
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
+
+    @patch('django.utils.timezone.now')
+    def test_weekend_warrior_badge(self, mock_now):
+        # Set time to a Sunday (2023-01-01 is a Sunday)
+        sunday = datetime(2023, 1, 1, 12, 0, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = sunday
+
+        weekend_badge, _ = Badge.objects.get_or_create(
+            slug='weekend-warrior',
+            defaults={'name': 'Weekend Warrior', 'description': 'Watched 5 episodes on a weekend'}
+        )
+
+        # Watch 4 episodes on Sunday
+        for i in range(4):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=self.episodes[i],
+                duration=1200
+            )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
+
+        # Watch 5th episode
+        WatchLog.objects.create(
+            user=self.user,
+            episode=self.episodes[4],
+            duration=1200
+        )
+
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
+
+    @patch('django.utils.timezone.now')
+    def test_weekend_warrior_badge_weekday(self, mock_now):
+        # Set time to a Monday (2023-01-02 is a Monday)
+        monday = datetime(2023, 1, 2, 12, 0, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = monday
+
+        weekend_badge, _ = Badge.objects.get_or_create(
+            slug='weekend-warrior',
+            defaults={'name': 'Weekend Warrior', 'description': 'Watched 5 episodes on a weekend'}
+        )
+
+        # Watch 5 episodes on Monday
+        for i in range(5):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=self.episodes[i],
+                duration=1200
+            )
+
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
