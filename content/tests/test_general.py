@@ -7,8 +7,8 @@ import uuid
 import shutil
 import os
 from django.conf import settings
-from .models import Anime, Season, Episode, VideoFile
-from .tasks import encode_episode
+from content.models import Anime, Season, Episode, VideoFile
+from content.tasks import encode_episode
 
 User = get_user_model()
 
