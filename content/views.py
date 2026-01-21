@@ -8,7 +8,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.throttling import UserRateThrottle, ScopedRateThrottle
 from .models import VideoFile, Episode, Anime, Subscription, Genre
+from core.utils import rate_limit_ip
 
+@rate_limit_ip(limit=20, period=60)
 def search_view(request):
     query = request.GET.get('q')
     genre_name = request.GET.get('genre')
