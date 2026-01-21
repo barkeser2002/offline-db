@@ -9,6 +9,9 @@ from django.conf import settings
 import hmac
 import hashlib
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 def verify_shopier_signature(post_data):
     """
@@ -24,7 +27,9 @@ def verify_shopier_signature(post_data):
         # If secret is not configured, we can't verify.
         # In a real scenario, this should probably fail, but to avoid breaking existing dev envs without secret:
         if settings.DEBUG:
+            logger.warning("SHOPIER_SECRET is missing. Skipping signature verification in DEBUG mode.")
             return True
+        logger.error("SHOPIER_SECRET is missing in production. Signature verification failed.")
         return False
 
     signature = post_data.get('signature')
