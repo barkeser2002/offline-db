@@ -194,6 +194,24 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 13. Daily Viewer: Watched anime for 30 consecutive days.
+    try:
+        daily_viewer_badge = Badge.objects.get(slug='daily-viewer')
+        if not UserBadge.objects.filter(user=user, badge=daily_viewer_badge).exists():
+            today = timezone.now().date()
+            start_date = today - timedelta(days=29)  # 30 days including today
+
+            # Count distinct days in the last 30 days
+            distinct_days_count = WatchLog.objects.filter(
+                user=user,
+                watched_at__gte=start_date
+            ).values('watched_at__date').distinct().count()
+
+            if distinct_days_count >= 30:
+                UserBadge.objects.get_or_create(user=user, badge=daily_viewer_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
