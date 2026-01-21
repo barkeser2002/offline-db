@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
 from unittest.mock import patch
 from users.models import User, Badge, UserBadge, WatchLog
-from content.models import Anime, Season, Episode, Subscription
+from content.models import Anime, Season, Episode, Subscription, Genre
 from core.models import ChatMessage
 from users.services import check_badges
 
@@ -346,3 +346,88 @@ class BadgeSystemTests(TestCase):
             )
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
+
+    def test_genre_explorer_badge(self):
+        """Test for Genre Explorer badge"""
+        genre_explorer_badge, _ = Badge.objects.get_or_create(
+            slug='genre-explorer',
+            defaults={'name': 'Genre Explorer', 'description': 'Watched anime from 5 different genres.'}
+        )
+
+        # Create 5 genres
+        genres = []
+        for i in range(5):
+            genre = Genre.objects.create(name=f"Genre {i}", slug=f"genre-{i}")
+            genres.append(genre)
+
+        # Create 5 animes, each with a different genre
+        animes = []
+        for i in range(5):
+            anime = Anime.objects.create(title=f"Genre Anime {i}")
+            anime.genres.add(genres[i])
+            animes.append(anime)
+
+        # Create 1 episode for each anime
+        episodes = []
+        for i in range(5):
+            season = Season.objects.create(anime=animes[i], number=1)
+            episode = Episode.objects.create(season=season, number=1)
+            episodes.append(episode)
+
+        # Watch 4 episodes from different genres
+        for i in range(4):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=episodes[i],
+                duration=1200
+            )
+
+        # Verify user has 4 distinct genres watched
+        # Using service logic just to check our assumption in test setup
+        # But we primarily check if badge exists or not
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
+
+        # Watch 5th episode from 5th genre
+        WatchLog.objects.create(
+            user=self.user,
+            episode=episodes[4],
+            duration=1200
+        )
+
+        # Now badge should be awarded
+        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
+
+    def test_genre_explorer_badge_duplicate_genre(self):
+        """Test that watching same genre across different animes doesn't count towards the 5 unique genres"""
+        genre_explorer_badge, _ = Badge.objects.get_or_create(
+            slug='genre-explorer',
+            defaults={'name': 'Genre Explorer', 'description': 'Watched anime from 5 different genres.'}
+        )
+
+        # Create 1 genre
+        genre = Genre.objects.create(name="Action", slug="action")
+
+        # Create 5 animes, all with same genre
+        animes = []
+        for i in range(5):
+            anime = Anime.objects.create(title=f"Action Anime {i}")
+            anime.genres.add(genre)
+            animes.append(anime)
+
+        # Create episodes
+        episodes = []
+        for i in range(5):
+            season = Season.objects.create(anime=animes[i], number=1)
+            episode = Episode.objects.create(season=season, number=1)
+            episodes.append(episode)
+
+        # Watch all 5
+        for i in range(5):
+            WatchLog.objects.create(
+                user=self.user,
+                episode=episodes[i],
+                duration=1200
+            )
+
+        # Should not have badge because only 1 unique genre watched
+        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())

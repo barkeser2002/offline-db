@@ -4,10 +4,18 @@ from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
+class Genre(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
 class Anime(models.Model):
     title = models.CharField(max_length=255)
     synopsis = models.TextField(blank=True)
     cover_image = models.URLField(blank=True, null=True)
+    genres = models.ManyToManyField(Genre, related_name='animes', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
