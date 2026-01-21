@@ -92,6 +92,18 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 4.5. Morning Glory: Watched an episode between 6 AM and 9 AM.
+    try:
+        morning_glory_badge = Badge.objects.get(slug='morning-glory')
+        if not UserBadge.objects.filter(user=user, badge=morning_glory_badge).exists():
+            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
+            if last_log:
+                hour = last_log.watched_at.hour
+                if 6 <= hour < 9:
+                    UserBadge.objects.get_or_create(user=user, badge=morning_glory_badge)
+    except Badge.DoesNotExist:
+        pass
+
     # 5. Early Bird: Watched an episode within 1 hour of release.
     try:
         early_bird_badge = Badge.objects.get(slug='early-bird')
