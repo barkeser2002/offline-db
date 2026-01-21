@@ -4,6 +4,7 @@ Django settings for AniScrap project.
 
 import os
 from pathlib import Path
+import logging
 from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -253,6 +254,8 @@ CONTACT_EMAIL = "info@bariskeser.com"
 CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
 SHOPIER_SECRET = os.getenv('SHOPIER_SECRET')
 
+if not SHOPIER_SECRET and not DEBUG:
+    logging.getLogger('django.conf').warning("SHOPIER_SECRET is not set in production. Billing callbacks will fail.")
 
 # Unfold Admin Theme Configuration
 UNFOLD = {
