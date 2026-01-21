@@ -108,3 +108,15 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.anime} ({self.rating}/10)"
+
+class WatchParty(models.Model):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='watch_parties')
+    host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hosted_parties')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Party {self.uuid} - {self.episode}"
+
+    def get_absolute_url(self):
+        return reverse('watch_party_detail', args=[str(self.uuid)])
