@@ -1,5 +1,5 @@
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 from django.db.models import Count
 from .models import Badge, UserBadge, WatchLog
 from core.models import ChatMessage
@@ -178,16 +178,14 @@ def check_badges(user):
         if not UserBadge.objects.filter(user=user, badge=streak_master_badge).exists():
             today = timezone.now().date()
             start_date = today - timedelta(days=6)
+            # Make start_date aware to prevent naive datetime warnings
+            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
 
             # Count distinct days in the last 7 days (inclusive)
             distinct_days_count = WatchLog.objects.filter(
                 user=user,
-                watched_at__gte=start_date  # Check from start of the 7-day window
+                watched_at__gte=start_datetime  # Check from start of the 7-day window
             ).values('watched_at__date').distinct().count()
-
-            # Note: We use distinct dates. If the user watched every day for the last 7 days, count is 7.
-            # However, we must be careful about timezone. 'watched_at__date' extracts date in DB timezone (usually UTC).
-            # This is acceptable for this badge logic.
 
             if distinct_days_count >= 7:
                 UserBadge.objects.get_or_create(user=user, badge=streak_master_badge)
@@ -200,11 +198,13 @@ def check_badges(user):
         if not UserBadge.objects.filter(user=user, badge=daily_viewer_badge).exists():
             today = timezone.now().date()
             start_date = today - timedelta(days=29)  # 30 days including today
+            # Make start_date aware to prevent naive datetime warnings
+            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
 
             # Count distinct days in the last 30 days
             distinct_days_count = WatchLog.objects.filter(
                 user=user,
-                watched_at__gte=start_date
+                watched_at__gte=start_datetime
             ).values('watched_at__date').distinct().count()
 
             if distinct_days_count >= 30:

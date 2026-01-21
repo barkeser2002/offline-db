@@ -192,10 +192,6 @@ class BadgeSystemTests(TestCase):
             duration=100
         )
 
-        # Trigger check manually because our signal setup might be tricky with mock times in other tests
-        # But signals are synchronous, so it should have run.
-        # check_badges(self.user) # Redundant if signal works
-
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
 
         # Case 2: Watched early (30 mins after release)
@@ -203,8 +199,6 @@ class BadgeSystemTests(TestCase):
             season=self.season,
             number=101
         )
-        # Ensure created_at is strictly set (though auto_now_add handles it)
-        # We'll trust auto_now_add sets it to Now.
 
         # We need to simulate that the Episode was created "just now" and we watched it "just now".
         # Since logic compares (watched_at - created_at) <= 1h.
@@ -383,8 +377,6 @@ class BadgeSystemTests(TestCase):
             )
 
         # Verify user has 4 distinct genres watched
-        # Using service logic just to check our assumption in test setup
-        # But we primarily check if badge exists or not
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
 
         # Watch 5th episode from 5th genre
