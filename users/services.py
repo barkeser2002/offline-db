@@ -277,6 +277,17 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 16. Party Host: Hosted 5 Watch Parties.
+    try:
+        party_host_badge = Badge.objects.get(slug='party-host')
+        if not UserBadge.objects.filter(user=user, badge=party_host_badge).exists():
+            from content.models import WatchParty
+            host_count = WatchParty.objects.filter(host=user).count()
+            if host_count >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=party_host_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
@@ -298,5 +309,19 @@ def check_chat_badges(user):
             distinct_rooms = ChatMessage.objects.filter(user=user).values('room_name').distinct().count()
             if distinct_rooms >= 5:
                 UserBadge.objects.get_or_create(user=user, badge=social_butterfly_badge)
+    except Badge.DoesNotExist:
+        pass
+
+    # 17. Party Animal: Participated in 5 different Watch Parties.
+    try:
+        party_animal_badge = Badge.objects.get(slug='party-animal')
+        if not UserBadge.objects.filter(user=user, badge=party_animal_badge).exists():
+            distinct_parties = ChatMessage.objects.filter(
+                user=user,
+                room_name__startswith='party_'
+            ).values('room_name').distinct().count()
+
+            if distinct_parties >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=party_animal_badge)
     except Badge.DoesNotExist:
         pass
