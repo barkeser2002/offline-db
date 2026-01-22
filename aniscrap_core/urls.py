@@ -3,11 +3,12 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from content.sitemaps import AnimeSitemap, EpisodeSitemap
+from content.sitemaps import AnimeSitemap, EpisodeSitemap, GenreSitemap
 
 sitemaps = {
     'anime': AnimeSitemap,
     'episodes': EpisodeSitemap,
+    'genres': GenreSitemap,
 }
 
 urlpatterns = [

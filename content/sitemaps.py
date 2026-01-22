@@ -1,5 +1,5 @@
 from django.contrib.sitemaps import Sitemap
-from .models import Anime, Episode
+from .models import Anime, Episode, Genre
 
 class AnimeSitemap(Sitemap):
     changefreq = "weekly"
@@ -10,6 +10,13 @@ class AnimeSitemap(Sitemap):
 
     def lastmod(self, obj):
         return obj.created_at
+
+class GenreSitemap(Sitemap):
+    changefreq = "weekly"
+    priority = 0.6
+
+    def items(self):
+        return Genre.objects.all().order_by('name')
 
 class EpisodeSitemap(Sitemap):
     changefreq = "monthly"
