@@ -85,6 +85,7 @@ class SubscribeAnimeAPIView(APIView):
 
         return Response({'status': 'subscribed'})
 
+@rate_limit_ip(limit=5, period=300)
 @login_required
 def create_watch_party(request, episode_id):
     episode = get_object_or_404(Episode, id=episode_id)

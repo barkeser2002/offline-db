@@ -1,10 +1,12 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.cache import cache
 from users.models import User
 from content.models import Anime, Season, Episode, WatchParty
 
 class WatchPartyTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = Client()
         self.user = User.objects.create_user(username='testuser', password='password')
         self.anime = Anime.objects.create(title="Test Anime")
