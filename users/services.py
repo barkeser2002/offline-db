@@ -255,6 +255,11 @@ def check_badges(user):
         if movie_count >= 5:
             award('movie-buff')
 
+    # 22. Trendsetter: Hosted a Watch Party with 5 concurrent viewers.
+    if 'trendsetter' not in awarded_slugs and 'trendsetter' in all_badges:
+        if WatchParty.objects.filter(host=user, max_participants__gte=5).exists():
+            award('trendsetter')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)

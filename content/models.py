@@ -128,6 +128,7 @@ class WatchParty(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='watch_parties')
     host = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='hosted_parties')
+    max_participants = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

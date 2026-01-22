@@ -1,4 +1,5 @@
 import json
+import asyncio
 import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -190,13 +191,29 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
     def update_user_count(self, change):
         key = f"watch_party_count_{self.room_name}"
         try:
-            return cache.incr(key, change)
+            count = cache.incr(key, change)
         except ValueError:
-            new_value = 1 if change > 0 else 0
-            cache.set(key, new_value, timeout=86400)
-            return new_value
+            count = 1 if change > 0 else 0
+            cache.set(key, count, timeout=86400)
+
+        return count
+
+    @database_sync_to_async
+    def update_max_participants(self, count):
+        if self.room_name.startswith('party_'):
+            try:
+                uuid_str = self.room_name.split('party_')[1]
+                party = WatchParty.objects.get(uuid=uuid_str)
+                if count > party.max_participants:
+                    party.max_participants = count
+                    party.save(update_fields=['max_participants'])
+            except (WatchParty.DoesNotExist, IndexError, ValueError):
+                pass
 
     async def broadcast_user_count(self, count):
+        # Update DB for max participants asynchronously
+        asyncio.create_task(self.update_max_participants(count))
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
