@@ -2,6 +2,9 @@ import json
 import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.core.cache import cache
+from asgiref.sync import sync_to_async
+from core.models import ChatMessage
 from .models import WatchParty
 
 class WatchPartyConsumer(AsyncWebsocketConsumer):
@@ -17,6 +20,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
             await self.accept()
 
+            # Update user count
+            count = await self.update_user_count(1)
+            await self.broadcast_user_count(count)
+
             # Broadcast join message
             user = self.scope.get("user")
             if user and user.is_authenticated:
@@ -30,11 +37,25 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
                     }
                 )
 
+            # Send last 50 messages
+            last_messages = await self.get_last_messages()
+            for msg in last_messages:
+                await self.send(text_data=json.dumps({
+                    'type': 'chat_message',
+                    'message': msg['message'],
+                    'username': msg['username'],
+                    'created_at': str(msg['created_at'])
+                }))
+
         except Exception:
             traceback.print_exc()
             raise
 
     async def disconnect(self, close_code):
+        # Update user count
+        count = await self.update_user_count(-1)
+        await self.broadcast_user_count(count)
+
         user = self.scope.get("user")
         if user and user.is_authenticated:
              await self.channel_layer.group_send(
@@ -70,12 +91,18 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
                 # Chat message
                 user = self.scope.get('user')
                 username = user.username if user and user.is_authenticated else "Anonymous"
+                message = data['message']
+
+                # Save to DB
+                msg_obj = await self.save_message(username, message)
+
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
-                        'message': data['message'],
+                        'message': message,
                         'username': username,
+                        'created_at': str(msg_obj.created_at),
                     }
                 )
 
@@ -118,6 +145,7 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'username': event['username'],
             'is_system': event.get('is_system', False),
+            'created_at': event.get('created_at'),
         }))
 
     @database_sync_to_async
@@ -139,3 +167,47 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             pass
 
         return False
+
+    @database_sync_to_async
+    def save_message(self, username, message):
+        user = self.scope.get("user")
+        if user and not user.is_authenticated:
+             user = None
+
+        return ChatMessage.objects.create(
+            room_name=self.room_name,
+            username=username,
+            message=message,
+            user=user
+        )
+
+    @database_sync_to_async
+    def get_last_messages(self):
+        messages = ChatMessage.objects.filter(room_name=self.room_name).order_by('-created_at')[:50]
+        return [{'username': m.username, 'message': m.message, 'created_at': m.created_at} for m in reversed(list(messages))]
+
+    @sync_to_async
+    def update_user_count(self, change):
+        key = f"watch_party_count_{self.room_name}"
+        try:
+            return cache.incr(key, change)
+        except ValueError:
+            new_value = 1 if change > 0 else 0
+            cache.set(key, new_value, timeout=86400)
+            return new_value
+
+    async def broadcast_user_count(self, count):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'user_count',
+                'count': count
+            }
+        )
+
+    async def user_count(self, event):
+        count = event['count']
+        await self.send(text_data=json.dumps({
+            'type': 'user_count',
+            'count': count
+        }))
