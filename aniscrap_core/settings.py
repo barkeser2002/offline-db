@@ -264,7 +264,8 @@ CORS_ALLOW_ALL_ORIGINS = os.getenv('CORS_ALLOW_ALL_ORIGINS', 'False') == 'True'
 SHOPIER_SECRET = os.getenv('SHOPIER_SECRET')
 
 if not SHOPIER_SECRET and not DEBUG:
-    logging.getLogger('django.conf').warning("SHOPIER_SECRET is not set in production. Billing callbacks will fail.")
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("SHOPIER_SECRET is not set in production. Billing callbacks will fail.")
 
 # Unfold Admin Theme Configuration
 UNFOLD = {
