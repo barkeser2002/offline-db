@@ -274,6 +274,18 @@ def check_badges(user):
                 if watched_count >= total_episodes:
                     award('super-fan')
 
+    # 24. Review Guru: Wrote 20 reviews.
+    if 'review-guru' not in awarded_slugs and 'review-guru' in all_badges:
+        review_count = Review.objects.filter(user=user).count()
+        if review_count >= 20:
+            award('review-guru')
+
+    # 25. Star Power: Rated 5 anime with a perfect 10/10 score.
+    if 'star-power' not in awarded_slugs and 'star-power' in all_badges:
+        perfect_score_count = Review.objects.filter(user=user, rating=10).count()
+        if perfect_score_count >= 5:
+            award('star-power')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
