@@ -125,28 +125,34 @@
             const messages = document.getElementById('chat-messages');
 
             const messageItem = document.createElement('div');
-            messageItem.className = 'bg-gray-700/50 p-2 rounded animate-fade-in';
 
-            const meta = document.createElement('div');
-            meta.className = 'flex justify-between text-xs text-gray-400 mb-1';
+            if (data.is_system) {
+                messageItem.className = 'text-center text-xs text-gray-500 italic my-2 animate-fade-in';
+                messageItem.textContent = data.message;
+            } else {
+                messageItem.className = 'bg-gray-700/50 p-2 rounded animate-fade-in';
 
-            const userSpan = document.createElement('span');
-            userSpan.className = 'font-bold text-blue-400';
-            userSpan.textContent = data.username;
+                const meta = document.createElement('div');
+                meta.className = 'flex justify-between text-xs text-gray-400 mb-1';
 
-            const timeSpan = document.createElement('span');
-            const date = new Date(data.created_at || Date.now());
-            timeSpan.textContent = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const userSpan = document.createElement('span');
+                userSpan.className = 'font-bold text-blue-400';
+                userSpan.textContent = data.username;
 
-            meta.appendChild(userSpan);
-            meta.appendChild(timeSpan);
+                const timeSpan = document.createElement('span');
+                const date = new Date(data.created_at || Date.now());
+                timeSpan.textContent = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 
-            const textDiv = document.createElement('div');
-            textDiv.className = 'text-sm text-gray-200 break-words';
-            textDiv.textContent = data.message;
+                meta.appendChild(userSpan);
+                meta.appendChild(timeSpan);
 
-            messageItem.appendChild(meta);
-            messageItem.appendChild(textDiv);
+                const textDiv = document.createElement('div');
+                textDiv.className = 'text-sm text-gray-200 break-words';
+                textDiv.textContent = data.message;
+
+                messageItem.appendChild(meta);
+                messageItem.appendChild(textDiv);
+            }
 
             messages.appendChild(messageItem);
             messages.scrollTop = messages.scrollHeight;

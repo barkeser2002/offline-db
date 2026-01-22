@@ -22,6 +22,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         count = await self.update_user_count(1)
         await self.broadcast_user_count(count)
 
+        # Broadcast System Message (Join)
+        user = self.scope.get("user")
+        if user and user.is_authenticated:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': f"{user.username} joined the chat.",
+                    'username': 'System',
+                    'is_system': True,
+                }
+            )
+
         # Send last 50 messages
         last_messages = await self.get_last_messages()
         for msg in last_messages:
@@ -42,6 +55,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Update user count
         count = await self.update_user_count(-1)
         await self.broadcast_user_count(count)
+
+        # Broadcast System Message (Leave)
+        user = self.scope.get("user")
+        if user and user.is_authenticated:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': f"{user.username} left the chat.",
+                    'username': 'System',
+                    'is_system': True,
+                }
+            )
 
     # Receive message from WebSocket
     async def receive(self, text_data):
@@ -76,12 +102,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def chat_message(self, event):
         message = event['message']
         username = event.get('username', 'Anonymous')
+        is_system = event.get('is_system', False)
 
         # Send message to WebSocket
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'message': message,
-            'username': username
+            'username': username,
+            'is_system': is_system,
         }))
 
     async def user_count(self, event):
