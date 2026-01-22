@@ -1,13 +1,10 @@
 from django.test import TestCase
 from django.urls import reverse
-from content.models import Anime, Genre, Episode, Season
+from content.models import Anime, Season, Episode
 
 class SitemapTests(TestCase):
     def setUp(self):
-        # Create dummy data
-        self.genre = Genre.objects.create(name="Action", slug="action")
         self.anime = Anime.objects.create(title="Test Anime")
-        self.anime.genres.add(self.genre)
         self.season = Season.objects.create(anime=self.anime, number=1)
         self.episode = Episode.objects.create(season=self.season, number=1, title="Test Episode")
 
@@ -19,14 +16,16 @@ class SitemapTests(TestCase):
         response = self.client.get('/sitemap.xml')
         content = response.content.decode('utf-8')
 
-        # Check if anime URL is in sitemap
+        # Check if Anime URL is present
         self.assertIn(self.anime.get_absolute_url(), content)
 
-        # Check if episode URL is in sitemap
+        # Check if Episode URL is present
         self.assertIn(self.episode.get_absolute_url(), content)
 
     def test_sitemap_structure(self):
         response = self.client.get('/sitemap.xml')
         content = response.content.decode('utf-8')
-        self.assertIn('urlset', content)
-        self.assertIn('loc', content)
+
+        # Check for standard XML sitemap tags
+        self.assertIn('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"', content)
+        self.assertIn('<loc>', content)
