@@ -1,0 +1,32 @@
+import pytest
+from channels.testing import WebsocketCommunicator
+from aniscrap_core.asgi import application
+from content.models import WatchParty, Episode, Season, Anime
+from users.models import User
+from channels.db import database_sync_to_async
+
+@pytest.mark.asyncio
+@pytest.mark.django_db(transaction=True)
+async def test_watch_party_connection():
+    # Setup
+    user = await database_sync_to_async(User.objects.create_user)(username='host', password='password')
+    anime = await database_sync_to_async(Anime.objects.create)(title="Test Anime")
+    season = await database_sync_to_async(Season.objects.create)(anime=anime, number=1)
+    episode = await database_sync_to_async(Episode.objects.create)(season=season, number=1)
+    party = await database_sync_to_async(WatchParty.objects.create)(episode=episode, host=user)
+
+    room_name = f"party_{party.uuid}"
+
+    # Connect
+    communicator = WebsocketCommunicator(application, f"ws/watch-party/{room_name}/")
+    communicator.scope["user"] = user
+    connected, _ = await communicator.connect()
+    assert connected
+
+    # Receive join message
+    # Depending on implementation, it might be the first message
+    msg = await communicator.receive_json_from()
+    assert msg['type'] == 'chat_message'
+    assert 'joined the party' in msg['message']
+
+    await communicator.disconnect()

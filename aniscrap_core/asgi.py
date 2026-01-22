@@ -16,11 +16,13 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from django.urls import path
 from core.consumers import ChatConsumer
 from users.consumers import NotificationConsumer
+from content.consumers import WatchPartyConsumer
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter([
+            path("ws/watch-party/<str:room_name>/", WatchPartyConsumer.as_asgi()),
             path("ws/chat/<str:room_name>/", ChatConsumer.as_asgi()),
             path("ws/notifications/", NotificationConsumer.as_asgi()),
         ])
