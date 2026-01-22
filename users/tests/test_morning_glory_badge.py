@@ -1,8 +1,9 @@
 from django.test import TestCase
-from django.utils import timezone
 from users.models import User, Badge, UserBadge, WatchLog
 from content.models import Anime, Season, Episode
 from users.services import check_badges
+from unittest import mock
+from datetime import datetime, timezone as dt_timezone
 
 class MorningGloryBadgeTest(TestCase):
     def setUp(self):
@@ -17,50 +18,48 @@ class MorningGloryBadgeTest(TestCase):
         self.season = Season.objects.create(anime=self.anime, number=1)
         self.episode = Episode.objects.create(season=self.season, number=1, title="Ep 1")
 
-    def test_award_badge_at_6_am(self):
+    @mock.patch('django.utils.timezone.now')
+    def test_award_badge_at_6_am(self, mock_now):
         # Watch at 6:30 AM UTC
-        now = timezone.now()
-        target_time = now.replace(hour=6, minute=30, second=0, microsecond=0)
+        target_time = datetime(2024, 1, 1, 6, 30, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = target_time
 
-        w = WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
-        w.watched_at = target_time
-        w.save()
+        # Create log (auto_now_add uses mocked time)
+        WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
 
+        # Signal triggers check_badges automatically, but we can call it explicitly too to be safe/clear
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
-    def test_award_badge_at_8_59_am(self):
+    @mock.patch('django.utils.timezone.now')
+    def test_award_badge_at_8_59_am(self, mock_now):
         # Watch at 8:59 AM UTC
-        now = timezone.now()
-        target_time = now.replace(hour=8, minute=59, second=59, microsecond=0)
+        target_time = datetime(2024, 1, 1, 8, 59, 59, tzinfo=dt_timezone.utc)
+        mock_now.return_value = target_time
 
-        w = WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
-        w.watched_at = target_time
-        w.save()
+        WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
 
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
-    def test_no_badge_at_5_59_am(self):
+    @mock.patch('django.utils.timezone.now')
+    def test_no_badge_at_5_59_am(self, mock_now):
         # Watch at 5:59 AM UTC
-        now = timezone.now()
-        target_time = now.replace(hour=5, minute=59, second=59, microsecond=0)
+        target_time = datetime(2024, 1, 1, 5, 59, 59, tzinfo=dt_timezone.utc)
+        mock_now.return_value = target_time
 
-        w = WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
-        w.watched_at = target_time
-        w.save()
+        WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
 
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
-    def test_no_badge_at_9_00_am(self):
+    @mock.patch('django.utils.timezone.now')
+    def test_no_badge_at_9_00_am(self, mock_now):
         # Watch at 9:00 AM UTC
-        now = timezone.now()
-        target_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+        target_time = datetime(2024, 1, 1, 9, 0, 0, tzinfo=dt_timezone.utc)
+        mock_now.return_value = target_time
 
-        w = WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
-        w.watched_at = target_time
-        w.save()
+        WatchLog.objects.create(user=self.user, episode=self.episode, duration=100)
 
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
