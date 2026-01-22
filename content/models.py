@@ -1,4 +1,5 @@
 import uuid
+from urllib.parse import urlencode
 from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -10,6 +11,11 @@ class Genre(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        base_url = reverse('search')
+        query_string = urlencode({'genre': self.name})
+        return f"{base_url}?{query_string}"
 
 class Anime(models.Model):
     title = models.CharField(max_length=255)
