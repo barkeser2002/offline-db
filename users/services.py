@@ -192,6 +192,18 @@ def check_badges(user):
         if upload_count >= 5:
             award('content-creator')
 
+    # 19. Genre Savant: Watched 50 episodes of a single genre.
+    if 'genre-savant' not in awarded_slugs and 'genre-savant' in all_badges:
+        watched_episode_ids = WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct()
+        if watched_episode_ids:
+            qs = Genre.objects.filter(
+                animes__seasons__episodes__id__in=watched_episode_ids
+            ).annotate(
+                user_episode_count=Count('animes__seasons__episodes', filter=Q(animes__seasons__episodes__id__in=watched_episode_ids), distinct=True)
+            )
+            if qs.filter(user_episode_count__gte=50).exists():
+                award('genre-savant')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
