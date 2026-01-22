@@ -230,7 +230,12 @@ else:
     }
 
 # Celery Configuration
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+if USE_SQLITE:
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_TASK_ALWAYS_EAGER = True
+else:
+    CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -249,6 +254,7 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Footer Details
 SITE_NAME = "AniScrap"
+SITE_URL = os.getenv('SITE_URL', 'http://127.0.0.1:8000')
 SITE_AUTHOR = "Barış Keser"
 CONTACT_EMAIL = "info@bariskeser.com"
 
