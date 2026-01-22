@@ -288,6 +288,17 @@ def check_badges(user):
     except Badge.DoesNotExist:
         pass
 
+    # 18. Content Creator: Uploaded 5 videos.
+    try:
+        content_creator_badge = Badge.objects.get(slug='content-creator')
+        if not UserBadge.objects.filter(user=user, badge=content_creator_badge).exists():
+            from content.models import VideoFile
+            upload_count = VideoFile.objects.filter(uploader=user).count()
+            if upload_count >= 5:
+                UserBadge.objects.get_or_create(user=user, badge=content_creator_badge)
+    except Badge.DoesNotExist:
+        pass
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
