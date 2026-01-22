@@ -1,338 +1,237 @@
 from django.utils import timezone
 from datetime import timedelta, datetime
-from django.db.models import Count
+from django.db.models import Count, Q
 from .models import Badge, UserBadge, WatchLog
 from core.models import ChatMessage
-from content.models import Subscription, Review
+from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre
 
 def check_badges(user):
     """
     Checks and awards badges to the user based on criteria.
+    Optimized to minimize DB queries.
     """
+    # Bulk fetch badges and awarded status
+    all_badges = {b.slug: b for b in Badge.objects.all()}
+    awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
+
+    new_badges = []
+
+    def award(slug):
+        if slug in all_badges and slug not in awarded_slugs:
+            new_badges.append(UserBadge(user=user, badge=all_badges[slug]))
+            awarded_slugs.add(slug)
+
     # 0. Critic: Wrote first review.
-    try:
-        critic_badge = Badge.objects.get(slug='critic')
-        if not UserBadge.objects.filter(user=user, badge=critic_badge).exists():
-            if Review.objects.filter(user=user).exists():
-                UserBadge.objects.get_or_create(user=user, badge=critic_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'critic' not in awarded_slugs and 'critic' in all_badges:
+        if Review.objects.filter(user=user).exists():
+            award('critic')
 
     # 0.5. Opinionated: Wrote 5 reviews.
-    try:
-        opinionated_badge = Badge.objects.get(slug='opinionated')
-        if not UserBadge.objects.filter(user=user, badge=opinionated_badge).exists():
-            if Review.objects.filter(user=user).count() >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=opinionated_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'opinionated' not in awarded_slugs and 'opinionated' in all_badges:
+        if Review.objects.filter(user=user).count() >= 5:
+            award('opinionated')
 
     # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
-    try:
-        binge_badge = Badge.objects.get(slug='binge-watcher')
-        # Check if user already has it
-        if not UserBadge.objects.filter(user=user, badge=binge_badge).exists():
-            last_24h = timezone.now() - timedelta(hours=24)
-            # Count distinct episodes watched
-            distinct_episodes_count = WatchLog.objects.filter(
-                user=user,
-                watched_at__gte=last_24h
-            ).values('episode').distinct().count()
-
-            if distinct_episodes_count >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=binge_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'binge-watcher' not in awarded_slugs and 'binge-watcher' in all_badges:
+        last_24h = timezone.now() - timedelta(hours=24)
+        distinct_episodes_count = WatchLog.objects.filter(
+            user=user,
+            watched_at__gte=last_24h
+        ).values('episode').distinct().count()
+        if distinct_episodes_count >= 5:
+            award('binge-watcher')
 
     # 1.1 Weekend Warrior: Watched 5+ episodes on a single weekend day.
-    try:
-        weekend_warrior_badge = Badge.objects.get(slug='weekend-warrior')
-        if not UserBadge.objects.filter(user=user, badge=weekend_warrior_badge).exists():
-            # Check if today is Saturday (5) or Sunday (6)
-            today = timezone.now().date()
-            if today.weekday() in [5, 6]:
-                # Count episodes watched TODAY
-                distinct_episodes_today = WatchLog.objects.filter(
-                    user=user,
-                    watched_at__date=today
-                ).values('episode').distinct().count()
-
-                if distinct_episodes_today >= 5:
-                    UserBadge.objects.get_or_create(user=user, badge=weekend_warrior_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'weekend-warrior' not in awarded_slugs and 'weekend-warrior' in all_badges:
+        today = timezone.now().date()
+        if today.weekday() in [5, 6]:
+            distinct_episodes_today = WatchLog.objects.filter(
+                user=user,
+                watched_at__date=today
+            ).values('episode').distinct().count()
+            if distinct_episodes_today >= 5:
+                award('weekend-warrior')
 
     # 2. Supporter: Is Premium.
-    try:
-        supporter_badge = Badge.objects.get(slug='supporter')
-        if not UserBadge.objects.filter(user=user, badge=supporter_badge).exists():
-            if user.is_premium:
-                UserBadge.objects.get_or_create(user=user, badge=supporter_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'supporter' not in awarded_slugs and 'supporter' in all_badges:
+        if user.is_premium:
+            award('supporter')
 
     # 3. Veteran: Account created over 1 year ago.
-    try:
-        veteran_badge = Badge.objects.get(slug='veteran')
-        if not UserBadge.objects.filter(user=user, badge=veteran_badge).exists():
-            if user.date_joined <= timezone.now() - timedelta(days=365):
-                UserBadge.objects.get_or_create(user=user, badge=veteran_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'veteran' not in awarded_slugs and 'veteran' in all_badges:
+        if user.date_joined <= timezone.now() - timedelta(days=365):
+            award('veteran')
 
     # 4. Night Owl: Watched an episode between 2 AM and 5 AM.
-    try:
-        night_owl_badge = Badge.objects.get(slug='night-owl')
-        if not UserBadge.objects.filter(user=user, badge=night_owl_badge).exists():
-            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
-            if last_log:
-                hour = last_log.watched_at.hour
-                if 2 <= hour < 5:
-                    UserBadge.objects.get_or_create(user=user, badge=night_owl_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'night-owl' not in awarded_slugs and 'night-owl' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
+        if last_log:
+            hour = last_log.watched_at.hour
+            if 2 <= hour < 5:
+                award('night-owl')
 
     # 4.5. Morning Glory: Watched an episode between 6 AM and 9 AM.
-    try:
-        morning_glory_badge = Badge.objects.get(slug='morning-glory')
-        if not UserBadge.objects.filter(user=user, badge=morning_glory_badge).exists():
-            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
-            if last_log:
-                hour = last_log.watched_at.hour
-                if 6 <= hour < 9:
-                    UserBadge.objects.get_or_create(user=user, badge=morning_glory_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'morning-glory' not in awarded_slugs and 'morning-glory' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
+        if last_log:
+            hour = last_log.watched_at.hour
+            if 6 <= hour < 9:
+                award('morning-glory')
 
     # 5. Early Bird: Watched an episode within 1 hour of release.
-    try:
-        early_bird_badge = Badge.objects.get(slug='early-bird')
-        if not UserBadge.objects.filter(user=user, badge=early_bird_badge).exists():
-            last_log = WatchLog.objects.filter(user=user).select_related('episode').order_by('-watched_at').first()
-            if last_log:
-                episode_created_at = last_log.episode.created_at
-                watched_at = last_log.watched_at
-
-                # Check if watched within 1 hour (3600 seconds) of creation
-                # We use abs() just in case of slight clock skews, though usually watched_at > created_at
-                diff = watched_at - episode_created_at
-                if timedelta(seconds=0) <= diff <= timedelta(hours=1):
-                    UserBadge.objects.get_or_create(user=user, badge=early_bird_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'early-bird' not in awarded_slugs and 'early-bird' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).select_related('episode').order_by('-watched_at').first()
+        if last_log:
+            episode_created_at = last_log.episode.created_at
+            watched_at = last_log.watched_at
+            diff = watched_at - episode_created_at
+            if timedelta(seconds=0) <= diff <= timedelta(hours=1):
+                award('early-bird')
 
     # 7. Collector: Subscribed to 10 different anime.
-    try:
-        collector_badge = Badge.objects.get(slug='collector')
-        if not UserBadge.objects.filter(user=user, badge=collector_badge).exists():
-            subscription_count = Subscription.objects.filter(user=user).count()
-            if subscription_count >= 10:
-                UserBadge.objects.get_or_create(user=user, badge=collector_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'collector' not in awarded_slugs and 'collector' in all_badges:
+        subscription_count = Subscription.objects.filter(user=user).count()
+        if subscription_count >= 10:
+            award('collector')
 
     # 8. Season Completist: Completed an entire season.
-    try:
-        season_completist_badge = Badge.objects.get(slug='season-completist')
-        # This badge can be awarded multiple times? Usually badges are unique per user-badge pair in this system.
-        # Assuming unique for now based on other badges.
-        if not UserBadge.objects.filter(user=user, badge=season_completist_badge).exists():
-            last_log = WatchLog.objects.filter(user=user).select_related('episode__season').order_by('-watched_at').first()
-            if last_log:
-                season = last_log.episode.season
-                total_episodes = season.episodes.count()
-                if total_episodes > 0:
-                    watched_count = WatchLog.objects.filter(
-                        user=user,
-                        episode__season=season
-                    ).values('episode').distinct().count()
-
-                    if watched_count >= total_episodes:
-                        UserBadge.objects.get_or_create(user=user, badge=season_completist_badge)
-    except Badge.DoesNotExist:
-        pass
-
-    # 9. Marathoner: Watched 50 episodes in total.
-    try:
-        marathoner_badge = Badge.objects.get(slug='marathoner')
-        if not UserBadge.objects.filter(user=user, badge=marathoner_badge).exists():
-            watched_count = WatchLog.objects.filter(user=user).values('episode').distinct().count()
-            if watched_count >= 50:
-                UserBadge.objects.get_or_create(user=user, badge=marathoner_badge)
-    except Badge.DoesNotExist:
-        pass
-
-    # 10. Genre Explorer: Watched anime from 5 different genres.
-    try:
-        genre_explorer_badge = Badge.objects.get(slug='genre-explorer')
-        if not UserBadge.objects.filter(user=user, badge=genre_explorer_badge).exists():
-            # Get all episodes watched by user
-            watched_episodes = WatchLog.objects.filter(user=user).select_related('episode__season__anime')
-
-            # Optimization: Filter distinct animes first.
-            distinct_anime_ids = watched_episodes.values_list('episode__season__anime_id', flat=True).distinct()
-
-            from content.models import Anime
-            # Count distinct genres across all watched animes
-            distinct_genres_count = Anime.objects.filter(
-                id__in=distinct_anime_ids
-            ).values('genres__id').distinct().count()
-
-            if distinct_genres_count >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=genre_explorer_badge)
-    except Badge.DoesNotExist:
-        pass
-
-    # 11. Loyal Fan: Watched 10 episodes of the same anime.
-    try:
-        loyal_fan_badge = Badge.objects.get(slug='loyal-fan')
-        if not UserBadge.objects.filter(user=user, badge=loyal_fan_badge).exists():
-            # Get the anime of the last watched episode
-            last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
-            if last_log:
-                anime = last_log.episode.season.anime
-                # Count episodes watched for this anime
+    if 'season-completist' not in awarded_slugs and 'season-completist' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).select_related('episode__season').order_by('-watched_at').first()
+        if last_log:
+            season = last_log.episode.season
+            total_episodes = season.episodes.count()
+            if total_episodes > 0:
                 watched_count = WatchLog.objects.filter(
                     user=user,
-                    episode__season__anime=anime
+                    episode__season=season
                 ).values('episode').distinct().count()
+                if watched_count >= total_episodes:
+                    award('season-completist')
 
-                if watched_count >= 10:
-                    UserBadge.objects.get_or_create(user=user, badge=loyal_fan_badge)
-    except Badge.DoesNotExist:
-        pass
+    # 9. Marathoner: Watched 50 episodes in total.
+    if 'marathoner' not in awarded_slugs and 'marathoner' in all_badges:
+        watched_count = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+        if watched_count >= 50:
+            award('marathoner')
+
+    # 10. Genre Explorer: Watched anime from 5 different genres.
+    if 'genre-explorer' not in awarded_slugs and 'genre-explorer' in all_badges:
+        watched_episodes = WatchLog.objects.filter(user=user).select_related('episode__season__anime')
+        distinct_anime_ids = watched_episodes.values_list('episode__season__anime_id', flat=True).distinct()
+        distinct_genres_count = Anime.objects.filter(
+            id__in=distinct_anime_ids
+        ).values('genres__id').distinct().count()
+        if distinct_genres_count >= 5:
+            award('genre-explorer')
+
+    # 11. Loyal Fan: Watched 10 episodes of the same anime.
+    if 'loyal-fan' not in awarded_slugs and 'loyal-fan' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+        if last_log:
+            anime = last_log.episode.season.anime
+            watched_count = WatchLog.objects.filter(
+                user=user,
+                episode__season__anime=anime
+            ).values('episode').distinct().count()
+            if watched_count >= 10:
+                award('loyal-fan')
 
     # 12. Streak Master: Watched anime for 7 consecutive days.
-    try:
-        streak_master_badge = Badge.objects.get(slug='streak-master')
-        if not UserBadge.objects.filter(user=user, badge=streak_master_badge).exists():
-            today = timezone.now().date()
-            start_date = today - timedelta(days=6)
-            # Make start_date aware to prevent naive datetime warnings
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-
-            # Count distinct days in the last 7 days (inclusive)
-            distinct_days_count = WatchLog.objects.filter(
-                user=user,
-                watched_at__gte=start_datetime  # Check from start of the 7-day window
-            ).values('watched_at__date').distinct().count()
-
-            if distinct_days_count >= 7:
-                UserBadge.objects.get_or_create(user=user, badge=streak_master_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'streak-master' not in awarded_slugs and 'streak-master' in all_badges:
+        today = timezone.now().date()
+        start_date = today - timedelta(days=6)
+        start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+        distinct_days_count = WatchLog.objects.filter(
+            user=user,
+            watched_at__gte=start_datetime
+        ).values('watched_at__date').distinct().count()
+        if distinct_days_count >= 7:
+            award('streak-master')
 
     # 13. Daily Viewer: Watched anime for 30 consecutive days.
-    try:
-        daily_viewer_badge = Badge.objects.get(slug='daily-viewer')
-        if not UserBadge.objects.filter(user=user, badge=daily_viewer_badge).exists():
-            today = timezone.now().date()
-            start_date = today - timedelta(days=29)  # 30 days including today
-            # Make start_date aware to prevent naive datetime warnings
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-
-            # Count distinct days in the last 30 days
-            distinct_days_count = WatchLog.objects.filter(
-                user=user,
-                watched_at__gte=start_datetime
-            ).values('watched_at__date').distinct().count()
-
-            if distinct_days_count >= 30:
-                UserBadge.objects.get_or_create(user=user, badge=daily_viewer_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'daily-viewer' not in awarded_slugs and 'daily-viewer' in all_badges:
+        today = timezone.now().date()
+        start_date = today - timedelta(days=29)
+        start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
+        distinct_days_count = WatchLog.objects.filter(
+            user=user,
+            watched_at__gte=start_datetime
+        ).values('watched_at__date').distinct().count()
+        if distinct_days_count >= 30:
+            award('daily-viewer')
 
     # 14. Genre Master: Watched 10 different anime from the same genre.
-    try:
-        genre_master_badge = Badge.objects.get(slug='genre-master')
-        if not UserBadge.objects.filter(user=user, badge=genre_master_badge).exists():
-            watched_anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
-
-            if watched_anime_ids:
-                from django.db.models import Q
-                from content.models import Genre
-
-                # Count distinct animes per genre for the animes the user has watched
-                qs = Genre.objects.filter(animes__id__in=watched_anime_ids).annotate(
-                    user_anime_count=Count('animes', filter=Q(animes__id__in=watched_anime_ids))
-                )
-
-                if qs.filter(user_anime_count__gte=10).exists():
-                     UserBadge.objects.get_or_create(user=user, badge=genre_master_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'genre-master' not in awarded_slugs and 'genre-master' in all_badges:
+        watched_anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
+        if watched_anime_ids:
+            qs = Genre.objects.filter(animes__id__in=watched_anime_ids).annotate(
+                user_anime_count=Count('animes', filter=Q(animes__id__in=watched_anime_ids))
+            )
+            if qs.filter(user_anime_count__gte=10).exists():
+                 award('genre-master')
 
     # 15. Speedster: Watched 3 episodes in 1 hour.
-    try:
-        speedster_badge = Badge.objects.get(slug='speedster')
-        if not UserBadge.objects.filter(user=user, badge=speedster_badge).exists():
-            last_hour = timezone.now() - timedelta(hours=1)
-            count = WatchLog.objects.filter(
-                user=user,
-                watched_at__gte=last_hour
-            ).values('episode').distinct().count()
-
-            if count >= 3:
-                UserBadge.objects.get_or_create(user=user, badge=speedster_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'speedster' not in awarded_slugs and 'speedster' in all_badges:
+        last_hour = timezone.now() - timedelta(hours=1)
+        count = WatchLog.objects.filter(
+            user=user,
+            watched_at__gte=last_hour
+        ).values('episode').distinct().count()
+        if count >= 3:
+            award('speedster')
 
     # 16. Party Host: Hosted 5 Watch Parties.
-    try:
-        party_host_badge = Badge.objects.get(slug='party-host')
-        if not UserBadge.objects.filter(user=user, badge=party_host_badge).exists():
-            from content.models import WatchParty
-            host_count = WatchParty.objects.filter(host=user).count()
-            if host_count >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=party_host_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'party-host' not in awarded_slugs and 'party-host' in all_badges:
+        host_count = WatchParty.objects.filter(host=user).count()
+        if host_count >= 5:
+            award('party-host')
 
     # 18. Content Creator: Uploaded 5 videos.
-    try:
-        content_creator_badge = Badge.objects.get(slug='content-creator')
-        if not UserBadge.objects.filter(user=user, badge=content_creator_badge).exists():
-            from content.models import VideoFile
-            upload_count = VideoFile.objects.filter(uploader=user).count()
-            if upload_count >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=content_creator_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'content-creator' not in awarded_slugs and 'content-creator' in all_badges:
+        upload_count = VideoFile.objects.filter(uploader=user).count()
+        if upload_count >= 5:
+            award('content-creator')
+
+    # Commit all new badges
+    if new_badges:
+        UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
 
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
+    Optimized to minimize DB queries.
     """
+    all_badges = {b.slug: b for b in Badge.objects.all()}
+    awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
+
+    new_badges = []
+
+    def award(slug):
+        if slug in all_badges and slug not in awarded_slugs:
+            new_badges.append(UserBadge(user=user, badge=all_badges[slug]))
+            awarded_slugs.add(slug)
+
     # 5. Commentator: Posted 50 chat messages.
-    try:
-        commentator_badge = Badge.objects.get(slug='commentator')
-        if not UserBadge.objects.filter(user=user, badge=commentator_badge).exists():
-            message_count = ChatMessage.objects.filter(user=user).count()
-            if message_count >= 50:
-                UserBadge.objects.get_or_create(user=user, badge=commentator_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'commentator' not in awarded_slugs and 'commentator' in all_badges:
+        message_count = ChatMessage.objects.filter(user=user).count()
+        if message_count >= 50:
+            award('commentator')
 
     # 6. Social Butterfly: Participated in 5 different chat rooms.
-    try:
-        social_butterfly_badge = Badge.objects.get(slug='social-butterfly')
-        if not UserBadge.objects.filter(user=user, badge=social_butterfly_badge).exists():
-            distinct_rooms = ChatMessage.objects.filter(user=user).values('room_name').distinct().count()
-            if distinct_rooms >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=social_butterfly_badge)
-    except Badge.DoesNotExist:
-        pass
+    if 'social-butterfly' not in awarded_slugs and 'social-butterfly' in all_badges:
+        distinct_rooms = ChatMessage.objects.filter(user=user).values('room_name').distinct().count()
+        if distinct_rooms >= 5:
+            award('social-butterfly')
 
     # 17. Party Animal: Participated in 5 different Watch Parties.
-    try:
-        party_animal_badge = Badge.objects.get(slug='party-animal')
-        if not UserBadge.objects.filter(user=user, badge=party_animal_badge).exists():
-            distinct_parties = ChatMessage.objects.filter(
-                user=user,
-                room_name__startswith='party_'
-            ).values('room_name').distinct().count()
+    if 'party-animal' not in awarded_slugs and 'party-animal' in all_badges:
+        distinct_parties = ChatMessage.objects.filter(
+            user=user,
+            room_name__startswith='party_'
+        ).values('room_name').distinct().count()
+        if distinct_parties >= 5:
+            award('party-animal')
 
-            if distinct_parties >= 5:
-                UserBadge.objects.get_or_create(user=user, badge=party_animal_badge)
-    except Badge.DoesNotExist:
-        pass
+    # Commit all new badges
+    if new_badges:
+        UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
