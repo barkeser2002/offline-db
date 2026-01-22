@@ -1,9 +1,42 @@
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.db.models import Count, Q
-from .models import Badge, UserBadge, WatchLog
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+from .models import Badge, UserBadge, WatchLog, Notification
 from core.models import ChatMessage
 from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre
+
+def _send_badge_notifications(user, new_badges):
+    """
+    Helper to create notifications and send WebSocket events for new badges.
+    """
+    if not new_badges:
+        return
+
+    notifications = []
+    for user_badge in new_badges:
+        notifications.append(Notification(
+            user=user,
+            title="New Badge Earned!",
+            message=f"You have unlocked the '{user_badge.badge.name}' badge!",
+        ))
+
+    Notification.objects.bulk_create(notifications)
+
+    channel_layer = get_channel_layer()
+    group_name = f"user_{user.id}"
+
+    for notif in notifications:
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'notification_message',
+                'title': notif.title,
+                'message': notif.message,
+                'link': notif.link or '',
+            }
+        )
 
 def check_badges(user):
     """
@@ -216,6 +249,7 @@ def check_badges(user):
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
+        _send_badge_notifications(user, new_badges)
 
 def check_chat_badges(user):
     """
@@ -256,3 +290,4 @@ def check_chat_badges(user):
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
+        _send_badge_notifications(user, new_badges)
