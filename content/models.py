@@ -18,10 +18,19 @@ class Genre(models.Model):
         return f"{base_url}?{query_string}"
 
 class Anime(models.Model):
+    TYPE_CHOICES = [
+        ('TV', 'TV Series'),
+        ('Movie', 'Movie'),
+        ('OVA', 'OVA'),
+        ('ONA', 'ONA'),
+        ('Special', 'Special'),
+    ]
+
     title = models.CharField(max_length=255)
     synopsis = models.TextField(blank=True)
     cover_image = models.URLField(blank=True, null=True)
     genres = models.ManyToManyField(Genre, related_name='animes', blank=True)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='TV')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -246,6 +246,15 @@ def check_badges(user):
         if pilot_count >= 5:
             award('pilot-connoisseur')
 
+    # 21. Movie Buff: Watched 5 different anime movies.
+    if 'movie-buff' not in awarded_slugs and 'movie-buff' in all_badges:
+        movie_count = WatchLog.objects.filter(
+            user=user,
+            episode__season__anime__type='Movie'
+        ).values('episode__season__anime').distinct().count()
+        if movie_count >= 5:
+            award('movie-buff')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
