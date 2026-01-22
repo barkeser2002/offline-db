@@ -204,6 +204,15 @@ def check_badges(user):
             if qs.filter(user_episode_count__gte=50).exists():
                 award('genre-savant')
 
+    # 20. Pilot Connoisseur: Watched the first episode of 5 different anime series.
+    if 'pilot-connoisseur' not in awarded_slugs and 'pilot-connoisseur' in all_badges:
+        pilot_count = WatchLog.objects.filter(
+            user=user,
+            episode__number=1
+        ).values('episode__season__anime').distinct().count()
+        if pilot_count >= 5:
+            award('pilot-connoisseur')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
