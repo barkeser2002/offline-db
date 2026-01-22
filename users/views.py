@@ -39,6 +39,8 @@ class UnreadNotificationCountAPIView(APIView):
 
 class MarkNotificationReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'notifications'
 
     def post(self, request, pk):
         try:
@@ -51,6 +53,8 @@ class MarkNotificationReadAPIView(APIView):
 
 class MarkAllNotificationsReadAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'notifications'
 
     def post(self, request):
         Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
