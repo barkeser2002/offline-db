@@ -41,7 +41,7 @@
                                 video.src = source;
                             }
 
-                            const player = new Plyr(video, {
+                            window.player = new Plyr(video, {
                                 controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
                             });
                         });
@@ -106,13 +106,56 @@
     document.addEventListener('DOMContentLoaded', () => {
         // Use the room_name passed from view
         const roomId = "{{ room_name }}";
+        const isHost = "{{ user.id }}" == "{{ party.host.id }}";
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const chatSocket = new WebSocket(
-            protocol + '//' + window.location.host + '/ws/chat/' + roomId + '/'
+            protocol + '//' + window.location.host + '/ws/watch-party/' + roomId + '/'
         );
+
+        // Video Sync Logic
+        setTimeout(() => {
+            const player = window.player;
+            if (player) {
+                let ignoreEvent = false;
+
+                if (isHost) {
+                    player.on('play', () => {
+                         if (!ignoreEvent) {
+                            chatSocket.send(JSON.stringify({ type: 'video_control', action: 'play', timestamp: player.currentTime }));
+                         }
+                         ignoreEvent = false;
+                    });
+                    player.on('pause', () => {
+                         if (!ignoreEvent) {
+                            chatSocket.send(JSON.stringify({ type: 'video_control', action: 'pause', timestamp: player.currentTime }));
+                         }
+                         ignoreEvent = false;
+                    });
+                    player.on('seeked', () => {
+                         if (!ignoreEvent) {
+                            chatSocket.send(JSON.stringify({ type: 'video_control', action: 'seek', timestamp: player.currentTime }));
+                         }
+                         ignoreEvent = false;
+                    });
+                }
+            }
+        }, 500); // Slight delay to ensure player is ready
 
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
+
+            if (data.type === 'video_control') {
+                const player = window.player;
+                if (player && !isHost) {
+                    // Sync logic for viewers
+                    if (Math.abs(player.currentTime - data.timestamp) > 0.5) {
+                        player.currentTime = data.timestamp;
+                    }
+                    if (data.action === 'play') player.play();
+                    else if (data.action === 'pause') player.pause();
+                }
+                return;
+            }
 
             if (data.type === 'user_count') {
                 const countElement = document.getElementById('online-count');
