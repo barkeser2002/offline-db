@@ -5,7 +5,7 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .models import Badge, UserBadge, WatchLog, Notification
 from core.models import ChatMessage
-from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre
+from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre, Episode
 
 def _send_badge_notifications(user, new_badges):
     """
@@ -259,6 +259,20 @@ def check_badges(user):
     if 'trendsetter' not in awarded_slugs and 'trendsetter' in all_badges:
         if WatchParty.objects.filter(host=user, max_participants__gte=5).exists():
             award('trendsetter')
+
+    # 23. Super Fan: Completed all episodes of an anime series.
+    if 'super-fan' not in awarded_slugs and 'super-fan' in all_badges:
+        last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+        if last_log:
+            anime = last_log.episode.season.anime
+            total_episodes = Episode.objects.filter(season__anime=anime).count()
+            if total_episodes > 0:
+                watched_count = WatchLog.objects.filter(
+                    user=user,
+                    episode__season__anime=anime
+                ).values('episode').distinct().count()
+                if watched_count >= total_episodes:
+                    award('super-fan')
 
     # Commit all new badges
     if new_badges:
