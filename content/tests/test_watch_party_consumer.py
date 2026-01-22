@@ -23,8 +23,11 @@ async def test_watch_party_connection():
     connected, _ = await communicator.connect()
     assert connected
 
+    # Receive user count message first
+    msg = await communicator.receive_json_from()
+    assert msg['type'] == 'user_count'
+
     # Receive join message
-    # Depending on implementation, it might be the first message
     msg = await communicator.receive_json_from()
     assert msg['type'] == 'chat_message'
     assert 'joined the party' in msg['message']
