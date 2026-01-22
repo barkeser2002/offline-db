@@ -5,6 +5,7 @@ from django.urls import reverse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .models import Episode, Subscription
+from .tasks import send_new_episode_email_task
 
 @receiver(post_save, sender=Episode)
 @receiver(post_delete, sender=Episode)
@@ -49,3 +50,6 @@ def notify_subscribers(sender, instance, created, **kwargs):
                         'link': notification.link,
                     }
                 )
+
+        # Trigger Email Task (Async)
+        send_new_episode_email_task.delay(instance.id)

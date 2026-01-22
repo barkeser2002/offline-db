@@ -3,7 +3,10 @@ import uuid
 import subprocess
 from celery import shared_task
 from django.conf import settings
-from .models import VideoFile, Episode
+from django.core.mail import send_mass_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from .models import VideoFile, Episode, Subscription
 
 @shared_task
 def encode_episode(episode_id, source_url, quality='1080p'):
@@ -98,3 +101,33 @@ def encode_episode(episode_id, source_url, quality='1080p'):
 
     except Exception as e:
         return f"Encoding failed: {str(e)}"
+
+@shared_task
+def send_new_episode_email_task(episode_id):
+    """
+    Sends email notifications to all subscribers of the anime.
+    """
+    try:
+        episode = Episode.objects.select_related('season__anime').get(id=episode_id)
+        anime = episode.season.anime
+        subscribers = Subscription.objects.filter(anime=anime).select_related('user')
+
+        messages = []
+        subject = f"New Episode Available: {anime.title} - {episode.title or 'Episode ' + str(episode.number)}"
+        from_email = settings.DEFAULT_FROM_EMAIL
+
+        # Prepare email content
+        # Ideally, we would use a template here. For simplicity, we construct text.
+
+        for sub in subscribers:
+            if sub.user.email:
+                message = f"Hello {sub.user.username},\n\nA new episode of {anime.title} is now available on AniScrap!\n\nWatch now: {settings.SITE_URL}/watch/{episode.id}\n\nEnjoy!\nThe AniScrap Team"
+                messages.append((subject, message, from_email, [sub.user.email]))
+
+        if messages:
+            send_mass_mail(messages, fail_silently=False)
+
+        return f"Sent {len(messages)} emails for Episode {episode.id}"
+
+    except Episode.DoesNotExist:
+        return f"Episode {episode_id} not found."
