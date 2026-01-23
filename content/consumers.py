@@ -7,6 +7,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from asgiref.sync import sync_to_async
 from core.models import ChatMessage
+from users.services import check_chat_badges
 from .models import WatchParty
 
 class WatchPartyConsumer(AsyncWebsocketConsumer):
@@ -110,6 +111,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
                 # Save to DB
                 msg_obj = await self.save_message(username, message)
 
+                # Check Badges
+                if user and user.is_authenticated:
+                    await self.trigger_badge_check(user)
+
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
@@ -186,6 +191,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             'is_system': event.get('is_system', False),
             'created_at': event.get('created_at'),
         }))
+
+    @database_sync_to_async
+    def trigger_badge_check(self, user):
+        check_chat_badges(user)
 
     @database_sync_to_async
     def room_exists(self):
