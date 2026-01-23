@@ -139,6 +139,7 @@ class FansubGroupAdmin(ModelAdmin):
 class VideoFileAdmin(ModelAdmin):
     list_display = ('episode', 'quality', 'fansub_group', 'created_at')
     list_filter = ('quality', 'fansub_group')
+    list_select_related = ('episode', 'fansub_group', 'episode__season', 'episode__season__anime')
 
 @admin.register(Subtitle)
 class SubtitleAdmin(ModelAdmin):
