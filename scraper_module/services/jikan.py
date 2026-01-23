@@ -1,15 +1,15 @@
-import requests
 import time
-import threading
+import asyncio
 from typing import Optional, Dict, Any
 from django.conf import settings
+from curl_cffi.requests import AsyncSession, RequestsError
 
 JIKAN_API_BASE = getattr(settings, 'JIKAN_API_BASE', 'https://api.jikan.moe/v4')
 HTTP_TIMEOUT = getattr(settings, 'HTTP_TIMEOUT', 30)
 
 class JikanClient:
     """
-    Central client for the Jikan API.
+    Central client for the Jikan API (Async).
     Handles rate limiting, retries, and error management.
     """
 
@@ -17,18 +17,24 @@ class JikanClient:
         self.base_url = base_url
         self.timeout = timeout
         self._last_request_time = 0.0
-        self._lock = threading.Lock()
+        self._lock = None
 
-    def _rate_limit(self):
+    async def _get_lock(self):
+        if self._lock is None:
+            self._lock = asyncio.Lock()
+        return self._lock
+
+    async def _rate_limit(self):
         """Jikan API rate limit - max 3 requests per second."""
-        with self._lock:
+        lock = await self._get_lock()
+        async with lock:
             now = time.time()
             elapsed = now - self._last_request_time
             if elapsed < 0.35:  # 0.33s for ~3 req/s, 0.35s for safety
-                time.sleep(0.35 - elapsed)
+                await asyncio.sleep(0.35 - elapsed)
             self._last_request_time = time.time()
 
-    def _request(
+    async def _request(
         self,
         endpoint: str,
         params: Optional[Dict[str, Any]] = None,
@@ -46,50 +52,54 @@ class JikanClient:
             JSON response or None on error
         """
         url = f"{self.base_url}/{endpoint}"
-        for attempt in range(max_retries):
-            try:
-                self._rate_limit()
-                response = requests.get(url, params=params, timeout=self.timeout)
 
-                if response.status_code == 429:
-                    retry_after = int(response.headers.get("Retry-After", 5))
-                    wait_time = max(retry_after, 2**attempt)
-                    print(
-                        f"[JikanClient] Rate limit! Waiting {wait_time}s... (attempt {attempt + 1}/{max_retries})"
-                    )
-                    time.sleep(wait_time)
-                    continue
+        async with AsyncSession(timeout=self.timeout) as session:
+            for attempt in range(max_retries):
+                try:
+                    await self._rate_limit()
+                    response = await session.get(url, params=params)
 
-                response.raise_for_status()
-                return response.json()
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get("Retry-After", 5))
+                        wait_time = max(retry_after, 2**attempt)
+                        print(
+                            f"[JikanClient] Rate limit! Waiting {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(wait_time)
+                        continue
 
-            except requests.exceptions.HTTPError as e:
-                if e.response is not None and e.response.status_code == 404:
-                    print(f"[JikanClient] Resource not found: {url}")
-                    return None
-                print(f"[JikanClient] HTTP Error ({url}): {e}")
-                if attempt < max_retries - 1:
-                    time.sleep(2**attempt)
-            except requests.exceptions.Timeout:
-                print(f"[JikanClient] Timeout ({url}), retrying...")
-            except Exception as e:
-                print(f"[JikanClient] Unexpected error ({url}): {e}")
-                break
+                    if response.status_code == 404:
+                        print(f"[JikanClient] Resource not found: {url}")
+                        return None
+
+                    response.raise_for_status()
+                    return response.json()
+
+                except RequestsError as e:
+                    print(f"[JikanClient] Request Error ({url}): {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2**attempt)
+                except Exception as e:
+                    print(f"[JikanClient] Unexpected error ({url}): {e}")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2**attempt)
+                    else:
+                        break
 
         print(f"[JikanClient] Max retries exceeded: {url}")
         return None
 
-    def get_anime(self, mal_id: int) -> Optional[Dict[str, Any]]:
+    async def get_anime(self, mal_id: int) -> Optional[Dict[str, Any]]:
         """Gets info for a specific anime."""
-        response = self._request(f"anime/{mal_id}")
+        response = await self._request(f"anime/{mal_id}")
         return response.get("data") if response else None
 
-    def get_anime_episodes(self, mal_id: int) -> list:
+    async def get_anime_episodes(self, mal_id: int) -> list:
         """Gets all episodes of an anime."""
         all_episodes = []
         page = 1
         while True:
-            response = self._request(f"anime/{mal_id}/episodes", params={"page": page})
+            response = await self._request(f"anime/{mal_id}/episodes", params={"page": page})
             if not response or "data" not in response:
                 break
 
@@ -103,8 +113,6 @@ class JikanClient:
             page += 1
 
         return all_episodes
-
-    # ... Other methods can be added as needed, keeping it minimal for now based on prompt logic.
 
 # Global Jikan client
 jikan = JikanClient()
