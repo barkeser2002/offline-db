@@ -144,3 +144,4 @@ class VideoFileAdmin(ModelAdmin):
 class SubtitleAdmin(ModelAdmin):
     list_display = ('episode', 'lang', 'fansub_group')
     list_filter = ('lang',)
+    list_select_related = ('episode__season__anime', 'fansub_group')
