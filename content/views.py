@@ -68,7 +68,17 @@ def anime_detail(request, pk):
     anime = get_object_or_404(Anime, pk=pk)
     # Prefetch seasons and episodes for efficient rendering
     seasons = anime.seasons.prefetch_related('episodes').order_by('number')
-    return render(request, 'anime_detail.html', {'anime': anime, 'seasons': seasons})
+
+    is_subscribed = False
+    if request.user.is_authenticated:
+        is_subscribed = Subscription.objects.filter(user=request.user, anime=anime).exists()
+
+    context = {
+        'anime': anime,
+        'seasons': seasons,
+        'is_subscribed': is_subscribed,
+    }
+    return render(request, 'anime_detail.html', context)
 
 class SubscribeAnimeAPIView(APIView):
     permission_classes = [IsAuthenticated]

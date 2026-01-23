@@ -15,9 +15,23 @@
                 {% endif %}
             </div>
             <div class="md:w-2/3 p-8">
-                <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-4">
-                    {{ anime.title }}
-                </h1>
+                <div class="flex justify-between items-start mb-4">
+                    <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                        {{ anime.title }}
+                    </h1>
+                    {% if user.is_authenticated %}
+                    <button id="subscribe-btn"
+                            class="px-4 py-2 rounded-full font-bold transition transform hover:scale-105 focus:outline-none {% if is_subscribed %}bg-gray-700 text-gray-300 hover:bg-gray-600{% else %}bg-brand text-white hover:bg-brand-dark{% endif %}"
+                            data-anime-id="{{ anime.id }}"
+                            data-subscribed="{{ is_subscribed|yesno:'true,false' }}">
+                        {% if is_subscribed %}
+                            Unsubscribe
+                        {% else %}
+                            Subscribe
+                        {% endif %}
+                    </button>
+                    {% endif %}
+                </div>
                 <p class="text-gray-300 leading-relaxed mb-6 text-lg">
                     {{ anime.synopsis|default:"No synopsis available." }}
                 </p>
@@ -70,4 +84,70 @@
         {% endfor %}
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('subscribe-btn');
+        if (!btn) return;
+
+        btn.addEventListener('click', async () => {
+            const animeId = btn.getAttribute('data-anime-id');
+            const isSubscribed = btn.getAttribute('data-subscribed') === 'true';
+
+            // Optimistic UI Update
+            btn.disabled = true;
+
+            try {
+                // Get CSRF Token from Cookie (Robust)
+                let csrftoken = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, 11) === ('csrftoken=')) {
+                            csrftoken = decodeURIComponent(cookie.substring(11));
+                            break;
+                        }
+                    }
+                }
+                // Fallback to DOM if cookie is missing (e.g. HttpOnly, though CSRF shouldn't be)
+                if (!csrftoken) {
+                     const input = document.querySelector('[name=csrfmiddlewaretoken]');
+                     if (input) csrftoken = input.value;
+                }
+
+                const response = await fetch(`/api/anime/${animeId}/subscribe/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'subscribed') {
+                        btn.textContent = 'Unsubscribe';
+                        btn.setAttribute('data-subscribed', 'true');
+                        btn.classList.remove('bg-brand', 'text-white', 'hover:bg-brand-dark');
+                        btn.classList.add('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                    } else {
+                        btn.textContent = 'Subscribe';
+                        btn.setAttribute('data-subscribed', 'false');
+                        btn.classList.remove('bg-gray-700', 'text-gray-300', 'hover:bg-gray-600');
+                        btn.classList.add('bg-brand', 'text-white', 'hover:bg-brand-dark');
+                    }
+                    if (window.showToast) window.showToast({ title: 'Success', message: data.status === 'subscribed' ? 'Subscribed successfully!' : 'Unsubscribed.' });
+                } else {
+                    if (window.showToast) window.showToast({ title: 'Error', message: 'Action failed.' });
+                }
+            } catch (err) {
+                console.error(err);
+                if (window.showToast) window.showToast({ title: 'Error', message: 'Network error.' });
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    });
+</script>
 {% endblock %}
