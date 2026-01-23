@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.throttling import ScopedRateThrottle
 from .models import Notification, UserBadge, WatchLog
-from .serializers import NotificationSerializer, UserBadgeSerializer
+from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
+from .services import check_badges
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
@@ -68,6 +69,14 @@ class UserBadgeListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         return UserBadge.objects.filter(user=self.request.user).select_related('badge')
+
+class WatchLogCreateAPIView(generics.CreateAPIView):
+    serializer_class = WatchLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+        check_badges(self.request.user)
 
 @login_required
 def profile_view(request):

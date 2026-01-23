@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Notification, Badge, UserBadge
+from .models import Notification, Badge, UserBadge, WatchLog
+
+class WatchLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WatchLog
+        fields = ['episode', 'duration', 'watched_at']
+        read_only_fields = ['watched_at']
 
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
