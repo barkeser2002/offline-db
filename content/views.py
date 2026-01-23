@@ -26,11 +26,17 @@ def search_view(request):
 
     results = results.order_by('-created_at')
 
+    # Cache genres for 24 hours
+    all_genres = cache.get('all_genres')
+    if not all_genres:
+        all_genres = list(Genre.objects.all())
+        cache.set('all_genres', all_genres, 86400)
+
     context = {
         'results': results,
         'query': query,
         'selected_genre': genre_name,
-        'genres': Genre.objects.all(),
+        'genres': all_genres,
     }
 
     return render(request, 'search_results.html', context)
@@ -66,8 +72,16 @@ def player_view(request, episode_id):
 
 def anime_detail(request, pk):
     anime = get_object_or_404(Anime, pk=pk)
-    # Prefetch seasons and episodes for efficient rendering
-    seasons = anime.seasons.prefetch_related('episodes').order_by('number')
+
+    # Cache seasons and episodes structure for 1 hour
+    cache_key = f'anime_{pk}_seasons'
+    seasons = cache.get(cache_key)
+
+    if not seasons:
+        # Prefetch seasons and episodes for efficient rendering
+        # Evaluate to list to ensure caching works
+        seasons = list(anime.seasons.prefetch_related('episodes').order_by('number'))
+        cache.set(cache_key, seasons, 3600)
 
     is_subscribed = False
     if request.user.is_authenticated:
