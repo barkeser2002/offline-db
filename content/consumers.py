@@ -99,6 +99,8 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
             if msg_type == 'video_control':
                 await self.handle_video_control(data)
+            elif msg_type == 'typing':
+                await self.handle_typing(data)
             elif 'message' in data:
                 # Chat message
                 user = self.scope.get('user')
@@ -121,6 +123,31 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         except Exception:
             traceback.print_exc()
             raise
+
+    async def handle_typing(self, data):
+        """
+        Broadcast typing status.
+        """
+        user = self.scope.get('user')
+        if user and user.is_authenticated:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_typing',
+                    'username': user.username,
+                    'is_typing': data.get('is_typing', False)
+                }
+            )
+
+    async def chat_typing(self, event):
+        """
+        Send typing status to WebSocket.
+        """
+        await self.send(text_data=json.dumps({
+            'type': 'typing',
+            'username': event['username'],
+            'is_typing': event['is_typing']
+        }))
 
     async def handle_video_control(self, data):
         """

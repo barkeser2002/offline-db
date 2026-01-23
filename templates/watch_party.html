@@ -80,6 +80,10 @@
                 <!-- Messages will appear here -->
             </div>
 
+            <div id="typing-indicator" class="px-4 py-1 text-xs text-gray-500 italic hidden bg-gray-900">
+                <!-- User is typing... -->
+            </div>
+
             <div class="p-3 bg-gray-900 border-t border-gray-700">
                 <div class="flex gap-2">
                     <input type="text" id="chat-input"
@@ -165,6 +169,11 @@
                 return;
             }
 
+            if (data.type === 'typing') {
+                updateTypingIndicator(data.username, data.is_typing);
+                return;
+            }
+
             const messages = document.getElementById('chat-messages');
 
             const messageItem = document.createElement('div');
@@ -212,9 +221,57 @@
 
         const chatInput = document.querySelector('#chat-input');
         const chatSend = document.querySelector('#chat-send');
+        let typingTimeout = null;
+        let isTyping = false;
+        const typingUsers = new Set();
+
+        function updateTypingIndicator(username, isTypingStatus) {
+            const indicator = document.getElementById('typing-indicator');
+            if (isTypingStatus) {
+                typingUsers.add(username);
+            } else {
+                typingUsers.delete(username);
+            }
+
+            if (typingUsers.size > 0) {
+                const users = Array.from(typingUsers);
+                let text = '';
+                if (typingUsers.size === 1) {
+                    text = `${users[0]} is typing...`;
+                } else if (typingUsers.size === 2) {
+                    text = `${users[0]} and ${users[1]} are typing...`;
+                } else {
+                    text = `${users[0]}, ${users[1]} and ${typingUsers.size - 2} others are typing...`;
+                }
+                indicator.textContent = text;
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
+        }
 
         if (chatInput && chatSend) {
             chatInput.focus();
+
+            chatInput.oninput = function() {
+                if (!isTyping) {
+                    isTyping = true;
+                    chatSocket.send(JSON.stringify({
+                        'type': 'typing',
+                        'is_typing': true
+                    }));
+                }
+
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    isTyping = false;
+                    chatSocket.send(JSON.stringify({
+                        'type': 'typing',
+                        'is_typing': false
+                    }));
+                }, 1500);
+            };
+
             chatInput.onkeyup = function(e) {
                 if (e.key === 'Enter') {
                     chatSend.click();
@@ -228,6 +285,16 @@
                         'message': message,
                     }));
                     chatInput.value = '';
+
+                    // Stop typing indicator immediately
+                    if (isTyping) {
+                        isTyping = false;
+                        clearTimeout(typingTimeout);
+                        chatSocket.send(JSON.stringify({
+                            'type': 'typing',
+                            'is_typing': false
+                        }));
+                    }
                 }
             };
         }
