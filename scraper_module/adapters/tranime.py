@@ -17,6 +17,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Any, Tuple
 from urllib.parse import unquote
+import concurrent.futures
 
 try:
     from curl_cffi import requests as curl_requests
@@ -389,6 +390,13 @@ def get_episode_details(episode_slug: str) -> Optional[TRAnimeEpisode]:
         return None
 
 
+def _delayed_search(delay: float, letter: str, page: int) -> List[Tuple[str, str]]:
+    """Gecikmeli arama (rate limit için)."""
+    if delay > 0:
+        time.sleep(delay)
+    return search_by_letter(letter, page)
+
+
 def search_by_letter(letter: str, page: int = 1) -> List[Tuple[str, str]]:
     """
     Harfe göre anime ara.
@@ -467,12 +475,30 @@ def search_anime(query: str, limit: int = 10) -> List[Tuple[str, str]]:
     if cached is None:
         # Tüm sayfaları çek (max 5 sayfa)
         all_results = []
-        for page in range(1, 6):
-            results = search_by_letter(first_letter, page)
-            if not results:
-                break
-            all_results.extend(results)
-            time.sleep(0.3)  # Rate limit
+
+        # 1. Fetch Page 1 immediately
+        results_p1 = search_by_letter(first_letter, 1)
+        if results_p1:
+            all_results.extend(results_p1)
+
+            # 2. Fetch Pages 2-5 in parallel if Page 1 had results
+            # Use ThreadPoolExecutor with delayed execution to respect rate limits
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = []
+                for i, page in enumerate(range(2, 6)):
+                    # Stagger requests: 0.3s, 0.6s, 0.9s, 1.2s
+                    delay = (i + 1) * 0.3
+                    futures.append(executor.submit(_delayed_search, delay, first_letter, page))
+
+                # Collect results in order
+                for future in futures:
+                    try:
+                        results = future.result()
+                        if not results:
+                            break
+                        all_results.extend(results)
+                    except Exception as e:
+                        print(f"[TRAnime] Arama hatası (future): {e}")
 
         _save_cache(cache_key, all_results)
         cached = all_results
