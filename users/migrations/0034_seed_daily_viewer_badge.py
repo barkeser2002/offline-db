@@ -1,0 +1,25 @@
+from django.db import migrations
+
+def seed_daily_viewer_badge(apps, schema_editor):
+    Badge = apps.get_model('users', 'Badge')
+    if not Badge.objects.filter(slug='daily-viewer').exists():
+        Badge.objects.create(
+            slug='daily-viewer',
+            name='Daily Viewer',
+            description='Watched anime for 30 consecutive days.',
+            icon_url='/static/badges/daily-viewer.png'
+        )
+
+def remove_daily_viewer_badge(apps, schema_editor):
+    Badge = apps.get_model('users', 'Badge')
+    Badge.objects.filter(slug='daily-viewer').delete()
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("users", "0033_seed_specific_genre_badges"),
+    ]
+
+    operations = [
+        migrations.RunPython(seed_daily_viewer_badge, remove_daily_viewer_badge),
+    ]

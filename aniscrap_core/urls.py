@@ -5,7 +5,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
 from content.sitemaps import AnimeSitemap, EpisodeSitemap, GenreSitemap
-from users.views import profile_view
+from users.views import profile_view, badges_list_view
 
 sitemaps = {
     'anime': AnimeSitemap,
@@ -22,6 +22,7 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     # User Profile
     path('profile/', profile_view, name='profile'),
+    path('badges/', badges_list_view, name='badges_list'),
     # Content API
     path('api/content/', include('content.api.urls')),
     # Content

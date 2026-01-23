@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Badge Gallery - AniScrap{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-lg shadow-lg p-6 mb-8 border border-gray-700">
+        <h1 class="text-3xl font-bold text-white mb-2">Badge Gallery</h1>
+        <p class="text-gray-400">Explore all available badges and see which ones you've earned.</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {% for badge in all_badges %}
+            <div class="bg-gray-900 rounded-xl p-6 flex flex-col items-center text-center transition hover:bg-gray-800 border {% if badge.slug in earned_slugs %}border-brand{% else %}border-gray-800{% endif %}">
+                {% if badge.icon_url %}
+                    <img src="{{ badge.icon_url }}" alt="{{ badge.name }}" class="w-24 h-24 mb-4 object-contain {% if badge.slug not in earned_slugs %}grayscale opacity-50{% endif %}">
+                {% else %}
+                    <div class="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center text-white font-bold text-3xl mb-4 {% if badge.slug not in earned_slugs %}grayscale opacity-50{% endif %}">
+                        {{ badge.name|slice:":1" }}
+                    </div>
+                {% endif %}
+
+                <h3 class="font-bold text-lg text-white mb-2">{{ badge.name }}</h3>
+                <p class="text-sm text-gray-400">{{ badge.description }}</p>
+
+                {% if badge.slug in earned_slugs %}
+                    <span class="mt-4 px-3 py-1 bg-brand text-white text-xs font-bold rounded-full">EARNED</span>
+                {% else %}
+                    <span class="mt-4 px-3 py-1 bg-gray-700 text-gray-400 text-xs font-bold rounded-full">LOCKED</span>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p class="text-gray-400 text-center col-span-full">No badges available.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.throttling import ScopedRateThrottle
-from .models import Notification, UserBadge, WatchLog
+from .models import Notification, UserBadge, WatchLog, Badge
 from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
 from .services import check_badges
 
@@ -90,3 +90,16 @@ def profile_view(request):
         'history': history,
     }
     return render(request, 'profile.html', context)
+
+def badges_list_view(request):
+    all_badges = Badge.objects.all().order_by('name')
+    earned_slugs = set()
+
+    if request.user.is_authenticated:
+        earned_slugs = set(UserBadge.objects.filter(user=request.user).values_list('badge__slug', flat=True))
+
+    context = {
+        'all_badges': all_badges,
+        'earned_slugs': earned_slugs,
+    }
+    return render(request, 'badges_list.html', context)
