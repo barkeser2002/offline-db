@@ -148,6 +148,15 @@ export interface EpisodeDetail extends Episode {
   video_url?: string; // Derived or direct
 }
 
+export interface Room {
+  uuid: string;
+  episode: EpisodeDetail;
+  host_username: string;
+  created_at: string;
+  is_active: boolean;
+  max_participants: number;
+}
+
 export const contentService = {
   getHomeData: async () => {
     const { data } = await api.get<HomeData>('/home/');
@@ -166,6 +175,20 @@ export const contentService = {
 
   searchAnime: async (params: { search?: string; genre?: string; ordering?: string }) => {
     const { data } = await api.get('/anime/', { params });
+    return data;
+  },
+};
+
+export const watchPartyService = {
+  createRoom: async (episodeId: number) => {
+    const { data } = await api.post<Room>('/watch-parties/', {
+      episode_id: episodeId,
+    });
+    return data;
+  },
+
+  getRoom: async (uuid: string) => {
+    const { data } = await api.get<Room>(`/watch-parties/${uuid}/`);
     return data;
   },
 };

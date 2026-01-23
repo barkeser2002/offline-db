@@ -10,9 +10,11 @@ import {
   DropdownItem,
   Switch,
   Slider,
+  Tooltip,
 } from "@nextui-org/react";
 import Link from "next/link";
-import { EpisodeDetail } from "@/services/api";
+import { useRouter } from "next/navigation";
+import { EpisodeDetail, watchPartyService } from "@/services/api";
 import { WebGLRenderer } from "../player/Anime4K/WebGLRenderer";
 import { useSyncManager } from "../watchparty/useSyncManager";
 import { PartyPanel } from "../watchparty/PartyPanel";
@@ -47,8 +49,17 @@ export default function VideoPlayer({
     directSources[0]?.quality || "1080p",
   );
 
+  const router = useRouter();
+
   // Anime4K State
   const [anime4kEnabled, setAnime4kEnabled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Basic mobile detection
+    const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobile(mobile);
+  }, []);
 
   // Refs
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -62,6 +73,16 @@ export default function VideoPlayer({
       videoRef.current.muted = isMuted;
     }
   }, [volume, isMuted]);
+
+  const handleCreateParty = async () => {
+    try {
+      const room = await watchPartyService.createRoom(episode.id);
+      router.push(`/watch/room/${room.uuid}`);
+    } catch (error) {
+      console.error("Failed to create room", error);
+      alert("Failed to create Watch Party. Please try again.");
+    }
+  };
 
   // WatchParty Sync logic
   const {
@@ -175,6 +196,7 @@ export default function VideoPlayer({
           <video
             ref={videoRef}
             src={currentSourceUrl}
+            crossOrigin="anonymous"
             className="w-full h-full object-contain"
             onClick={() =>
               isPlaying ? videoRef.current?.pause() : videoRef.current?.play()
@@ -238,18 +260,36 @@ export default function VideoPlayer({
                   {episode.title || `Episode ${episode.number}`}
                 </h2>
               </div>
-              <div className="flex gap-2">
-                <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
-                  <span className="text-xs font-bold text-pink-400">
-                    Anime4K
-                  </span>
-                  <Switch
+              <div className="flex gap-2 items-center">
+                {/* Watch Party Button */}
+                {!roomUuid && (
+                  <Button
                     size="sm"
-                    color="secondary"
-                    isSelected={anime4kEnabled}
-                    onValueChange={setAnime4kEnabled}
-                  />
-                </div>
+                    color="primary"
+                    variant="shadow"
+                    onPress={handleCreateParty}
+                    startContent={<span>👥</span>}
+                  >
+                    Watch Party
+                  </Button>
+                )}
+
+                {/* Anime4K Toggle (Desktop Only) */}
+                {!isMobile && (
+                  <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full backdrop-blur-md border border-white/10">
+                    <Tooltip content="GPU Upscaling">
+                      <span className="text-xs font-bold text-pink-400 cursor-help">
+                        Anime4K
+                      </span>
+                    </Tooltip>
+                    <Switch
+                      size="sm"
+                      color="secondary"
+                      isSelected={anime4kEnabled}
+                      onValueChange={setAnime4kEnabled}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
