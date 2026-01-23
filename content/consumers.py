@@ -4,6 +4,7 @@ import traceback
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from asgiref.sync import sync_to_async
 from core.models import ChatMessage
 from .models import WatchParty
@@ -12,6 +13,12 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         try:
             self.room_name = self.scope['url_route']['kwargs']['room_name']
+
+            # Security: Validate if the room exists before accepting connection
+            if not await self.room_exists():
+                await self.close()
+                return
+
             self.room_group_name = 'chat_%s' % self.room_name
 
             await self.channel_layer.group_add(
@@ -53,6 +60,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             raise
 
     async def disconnect(self, close_code):
+        # If connection was rejected in connect(), room_group_name won't be set
+        if not hasattr(self, 'room_group_name'):
+            return
+
         # Update user count
         count = await self.update_user_count(-1)
         await self.broadcast_user_count(count)
@@ -148,6 +159,20 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             'is_system': event.get('is_system', False),
             'created_at': event.get('created_at'),
         }))
+
+    @database_sync_to_async
+    def room_exists(self):
+        """
+        Check if the Watch Party room exists in the database.
+        """
+        if not self.room_name.startswith('party_'):
+            return False
+
+        try:
+            uuid_str = self.room_name.split('party_')[1]
+            return WatchParty.objects.filter(uuid=uuid_str).exists()
+        except (IndexError, ValueError, ValidationError):
+            return False
 
     @database_sync_to_async
     def is_host(self):
