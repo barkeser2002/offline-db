@@ -12,11 +12,14 @@ export default async function WatchPage({
   params,
   searchParams,
 }: {
-  params: { slug: string[] };
-  searchParams: { room?: string };
+  params: Promise<{ slug: string[] }>;
+  searchParams: Promise<{ room?: string }>;
 }) {
-  const [animeId, episodeId] = params.slug;
-  const { room } = searchParams;
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+
+  const [animeId, episodeId] = resolvedParams.slug;
+  const { room } = resolvedSearchParams;
 
   if (!animeId || !episodeId) {
     notFound();

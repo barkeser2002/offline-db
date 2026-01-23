@@ -16,7 +16,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from django.urls import path
 from core.consumers import ChatConsumer
 from users.consumers import NotificationConsumer
-from content.consumers import WatchPartyConsumer
+from apps.watchparty.consumers import WatchPartyConsumer
 
 from apps.watchparty import routing
 

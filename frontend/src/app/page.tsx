@@ -1,4 +1,4 @@
-import { contentService } from "@/services/api";
+import { contentService, HomeData } from "@/services/api";
 import HeroSection from "@/components/home/HeroSection";
 import TrendingSection from "@/components/home/TrendingSection";
 import CommunityLive from "@/components/home/CommunityLive";
@@ -8,7 +8,7 @@ import StatsSection from "@/components/home/StatsSection";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  let homeData = {
+  let homeData: HomeData = {
     trending: [],
     latest_episodes: [],
     seasonal: [],
