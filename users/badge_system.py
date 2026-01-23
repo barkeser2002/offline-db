@@ -243,6 +243,22 @@ class GenreBadgeStrategy(BadgeStrategy):
                 if qs.filter(user_episode_count__gte=50).exists():
                     self._award(user, 'genre-savant', awarded_slugs, all_badges, new_badges)
 
+class SpecificGenreBadgeStrategy(BadgeStrategy):
+    def check(self, user, awarded_slugs, all_badges, new_badges):
+        # 30. Nightmare: Watched 5 Horror anime.
+        if 'nightmare' not in awarded_slugs:
+            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
+            count = Anime.objects.filter(id__in=anime_ids, genres__name__iexact='Horror').count()
+            if count >= 5:
+                self._award(user, 'nightmare', awarded_slugs, all_badges, new_badges)
+
+        # 31. Comedy Gold: Watched 5 Comedy anime.
+        if 'comedy-gold' not in awarded_slugs:
+            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
+            count = Anime.objects.filter(id__in=anime_ids, genres__name__iexact='Comedy').count()
+            if count >= 5:
+                self._award(user, 'comedy-gold', awarded_slugs, all_badges, new_badges)
+
 class CommunityBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
         # 16. Party Host: Hosted 5 Watch Parties.
@@ -288,6 +304,7 @@ GENERAL_BADGE_STRATEGIES = [
     ConsumptionBadgeStrategy(),
     CompletionBadgeStrategy(),
     GenreBadgeStrategy(),
+    SpecificGenreBadgeStrategy(),
     CommunityBadgeStrategy(),
 ]
 
