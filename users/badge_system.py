@@ -159,6 +159,18 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
             if count >= 5:
                 self._award(user, 'movie-buff', awarded_slugs, all_badges, new_badges)
 
+        # 28. TV Addict: Watched 10 different TV Series.
+        if 'tv-addict' not in awarded_slugs:
+            count = WatchLog.objects.filter(user=user, episode__season__anime__type='TV').values('episode__season__anime').distinct().count()
+            if count >= 10:
+                self._award(user, 'tv-addict', awarded_slugs, all_badges, new_badges)
+
+        # 29. OVA Enthusiast: Watched 5 different OVAs.
+        if 'ova-enthusiast' not in awarded_slugs:
+            count = WatchLog.objects.filter(user=user, episode__season__anime__type='OVA').values('episode__season__anime').distinct().count()
+            if count >= 5:
+                self._award(user, 'ova-enthusiast', awarded_slugs, all_badges, new_badges)
+
 class CompletionBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
         # 8. Season Completist: Completed an entire season.
