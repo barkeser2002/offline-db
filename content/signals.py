@@ -4,16 +4,34 @@ from django.core.cache import cache
 from django.urls import reverse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import Episode, Subscription
+from .models import Episode, Subscription, Genre, Season
 from .tasks import send_new_episode_email_task
+
+@receiver(post_save, sender=Genre)
+@receiver(post_delete, sender=Genre)
+def clear_genre_cache(sender, instance, **kwargs):
+    """
+    Clear the genres cache whenever a genre is added, updated, or deleted.
+    """
+    cache.delete('all_genres')
+
+@receiver(post_save, sender=Season)
+@receiver(post_delete, sender=Season)
+def clear_season_cache(sender, instance, **kwargs):
+    """
+    Clear the anime seasons cache whenever a season is modified.
+    """
+    cache.delete(f'anime_{instance.anime.id}_seasons')
 
 @receiver(post_save, sender=Episode)
 @receiver(post_delete, sender=Episode)
 def clear_home_cache(sender, instance, **kwargs):
     """
     Clear the homepage cache whenever an episode is added, updated, or deleted.
+    Also clears the anime seasons cache.
     """
     cache.delete('home_latest_episodes')
+    cache.delete(f'anime_{instance.season.anime.id}_seasons')
 
 @receiver(post_save, sender=Episode)
 def notify_subscribers(sender, instance, created, **kwargs):
