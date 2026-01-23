@@ -85,6 +85,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "csp.middleware.CSPMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -160,6 +161,14 @@ AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend",
     "guardian.backends.ObjectPermissionBackend",
 )
+
+# Password Hashing
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+]
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -248,7 +257,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_USER', 'info@bariskeser.com')
+EMAIL_HOST_USER = os.getenv('EMAIL_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_PASSWORD')
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
@@ -266,6 +275,16 @@ SHOPIER_SECRET = os.getenv('SHOPIER_SECRET')
 if not SHOPIER_SECRET and not DEBUG:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured("SHOPIER_SECRET is not set in production. Billing callbacks will fail.")
+
+# Content Security Policy (CSP)
+CSP_DEFAULT_SRC = ("'self'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "fonts.googleapis.com")
+CSP_IMG_SRC = ("'self'", "data:", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "i.ytimg.com", "img.youtube.com")
+CSP_FONT_SRC = ("'self'", "fonts.gstatic.com", "cdn.jsdelivr.net")
+CSP_MEDIA_SRC = ("'self'", "blob:", "cdn.plyr.io")
+CSP_CONNECT_SRC = ("'self'", "ws:", "wss:")
+CSP_FRAME_SRC = ("'self'",)
 
 # Unfold Admin Theme Configuration
 UNFOLD = {
