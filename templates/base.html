@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AniScrap</title>
+    <title>{% block title %}AniScrap{% endblock %}</title>
+    {% block meta %}{% endblock %}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {

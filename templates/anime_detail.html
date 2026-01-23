@@ -1,5 +1,16 @@
 {% extends 'base.html' %}
 
+{% block title %}{{ anime.title }} | AniScrap{% endblock %}
+
+{% block meta %}
+    <meta property="og:title" content="{{ anime.title }}">
+    <meta property="og:description" content="{{ anime.synopsis|truncatechars:200 }}">
+    {% if anime.cover_image %}
+    <meta property="og:image" content="{{ anime.cover_image }}">
+    {% endif %}
+    <meta property="og:type" content="video.tv_show">
+{% endblock %}
+
 {% block content %}
 <div class="max-w-6xl mx-auto p-4">
     <!-- Anime Header -->
