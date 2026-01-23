@@ -38,7 +38,7 @@ class WatchPartySecurityTests(TestCase):
             response = self.client.get(self.url)
             # Should redirect to login
             self.assertEqual(response.status_code, 302, f"Request {i+1} failed with {response.status_code}")
-            self.assertIn('/accounts/login/', response.url)
+            self.assertIn('/admin/login/', response.url)
 
         # 6th request should fail with 403 Forbidden because rate limit is per IP
         response = self.client.get(self.url)
