@@ -128,6 +128,7 @@ class SeasonAdmin(ModelAdmin):
 @admin.register(Episode)
 class EpisodeAdmin(ModelAdmin):
     list_display = ('season', 'number', 'title')
+    list_select_related = ('season', 'season__anime')
     list_filter = ('season__anime', 'season')
     search_fields = ('title', 'season__anime__title')
 
