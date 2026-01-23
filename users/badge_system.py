@@ -108,6 +108,13 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
             if count >= 3:
                 self._award(user, 'speedster', awarded_slugs, all_badges, new_badges)
 
+        # 32. Marathon Runner: Watched 12+ episodes in the last 24 hours.
+        if 'marathon-runner' not in awarded_slugs:
+            last_24h = timezone.now() - timedelta(hours=24)
+            count = WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values('episode').distinct().count()
+            if count >= 12:
+                self._award(user, 'marathon-runner', awarded_slugs, all_badges, new_badges)
+
 class ConsistencyBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
         # 12. Streak Master: Watched anime for 7 consecutive days.
@@ -147,7 +154,7 @@ class AccountBadgeStrategy(BadgeStrategy):
 class ConsumptionBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
         # Optimization: Fetch episode count once
-        if 'marathoner' not in awarded_slugs or 'century-club' not in awarded_slugs:
+        if 'marathoner' not in awarded_slugs or 'century-club' not in awarded_slugs or 'millennium-club' not in awarded_slugs:
             distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
 
             # 9. Marathoner: Watched 50 episodes in total.
@@ -157,6 +164,10 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
             # 27. Century Club: Watched 100 episodes.
             if 'century-club' not in awarded_slugs and distinct_episodes >= 100:
                 self._award(user, 'century-club', awarded_slugs, all_badges, new_badges)
+
+            # 33. Millennium Club: Watched 1000 distinct episodes.
+            if 'millennium-club' not in awarded_slugs and distinct_episodes >= 1000:
+                self._award(user, 'millennium-club', awarded_slugs, all_badges, new_badges)
 
         # 11. Loyal Fan: Watched 10 episodes of the same anime.
         if 'loyal-fan' not in awarded_slugs:
