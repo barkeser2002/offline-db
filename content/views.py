@@ -65,9 +65,9 @@ def home_view(request):
     return render(request, 'home.html', {'latest_episodes': latest_episodes})
 
 def player_view(request, episode_id):
-    episode = get_object_or_404(Episode, id=episode_id)
+    episode = get_object_or_404(Episode.objects.select_related('season__anime'), id=episode_id)
     # Get the default video (e.g. highest quality)
-    video = episode.video_files.order_by('-quality').first()
+    video = episode.video_files.select_related('fansub_group').order_by('-quality').first()
     return render(request, 'player.html', {'episode': episode, 'video': video})
 
 def anime_detail(request, pk):
