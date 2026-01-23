@@ -26,24 +26,40 @@ class BadgeStrategy:
 
 class ReviewBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
+        needed = False
+        for slug in ['critic', 'opinionated', 'review-guru', 'star-power']:
+            if slug not in awarded_slugs:
+                needed = True
+                break
+
+        if not needed:
+            return
+
+        stats = Review.objects.filter(user=user).aggregate(
+            total=Count('id'),
+            perfect=Count('id', filter=Q(rating=10))
+        )
+        total_reviews = stats['total'] or 0
+        perfect_reviews = stats['perfect'] or 0
+
         # 0. Critic: Wrote first review.
         if 'critic' not in awarded_slugs:
-            if Review.objects.filter(user=user).exists():
+            if total_reviews >= 1:
                 self._award(user, 'critic', awarded_slugs, all_badges, new_badges)
 
         # 0.5. Opinionated: Wrote 5 reviews.
         if 'opinionated' not in awarded_slugs:
-            if Review.objects.filter(user=user).count() >= 5:
+            if total_reviews >= 5:
                 self._award(user, 'opinionated', awarded_slugs, all_badges, new_badges)
 
         # 24. Review Guru: Wrote 20 reviews.
         if 'review-guru' not in awarded_slugs:
-            if Review.objects.filter(user=user).count() >= 20:
+            if total_reviews >= 20:
                 self._award(user, 'review-guru', awarded_slugs, all_badges, new_badges)
 
         # 25. Star Power: Rated 5 anime with a perfect 10/10 score.
         if 'star-power' not in awarded_slugs:
-            if Review.objects.filter(user=user, rating=10).count() >= 5:
+            if perfect_reviews >= 5:
                 self._award(user, 'star-power', awarded_slugs, all_badges, new_badges)
 
 class WatchTimeBadgeStrategy(BadgeStrategy):
@@ -63,25 +79,27 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
                 if count >= 5:
                     self._award(user, 'weekend-warrior', awarded_slugs, all_badges, new_badges)
 
-        # 4. Night Owl: Watched an episode between 2 AM and 5 AM.
-        if 'night-owl' not in awarded_slugs:
-            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
-            if last_log and 2 <= last_log.watched_at.hour < 5:
-                self._award(user, 'night-owl', awarded_slugs, all_badges, new_badges)
-
-        # 4.5. Morning Glory: Watched an episode between 6 AM and 9 AM.
-        if 'morning-glory' not in awarded_slugs:
-            last_log = WatchLog.objects.filter(user=user).order_by('-watched_at').first()
-            if last_log and 6 <= last_log.watched_at.hour < 9:
-                self._award(user, 'morning-glory', awarded_slugs, all_badges, new_badges)
-
-        # 5. Early Bird: Watched an episode within 1 hour of release.
-        if 'early-bird' not in awarded_slugs:
+        # Optimization: Fetch last log once for time-of-day badges
+        time_badges = ['night-owl', 'morning-glory', 'early-bird']
+        if any(b not in awarded_slugs for b in time_badges):
             last_log = WatchLog.objects.filter(user=user).select_related('episode').order_by('-watched_at').first()
+
             if last_log:
-                diff = last_log.watched_at - last_log.episode.created_at
-                if timedelta(seconds=0) <= diff <= timedelta(hours=1):
-                    self._award(user, 'early-bird', awarded_slugs, all_badges, new_badges)
+                # 4. Night Owl: Watched an episode between 2 AM and 5 AM.
+                if 'night-owl' not in awarded_slugs:
+                    if 2 <= last_log.watched_at.hour < 5:
+                        self._award(user, 'night-owl', awarded_slugs, all_badges, new_badges)
+
+                # 4.5. Morning Glory: Watched an episode between 6 AM and 9 AM.
+                if 'morning-glory' not in awarded_slugs:
+                    if 6 <= last_log.watched_at.hour < 9:
+                        self._award(user, 'morning-glory', awarded_slugs, all_badges, new_badges)
+
+                # 5. Early Bird: Watched an episode within 1 hour of release.
+                if 'early-bird' not in awarded_slugs:
+                    diff = last_log.watched_at - last_log.episode.created_at
+                    if timedelta(seconds=0) <= diff <= timedelta(hours=1):
+                        self._award(user, 'early-bird', awarded_slugs, all_badges, new_badges)
 
         # 15. Speedster: Watched 3 episodes in 1 hour.
         if 'speedster' not in awarded_slugs:
@@ -128,14 +146,16 @@ class AccountBadgeStrategy(BadgeStrategy):
 
 class ConsumptionBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
-        # 9. Marathoner: Watched 50 episodes in total.
-        if 'marathoner' not in awarded_slugs:
-            if WatchLog.objects.filter(user=user).values('episode').distinct().count() >= 50:
+        # Optimization: Fetch episode count once
+        if 'marathoner' not in awarded_slugs or 'century-club' not in awarded_slugs:
+            distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+
+            # 9. Marathoner: Watched 50 episodes in total.
+            if 'marathoner' not in awarded_slugs and distinct_episodes >= 50:
                 self._award(user, 'marathoner', awarded_slugs, all_badges, new_badges)
 
-        # 27. Century Club: Watched 100 episodes.
-        if 'century-club' not in awarded_slugs:
-            if WatchLog.objects.filter(user=user).values('episode').distinct().count() >= 100:
+            # 27. Century Club: Watched 100 episodes.
+            if 'century-club' not in awarded_slugs and distinct_episodes >= 100:
                 self._award(user, 'century-club', awarded_slugs, all_badges, new_badges)
 
         # 11. Loyal Fan: Watched 10 episodes of the same anime.
@@ -153,23 +173,29 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
             if count >= 5:
                 self._award(user, 'pilot-connoisseur', awarded_slugs, all_badges, new_badges)
 
-        # 21. Movie Buff: Watched 5 different anime movies.
-        if 'movie-buff' not in awarded_slugs:
-            count = WatchLog.objects.filter(user=user, episode__season__anime__type='Movie').values('episode__season__anime').distinct().count()
-            if count >= 5:
-                self._award(user, 'movie-buff', awarded_slugs, all_badges, new_badges)
+        # Optimization: Fetch type counts once
+        type_badges = ['movie-buff', 'tv-addict', 'ova-enthusiast']
+        if any(b not in awarded_slugs for b in type_badges):
+            type_counts_qs = Anime.objects.filter(
+                seasons__episodes__watch_logs__user=user
+            ).values('type').annotate(count=Count('id', distinct=True))
 
-        # 28. TV Addict: Watched 10 different TV Series.
-        if 'tv-addict' not in awarded_slugs:
-            count = WatchLog.objects.filter(user=user, episode__season__anime__type='TV').values('episode__season__anime').distinct().count()
-            if count >= 10:
-                self._award(user, 'tv-addict', awarded_slugs, all_badges, new_badges)
+            type_counts = {item['type']: item['count'] for item in type_counts_qs}
 
-        # 29. OVA Enthusiast: Watched 5 different OVAs.
-        if 'ova-enthusiast' not in awarded_slugs:
-            count = WatchLog.objects.filter(user=user, episode__season__anime__type='OVA').values('episode__season__anime').distinct().count()
-            if count >= 5:
-                self._award(user, 'ova-enthusiast', awarded_slugs, all_badges, new_badges)
+            # 21. Movie Buff: Watched 5 different anime movies.
+            if 'movie-buff' not in awarded_slugs:
+                if type_counts.get('Movie', 0) >= 5:
+                    self._award(user, 'movie-buff', awarded_slugs, all_badges, new_badges)
+
+            # 28. TV Addict: Watched 10 different TV Series.
+            if 'tv-addict' not in awarded_slugs:
+                if type_counts.get('TV', 0) >= 10:
+                    self._award(user, 'tv-addict', awarded_slugs, all_badges, new_badges)
+
+            # 29. OVA Enthusiast: Watched 5 different OVAs.
+            if 'ova-enthusiast' not in awarded_slugs:
+                if type_counts.get('OVA', 0) >= 5:
+                    self._award(user, 'ova-enthusiast', awarded_slugs, all_badges, new_badges)
 
 class CompletionBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
@@ -245,19 +271,29 @@ class GenreBadgeStrategy(BadgeStrategy):
 
 class SpecificGenreBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
-        # 30. Nightmare: Watched 5 Horror anime.
-        if 'nightmare' not in awarded_slugs:
-            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
-            count = Anime.objects.filter(id__in=anime_ids, genres__name__iexact='Horror').count()
-            if count >= 5:
-                self._award(user, 'nightmare', awarded_slugs, all_badges, new_badges)
+        # Optimization: Fetch all genre counts once to handle case-insensitivity
+        if 'nightmare' not in awarded_slugs or 'comedy-gold' not in awarded_slugs:
+            genre_counts_qs = Anime.objects.filter(
+                seasons__episodes__watch_logs__user=user
+            ).values('genres__name').annotate(count=Count('id', distinct=True))
 
-        # 31. Comedy Gold: Watched 5 Comedy anime.
-        if 'comedy-gold' not in awarded_slugs:
-            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
-            count = Anime.objects.filter(id__in=anime_ids, genres__name__iexact='Comedy').count()
-            if count >= 5:
-                self._award(user, 'comedy-gold', awarded_slugs, all_badges, new_badges)
+            # Map genre name lowercased
+            genre_counts = {}
+            for item in genre_counts_qs:
+                name = item['genres__name']
+                if name:
+                    name_lower = name.lower()
+                    genre_counts[name_lower] = genre_counts.get(name_lower, 0) + item['count']
+
+            # 30. Nightmare: Watched 5 Horror anime.
+            if 'nightmare' not in awarded_slugs:
+                if genre_counts.get('horror', 0) >= 5:
+                    self._award(user, 'nightmare', awarded_slugs, all_badges, new_badges)
+
+            # 31. Comedy Gold: Watched 5 Comedy anime.
+            if 'comedy-gold' not in awarded_slugs:
+                if genre_counts.get('comedy', 0) >= 5:
+                    self._award(user, 'comedy-gold', awarded_slugs, all_badges, new_badges)
 
 class CommunityBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
