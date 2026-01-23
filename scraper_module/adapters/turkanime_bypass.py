@@ -64,7 +64,6 @@ ALT_BASE_URLS = [
 
 class CFBypassError(Exception):
     """CloudFlare bypass hatası"""
-
     pass
 
 
@@ -253,7 +252,8 @@ def decrypt_cipher(key: bytes, data: bytes) -> str:
         return ""
 
     def salted_key(data: bytes, salt: bytes, output: int = 48):
-        assert len(salt) == 8, len(salt)
+        if len(salt) != 8:
+            raise ValueError(f"Salt length must be 8, got {len(salt)}")
         data += salt
         key = md5(data).digest()
         final_key = key
@@ -266,17 +266,18 @@ def decrypt_cipher(key: bytes, data: bytes) -> str:
         return data[: -(data[-1] if isinstance(data[-1], int) else ord(data[-1]))]
 
     # Remove URL path from the string.
-    b64 = b64decode(data)
-    cipher = json.loads(b64)
-    cipher_text = b64decode(cipher["ct"])
-    iv = bytes.fromhex(cipher["iv"])
-    salt = bytes.fromhex(cipher["s"])
-    # Create new AES object with using salted key as key.
-    crypt = AES.new(salted_key(key, salt, output=32), iv=iv, mode=AES.MODE_CBC)
-    # Decrypt link and unpad it.
     try:
+        b64 = b64decode(data)
+        cipher = json.loads(b64)
+        cipher_text = b64decode(cipher["ct"])
+        iv = bytes.fromhex(cipher["iv"])
+        salt = bytes.fromhex(cipher["s"])
+        # Create new AES object with using salted key as key.
+        crypt = AES.new(salted_key(key, salt, output=32), iv=iv, mode=AES.MODE_CBC)
+        # Decrypt link and unpad it.
         return unpad(crypt.decrypt(cipher_text)).decode("utf-8")
-    except (UnicodeDecodeError, ValueError):
+    except (UnicodeDecodeError, ValueError, json.JSONDecodeError, KeyError) as e:
+        logger.error(f"Decryption failed: {e}")
         return ""
 
 
@@ -360,7 +361,11 @@ def obtain_csrf():
     key = re.findall(r"csrf-token':[^\n\)]+'([^']+)'\)", res, re.IGNORECASE)
     # Bütün Ciphertext adaylarını çıkar
     candidates = re.findall(r"'([a-zA-Z\d\+\/]{96,156})',", res)
-    assert key and candidates
+
+    if not key or not candidates:
+        logger.warning("Could not find CSRF token or candidates in player.js")
+        return None
+
     key = key[0]
 
     # Hepsini decrypt'lemeyi dene, başarılı olanı döndür
@@ -371,14 +376,17 @@ def obtain_csrf():
 def unmask_real_url(url_mask):
     """TürkAnime'nin kendi playerlarının url maskesini çözer."""
     global PLAYERJS_CSRF
-    assert "turkanime" in url_mask
+
+    if "turkanime" not in url_mask:
+        return url_mask
+
     if PLAYERJS_CSRF is None:
         try:
             PLAYERJS_CSRF = obtain_csrf()
             if PLAYERJS_CSRF is None:
-                raise LookupError
-        except:
-            logger.error("ERROR: CSRF bulunamadı.")
+                raise LookupError("CSRF token not found")
+        except Exception as e:
+            logger.error(f"ERROR: {e}")
             return url_mask
 
     MASK = url_mask.split("/player/")[1]
@@ -386,10 +394,12 @@ def unmask_real_url(url_mask):
     res = fetch(f"/sources/{MASK}/false", headers)
 
     try:
-        url = json.loads(res)["response"]["sources"][-1]["file"]
+        data = json.loads(res)
+        url = data["response"]["sources"][-1]["file"]
         if url.startswith("//"):
             url = "https:" + url
-    except:
+    except Exception as e:
+        logger.error(f"Failed to unmask URL: {e}")
         return url_mask
     return url
 
@@ -401,7 +411,8 @@ def get_alucard_m3u8(url):
         if session is None:
             session = curl_requests.Session(impersonate="firefox", allow_redirects=True)
             res = session.get(BASE_URL)
-            assert res.status_code == 200, ConnectionError
+            if res.status_code != 200:
+                raise ConnectionError(f"Failed to connect to Base URL. Status: {res.status_code}")
             BASE_URL = res.url
             BASE_URL = BASE_URL[:-1] if BASE_URL.endswith("/") else BASE_URL
 
