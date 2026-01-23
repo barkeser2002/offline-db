@@ -312,6 +312,12 @@ def check_badges(user):
             if completed_anime_count >= 5:
                 award('otaku')
 
+    # 27. Century Club: Watched 100 episodes.
+    if 'century-club' not in awarded_slugs and 'century-club' in all_badges:
+        watched_count = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+        if watched_count >= 100:
+            award('century-club')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
