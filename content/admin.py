@@ -123,6 +123,7 @@ class AnimeAdmin(ModelAdmin):
 class SeasonAdmin(ModelAdmin):
     list_display = ('anime', 'number', 'title')
     list_filter = ('anime',)
+    list_select_related = ('anime',)
 
 @admin.register(Episode)
 class EpisodeAdmin(ModelAdmin):
