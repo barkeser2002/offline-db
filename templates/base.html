@@ -65,7 +65,7 @@
                         </div>
                     </div>
 
-                    <span class="text-gray-300">Welcome, {{ user.username }}</span>
+                    <a href="{% url 'profile' %}" class="text-gray-300 hover:text-white transition font-semibold">Welcome, {{ user.username }}</a>
                 {% else %}
                     <a href="/admin/" class="text-gray-300 hover:text-white transition">Login</a>
                 {% endif %}

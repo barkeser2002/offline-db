@@ -1,9 +1,11 @@
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.throttling import ScopedRateThrottle
-from .models import Notification, UserBadge
+from .models import Notification, UserBadge, WatchLog
 from .serializers import NotificationSerializer, UserBadgeSerializer
 
 class StandardResultsSetPagination(PageNumberPagination):
@@ -66,3 +68,16 @@ class UserBadgeListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         return UserBadge.objects.filter(user=self.request.user).select_related('badge')
+
+@login_required
+def profile_view(request):
+    user = request.user
+    badges = UserBadge.objects.filter(user=user).select_related('badge')
+    history = WatchLog.objects.filter(user=user).select_related('episode', 'episode__season__anime').order_by('-watched_at')[:10]
+
+    context = {
+        'user': user,
+        'badges': badges,
+        'history': history,
+    }
+    return render(request, 'profile.html', context)
