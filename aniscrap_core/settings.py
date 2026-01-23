@@ -51,6 +51,12 @@ INSTALLED_APPS = [
     "import_export",
     "guardian",
     "simple_history",
+    # Third Party
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "django_filters",
+    "corsheaders",
+    "django_celery_results",
 
     "unfold",  # Added Unfold Theme
     "django.contrib.admin",
@@ -62,17 +68,13 @@ INSTALLED_APPS = [
     "django.contrib.sites",
     "django.contrib.sitemaps",
 
-    # Third Party
-    "rest_framework",
-    "corsheaders",
-    "django_celery_results",
-
     # Local Apps
     "core",
     "content",
     "users",
     "billing",
     "scraper_module",
+    "apps.watchparty",
 ]
 
 SITE_ID = 1
@@ -93,18 +95,6 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "aniscrap_core.urls"
 
-REST_FRAMEWORK = {
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
-    ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'notifications': '600/hour',
-        'subscribe': '60/minute',
-    }
-}
 
 TEMPLATES = [
     {
@@ -299,3 +289,43 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Auth
 LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/profile/'
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '1000/day',
+        'user': '10000/day',
+        'subscribe': '60/minute',
+        'notifications': '100/minute',
+    }
+}
+
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+]
+CORS_ALLOW_CREDENTIALS = True

@@ -5,7 +5,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from .models import Badge, UserBadge, WatchLog, Notification
 from core.models import ChatMessage
-from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre, Episode
+from content.models import Subscription, Review, VideoFile, Anime, Genre, Episode
+from apps.watchparty.models import Room
 from .badge_system import GENERAL_BADGE_STRATEGIES, CHAT_BADGE_STRATEGIES
 
 def _send_badge_notifications(user, new_badges):

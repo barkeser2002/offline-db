@@ -1,132 +1,75 @@
-from django.http import HttpResponse, Http404
-from django.shortcuts import get_object_or_404, render, redirect
-from django.core.cache import cache
-from django.contrib.auth.decorators import login_required
-from rest_framework.views import APIView
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import SessionAuthentication
-from rest_framework.throttling import UserRateThrottle, ScopedRateThrottle
-from .models import VideoFile, Episode, Anime, Subscription, Genre, WatchParty
-from core.utils import rate_limit_ip
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
+from django.db.models import Prefetch
 
-@rate_limit_ip(limit=20, period=60)
-def search_view(request):
-    query = request.GET.get('q')
-    genre_name = request.GET.get('genre')
+from .models import Anime, Episode, Season, Subscription, VideoFile
+from .serializers import (
+    AnimeListSerializer, AnimeDetailSerializer, EpisodeSerializer,
+    SubscriptionSerializer
+)
 
-    results = Anime.objects.all()
+class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Anime.objects.all().order_by('-created_at')
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['title', 'english_title', 'japanese_title']
+    filterset_fields = ['status', 'type', 'genres__name']
+    ordering_fields = ['score', 'popularity', 'created_at', 'aired_from']
 
-    if query:
-        results = results.filter(title__icontains=query)
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return AnimeDetailSerializer
+        return AnimeListSerializer
 
-    if genre_name:
-        results = results.filter(genres__name__iexact=genre_name)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == 'retrieve':
+            return queryset.prefetch_related(
+                'genres', 
+                'seasons__episodes',
+                'anime_characters__character'
+            )
+        return queryset.prefetch_related('genres')
 
-    results = results.order_by('-created_at')
-
-    # Cache genres for 24 hours
-    all_genres = cache.get('all_genres')
-    if not all_genres:
-        all_genres = list(Genre.objects.all())
-        cache.set('all_genres', all_genres, 86400)
-
-    context = {
-        'results': results,
-        'query': query,
-        'selected_genre': genre_name,
-        'genres': all_genres,
-    }
-
-    return render(request, 'search_results.html', context)
-
-class KeyServeView(APIView):
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [UserRateThrottle]
-
-    def get(self, request, key_token):
-        # Look up VideoFile by the key token
-        video = get_object_or_404(VideoFile, encryption_key=key_token)
-
-        # Return the key content.
-        # In a real AES-128 HLS setup, this should be 16 binary bytes.
-        # Our task wrote a 32-char hex string. We'll return what we stored.
-        return HttpResponse(video.encryption_key, content_type='application/octet-stream')
-
-def home_view(request):
-    latest_episodes = cache.get('home_latest_episodes')
-    if not latest_episodes:
-        # Evaluate QuerySet to list to ensure data is fetched and cached
-        latest_episodes = list(Episode.objects.select_related('season__anime').order_by('-created_at')[:10])
-        cache.set('home_latest_episodes', latest_episodes, 900) # 15 minutes
-
-    return render(request, 'home.html', {'latest_episodes': latest_episodes})
-
-def player_view(request, episode_id):
-    episode = get_object_or_404(Episode.objects.select_related('season__anime'), id=episode_id)
-    # Get the default video (e.g. highest quality)
-    video = episode.video_files.select_related('fansub_group').order_by('-quality').first()
-    return render(request, 'player.html', {'episode': episode, 'video': video})
-
-def anime_detail(request, pk):
-    anime = get_object_or_404(Anime, pk=pk)
-
-    # Cache seasons and episodes structure for 1 hour
-    cache_key = f'anime_{pk}_seasons'
-    seasons = cache.get(cache_key)
-
-    if not seasons:
-        # Prefetch seasons and episodes for efficient rendering
-        # Evaluate to list to ensure caching works
-        seasons = list(anime.seasons.prefetch_related('episodes').order_by('number'))
-        cache.set(cache_key, seasons, 3600)
-
-    is_subscribed = False
-    if request.user.is_authenticated:
-        is_subscribed = Subscription.objects.filter(user=request.user, anime=anime).exists()
-
-    context = {
-        'anime': anime,
-        'seasons': seasons,
-        'is_subscribed': is_subscribed,
-    }
-    return render(request, 'anime_detail.html', context)
-
-class SubscribeAnimeAPIView(APIView):
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = 'subscribe'
-
-    def post(self, request, pk):
-        anime = get_object_or_404(Anime, pk=pk)
-        subscription, created = Subscription.objects.get_or_create(user=request.user, anime=anime)
-
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def subscribe(self, request, pk=None):
+        anime = self.get_object()
+        subscription, created = Subscription.objects.get_or_create(
+            user=request.user, 
+            anime=anime
+        )
+        
         if not created:
             subscription.delete()
             return Response({'status': 'unsubscribed'})
+            
+        return Response({'status': 'subscribed'}, status=status.HTTP_201_CREATED)
 
-        return Response({'status': 'subscribed'})
+class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Episode.objects.all()
+    serializer_class = EpisodeSerializer
+    
+    def get_queryset(self):
+        return Episode.objects.select_related('season__anime').prefetch_related(
+            'video_files__fansub_group',
+            'external_sources'
+        )
 
-@rate_limit_ip(limit=5, period=300)
-@login_required
-def create_watch_party(request, episode_id):
-    episode = get_object_or_404(Episode, id=episode_id)
-    party = WatchParty.objects.create(episode=episode, host=request.user)
-    return redirect('watch_party_detail', uuid=party.uuid)
+class HomeViewSet(viewsets.ViewSet):
+    """
+    API endpoint for Homepage data
+    """
+    def list(self, request):
+        trending = Anime.objects.order_by('-popularity')[:10]
+        latest_episodes = Episode.objects.select_related('season__anime').order_by('-created_at')[:12]
+        seasonal = Anime.objects.filter(status='Currently Airing').order_by('-score')[:10]
+        
+        return Response({
+            'trending': AnimeListSerializer(trending, many=True).data,
+            'latest_episodes': EpisodeSerializer(latest_episodes, many=True).data,
+            'seasonal': AnimeListSerializer(seasonal, many=True).data
+        })
 
-def watch_party_detail(request, uuid):
-    party = get_object_or_404(WatchParty, uuid=uuid)
-    episode = party.episode
-    video = episode.video_files.order_by('-quality').first()
-
-    room_name = f"party_{party.uuid}"
-
-    context = {
-        'episode': episode,
-        'video': video,
-        'party': party,
-        'room_name': room_name,
-    }
-    return render(request, 'watch_party.html', context)

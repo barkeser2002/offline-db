@@ -2,7 +2,8 @@ from datetime import timedelta, datetime
 from django.utils import timezone
 from django.db.models import Count, Q
 from core.models import ChatMessage
-from content.models import Subscription, Review, WatchParty, VideoFile, Anime, Genre, Episode
+from content.models import Subscription, Review, VideoFile, Anime, Genre, Episode
+from apps.watchparty.models import Room
 from .models import WatchLog, UserBadge, Badge
 
 class BadgeStrategy:
@@ -310,12 +311,12 @@ class CommunityBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
         # 16. Party Host: Hosted 5 Watch Parties.
         if 'party-host' not in awarded_slugs:
-            if WatchParty.objects.filter(host=user).count() >= 5:
+            if Room.objects.filter(host=user).count() >= 5:
                 self._award(user, 'party-host', awarded_slugs, all_badges, new_badges)
 
         # 22. Trendsetter: Hosted a Watch Party with 5 concurrent viewers.
         if 'trendsetter' not in awarded_slugs:
-            if WatchParty.objects.filter(host=user, max_participants__gte=5).exists():
+            if Room.objects.filter(host=user, max_participants__gte=5).exists():
                 self._award(user, 'trendsetter', awarded_slugs, all_badges, new_badges)
 
         # 18. Content Creator: Uploaded 5 videos.
