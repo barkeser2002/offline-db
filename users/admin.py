@@ -22,3 +22,4 @@ class WatchLogAdmin(ModelAdmin):
     list_display = ('user', 'episode', 'duration', 'watched_at')
     list_filter = ('watched_at',)
     search_fields = ('user__username', 'episode__title')
+    list_select_related = ('user', 'episode__season__anime')
