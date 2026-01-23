@@ -286,6 +286,32 @@ def check_badges(user):
         if perfect_score_count >= 5:
             award('star-power')
 
+    # 26. Otaku: Completed 5 different anime series.
+    if 'otaku' not in awarded_slugs and 'otaku' in all_badges:
+        watched_anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+
+        if watched_anime_ids:
+            # Get total episodes per anime: {anime_id: count}
+            total_episodes_qs = Episode.objects.filter(season__anime_id__in=watched_anime_ids).values('season__anime_id').annotate(total=Count('id'))
+            total_episodes_map = {item['season__anime_id']: item['total'] for item in total_episodes_qs}
+
+            # Get user watched episodes per anime: {anime_id: count}
+            user_watched_qs = WatchLog.objects.filter(
+                user=user,
+                episode__season__anime_id__in=watched_anime_ids
+            ).values('episode__season__anime_id').annotate(watched=Count('episode', distinct=True))
+            user_watched_map = {item['episode__season__anime_id']: item['watched'] for item in user_watched_qs}
+
+            completed_anime_count = 0
+            for anime_id in watched_anime_ids:
+                total = total_episodes_map.get(anime_id, 0)
+                watched = user_watched_map.get(anime_id, 0)
+                if total > 0 and watched >= total:
+                    completed_anime_count += 1
+
+            if completed_anime_count >= 5:
+                award('otaku')
+
     # Commit all new badges
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
