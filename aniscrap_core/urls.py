@@ -4,6 +4,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from content.sitemaps import AnimeSitemap, EpisodeSitemap, GenreSitemap
+from users.views import profile_view
 
 sitemaps = {
     'anime': AnimeSitemap,
@@ -17,6 +18,8 @@ urlpatterns = [
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     # Users API
     path('api/users/', include('users.urls')),
+    # User Profile
+    path('profile/', profile_view, name='profile'),
     # Content API
     path('api/content/', include('content.api.urls')),
     # Content
