@@ -422,10 +422,12 @@ def search_by_letter(letter: str, page: int = 1) -> List[Tuple[str, str]]:
             re.DOTALL,
         )
 
+        seen_slugs = set()
         for slug, title in matches:
             clean_slug = slug.replace("-izle", "")
             clean_title = title.strip()
-            if clean_title and clean_slug not in [r[0] for r in results]:
+            if clean_title and clean_slug not in seen_slugs:
+                seen_slugs.add(clean_slug)
                 results.append((clean_slug, clean_title))
 
         return results
