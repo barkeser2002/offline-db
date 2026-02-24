@@ -2,6 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from django.utils.html import escape
 from django.core.cache import cache
 from .models import Room, Participant, Message
 
@@ -45,6 +46,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         msg_type = data.get('type')
 
+        # Require authentication for all interactions
+        if not self.user.is_authenticated:
+            return
+
         if msg_type == 'sync':
             # Video Sync (Host -> Viewers)
             if await self.is_host(self.room_uuid, self.user):
@@ -60,16 +65,19 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'chat':
             # Chat Message
             message = data.get('message')
-            await self.save_message(self.room_uuid, self.user, message)
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message': message,
-                    'username': self.user.username,
-                    'is_system': False
-                }
-            )
+            # Sanitize message to prevent XSS
+            if message:
+                sanitized_message = escape(message)
+                await self.save_message(self.room_uuid, self.user, sanitized_message)
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': sanitized_message,
+                        'username': self.user.username,
+                        'is_system': False
+                    }
+                )
         elif msg_type == 'emote':
             # Emote Rain
             await self.channel_layer.group_send(
