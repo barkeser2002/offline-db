@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.db.models import Sum
 from decimal import Decimal
+from collections import defaultdict
 from .models import ShopierPayment
 from users.models import WatchLog, Wallet
 from content.models import VideoFile, FansubGroup
@@ -44,15 +45,32 @@ def calculate_revenue():
     encoder_units = {} # {user_id: units}
 
     # Fetch all logs (in production, filter by date)
-    logs = WatchLog.objects.select_related('episode').all()
+    # OPTIMIZATION: Aggregate by episode instead of iterating all logs
+    episode_durations = WatchLog.objects.values('episode').annotate(total_duration=Sum('duration'))
 
-    for log in logs:
-        episode = log.episode
-        duration = log.duration
+    episode_ids = [entry['episode'] for entry in episode_durations]
+
+    # Pre-fetch all relevant VideoFiles with related fields
+    # Use chunking to avoid SQLite limit on large IN clauses
+    all_videos = []
+    chunk_size = 900
+    for i in range(0, len(episode_ids), chunk_size):
+        chunk = episode_ids[i:i + chunk_size]
+        videos = VideoFile.objects.filter(episode_id__in=chunk).select_related('fansub_group', 'uploader')
+        all_videos.extend(videos)
+
+    # Group videos by episode
+    videos_by_episode = defaultdict(list)
+    for video in all_videos:
+        videos_by_episode[video.episode_id].append(video)
+
+    for entry in episode_durations:
+        episode_id = entry['episode']
+        duration = entry['total_duration']
 
         # Find providers
-        videos = VideoFile.objects.filter(episode=episode)
-        count = videos.count()
+        videos = videos_by_episode.get(episode_id, [])
+        count = len(videos)
 
         if count > 0:
             unit_share = duration / count
@@ -77,7 +95,7 @@ def calculate_revenue():
                 group = FansubGroup.objects.get(id=fg_id)
                 if group.owner:
                     wallet, _ = Wallet.objects.get_or_create(user=group.owner)
-                    wallet.balance += share
+                    wallet.balance = Decimal(wallet.balance) + share
                     wallet.save()
             except FansubGroup.DoesNotExist:
                 pass
@@ -87,7 +105,7 @@ def calculate_revenue():
         for enc_id, units in encoder_units.items():
             share = (Decimal(units) / Decimal(total_encoder_units)) * encoder_pool
             wallet, _ = Wallet.objects.get_or_create(user_id=enc_id)
-            wallet.balance += share
+            wallet.balance = Decimal(wallet.balance) + share
             wallet.save()
 
     # 5. Mark payments as distributed
