@@ -64,7 +64,10 @@ class HomeViewSet(viewsets.ViewSet):
     """
     def list(self, request):
         trending = Anime.objects.order_by('-popularity')[:10]
-        latest_episodes = Episode.objects.select_related('season__anime').order_by('-created_at')[:12]
+        latest_episodes = Episode.objects.select_related('season__anime').prefetch_related(
+            'video_files__fansub_group',
+            'external_sources'
+        ).order_by('-created_at')[:12]
         seasonal = Anime.objects.filter(status='Currently Airing').order_by('-score')[:10]
         
         return Response({
