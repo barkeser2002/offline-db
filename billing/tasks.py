@@ -44,50 +44,54 @@ def calculate_revenue():
     encoder_units = {} # {user_id: units}
 
     # Fetch all logs (in production, filter by date)
-    logs = WatchLog.objects.select_related('episode').all()
+    # Prefetch video files, but no need to prefetch related group/uploader since we only use IDs
+    logs = WatchLog.objects.select_related('episode').prefetch_related(
+        'episode__video_files'
+    ).all()
 
     for log in logs:
         episode = log.episode
         duration = log.duration
 
         # Find providers
-        videos = VideoFile.objects.filter(episode=episode)
-        count = videos.count()
+        videos = episode.video_files.all()
+        count = len(videos)
 
         if count > 0:
             unit_share = duration / count
             for video in videos:
                 # Fansub Group Logic
-                if video.fansub_group:
-                    fg_id = video.fansub_group.id
+                if video.fansub_group_id:
+                    fg_id = video.fansub_group_id
                     fansub_units[fg_id] = fansub_units.get(fg_id, 0) + unit_share
                     total_fansub_units += unit_share
 
                 # Encoder Logic
-                if video.uploader:
-                    enc_id = video.uploader.id
+                if video.uploader_id:
+                    enc_id = video.uploader_id
                     encoder_units[enc_id] = encoder_units.get(enc_id, 0) + unit_share
                     total_encoder_units += unit_share
 
     # 3. Distribute Fansub Pool
     if total_fansub_units > 0:
+        # Batch fetch groups to avoid N+1 queries in distribution loop
+        groups = FansubGroup.objects.filter(id__in=fansub_units.keys()).select_related('owner')
+        group_map = {g.id: g for g in groups}
+
         for fg_id, units in fansub_units.items():
             share = (Decimal(units) / Decimal(total_fansub_units)) * fansub_pool
-            try:
-                group = FansubGroup.objects.get(id=fg_id)
-                if group.owner:
-                    wallet, _ = Wallet.objects.get_or_create(user=group.owner)
-                    wallet.balance += share
-                    wallet.save()
-            except FansubGroup.DoesNotExist:
-                pass
+            group = group_map.get(fg_id)
+            if group and group.owner:
+                wallet, _ = Wallet.objects.get_or_create(user=group.owner)
+                wallet.balance = Decimal(wallet.balance) + share
+                wallet.save()
 
     # 4. Distribute Encoder Pool
     if total_encoder_units > 0:
         for enc_id, units in encoder_units.items():
             share = (Decimal(units) / Decimal(total_encoder_units)) * encoder_pool
             wallet, _ = Wallet.objects.get_or_create(user_id=enc_id)
-            wallet.balance += share
+            wallet.balance = Decimal(wallet.balance) + share
             wallet.save()
 
     # 5. Mark payments as distributed
