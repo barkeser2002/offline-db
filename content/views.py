@@ -30,7 +30,9 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
             return queryset.prefetch_related(
                 'genres', 
                 'seasons__episodes',
-                'anime_characters__character'
+                'anime_characters__character',
+                'seasons__episodes__video_files',
+                'seasons__episodes__external_sources'
             )
         return queryset.prefetch_related('genres')
 
