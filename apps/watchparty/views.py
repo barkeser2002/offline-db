@@ -6,7 +6,12 @@ from .models import Room
 from .serializers import RoomSerializer
 
 class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.filter(is_active=True)
+    queryset = Room.objects.filter(is_active=True).select_related(
+        'episode', 'host'
+    ).prefetch_related(
+        'episode__video_files__fansub_group',
+        'episode__external_sources'
+    )
     serializer_class = RoomSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -15,6 +20,11 @@ class RoomViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def my_rooms(self, request):
-        rooms = Room.objects.filter(host=request.user)
+        rooms = Room.objects.filter(host=request.user).select_related(
+            'episode', 'host'
+        ).prefetch_related(
+            'episode__video_files__fansub_group',
+            'episode__external_sources'
+        )
         serializer = self.get_serializer(rooms, many=True)
         return Response(serializer.data)
