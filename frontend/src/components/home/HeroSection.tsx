@@ -12,6 +12,7 @@ interface HeroSectionProps {
 
 export default function HeroSection({ slides = [] }: HeroSectionProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   // If no slides, show nothing or skeleton. Ideally parent handles loading.
   if (!slides || slides.length === 0) {
@@ -23,17 +24,30 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
   }
 
   useEffect(() => {
+    if (isPaused) return;
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 8000);
 
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, [slides.length, isPaused]);
 
   const slide = slides[currentSlide];
 
   return (
-    <section className="relative h-[70vh] min-h-[500px] overflow-hidden">
+    <section
+      className="relative h-[70vh] min-h-[500px] overflow-hidden"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+      onFocus={() => setIsPaused(true)}
+      onBlur={(e) => {
+        // Only resume if focus moves outside the section
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsPaused(false);
+        }
+      }}
+    >
       {/* Background Image with Overlay */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -114,6 +128,7 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
                     className="w-5 h-5"
                     fill="currentColor"
                     viewBox="0 0 20 20"
+                    aria-hidden="true"
                   >
                     <path d="M4 4l12 6-12 6V4z" />
                   </svg>
@@ -141,6 +156,8 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
           <button
             key={idx}
             onClick={() => setCurrentSlide(idx)}
+            aria-label={`Go to slide ${idx + 1}`}
+            aria-current={idx === currentSlide ? "true" : undefined}
             className={`h-1.5 rounded-full transition-all duration-300 ${
               idx === currentSlide
                 ? "w-8 bg-primary"
