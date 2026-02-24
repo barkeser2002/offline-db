@@ -57,9 +57,11 @@ class JikanClientTests(SimpleTestCase):
 
         asyncio.run(run_test())
 
+    @patch('scraper_module.services.jikan.cache')
     @patch('scraper_module.services.jikan.AsyncSession')
-    def test_rate_limit_retry(self, mock_session_cls):
+    def test_rate_limit_retry(self, mock_session_cls, mock_cache):
         async def run_test():
+            mock_cache.get.return_value = None
             mock_session = AsyncMock()
             mock_session_cls.return_value.__aenter__.return_value = mock_session
 

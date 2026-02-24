@@ -276,23 +276,23 @@ class JikanClient:
             if value is not None:
                 setattr(anime_instance, field, value)
 
-        anime_instance.save()
+        await anime_instance.asave()
         logger.info(f"Synced anime '{anime_instance.title}' with MAL data")
 
         # Sync genres
         for genre_data in jikan_data.get('genres', []):
-            genre, _ = Genre.objects.get_or_create(
+            genre, _ = await Genre.objects.aget_or_create(
                 name=genre_data['name'],
                 defaults={'slug': genre_data['name'].lower().replace(' ', '-')}
             )
-            anime_instance.genres.add(genre)
+            await anime_instance.genres.aadd(genre)
 
         # Sync characters (limit to 15 main characters)
         characters_data = await self.get_anime_characters(mal_id)
         for char_data in characters_data[:15]:
             parsed_char = self.parse_character_data(char_data)
 
-            character, _ = Character.objects.update_or_create(
+            character, _ = await Character.objects.aupdate_or_create(
                 mal_id=parsed_char['character']['mal_id'],
                 defaults={
                     'name': parsed_char['character']['name'],
@@ -300,7 +300,7 @@ class JikanClient:
                 }
             )
 
-            AnimeCharacter.objects.update_or_create(
+            await AnimeCharacter.objects.aupdate_or_create(
                 anime=anime_instance,
                 character=character,
                 defaults={
