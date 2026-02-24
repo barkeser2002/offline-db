@@ -78,6 +78,7 @@ class UserProfileAPIView(APIView):
         # Note: In a real app, create a ProfileSerializer.
         # Here constructing ad-hoc response for speed as per migration plan.
         return Response({
+            'id': user.id,
             'username': user.username,
             'email': user.email,
             'is_premium': getattr(user, 'is_premium', False),
