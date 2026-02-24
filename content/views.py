@@ -65,12 +65,14 @@ class HomeViewSet(viewsets.ViewSet):
     API endpoint for Homepage data
     """
     def list(self, request):
-        trending = Anime.objects.order_by('-popularity')[:10]
+        # Optimization: Add prefetch_related('genres') to avoid N+1 queries
+        trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]
         latest_episodes = Episode.objects.select_related('season__anime').prefetch_related(
             'video_files__fansub_group',
             'external_sources'
         ).order_by('-created_at')[:12]
-        seasonal = Anime.objects.filter(status='Currently Airing').order_by('-score')[:10]
+        # Optimization: Add prefetch_related('genres') to avoid N+1 queries
+        seasonal = Anime.objects.filter(status='Currently Airing').prefetch_related('genres').order_by('-score')[:10]
         
         return Response({
             'trending': AnimeListSerializer(trending, many=True).data,
