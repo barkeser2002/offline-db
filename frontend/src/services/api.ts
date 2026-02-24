@@ -42,6 +42,7 @@ api.interceptors.response.use(
           });
           
           localStorage.setItem('accessToken', data.access);
+          document.cookie = `accessToken=${data.access}; path=/; max-age=86400; SameSite=Lax`;
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return api(originalRequest);
         }
@@ -50,6 +51,8 @@ api.interceptors.response.use(
         if (typeof window !== 'undefined') {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          document.cookie = 'accessToken=; path=/; max-age=0';
+          document.cookie = 'refreshToken=; path=/; max-age=0';
           window.location.href = '/login';
         }
       }
@@ -199,6 +202,10 @@ export const authService = {
     if (data.access) {
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
+
+      // Set cookies for server-side access
+      document.cookie = `accessToken=${data.access}; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `refreshToken=${data.refresh}; path=/; max-age=604800; SameSite=Lax`;
     }
     return data;
   },
@@ -206,6 +213,10 @@ export const authService = {
   logout: () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
+
+    // Remove cookies
+    document.cookie = 'accessToken=; path=/; max-age=0';
+    document.cookie = 'refreshToken=; path=/; max-age=0';
   },
   
   getProfile: async () => {

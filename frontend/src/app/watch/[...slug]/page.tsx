@@ -1,4 +1,5 @@
 import { contentService } from "@/services/api";
+import { getCurrentUser } from "@/services/serverAuth";
 import VideoPlayer from "@/components/watch/VideoPlayer";
 import { notFound } from "next/navigation";
 
@@ -36,10 +37,8 @@ export default async function WatchPage({
     notFound();
   }
 
-  // TODO: Fetch current user from session if available
-  // const currentUser = await authService.getCurrentUser();
-  // For now, VideoPlayer will assume anonymous or handle it if we pass it.
-  // Actually, useSyncManager handles connection, backend handles auth via Token/Session.
+  // Fetch current user from session if available
+  const currentUser = await getCurrentUser();
 
   return (
     <VideoPlayer
@@ -47,7 +46,7 @@ export default async function WatchPage({
       animeId={animeId}
       totalEpisodes={(animeDetail as any).total_episodes || 12}
       roomUuid={room}
-      currentUser={{ id: 1, username: "Guest" }} // Placeholder until Auth integration
+      currentUser={currentUser || undefined}
     />
   );
 }
