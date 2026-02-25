@@ -27,6 +27,7 @@ router.register(r'home', HomeViewSet, basename='home')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('content.urls')),
     
     # API Handlers
     path('api/v1/', include(router.urls)),

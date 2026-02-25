@@ -82,6 +82,14 @@ def encode_episode(self, episode_id, source_path, quality='1080p', upload_to_sto
         output_dir = os.path.join(settings.MEDIA_ROOT, 'videos', str(episode.id), quality)
         os.makedirs(output_dir, exist_ok=True)
 
+        # Retrieve or Create VideoFile first to get consistent ID
+        # We need the ID for the key_uri to prevent leaking the key in the URL
+        video, created = VideoFile.objects.get_or_create(
+            episode=episode,
+            quality=quality,
+            defaults={'id': uuid.uuid4(), 'hls_path': '', 'encryption_key': '', 'quality': quality}
+        )
+
         # Encryption Key Generation
         encryption_key = uuid.uuid4().hex
         key_file_path = os.path.join(output_dir, 'segment.key')
@@ -90,7 +98,8 @@ def encode_episode(self, episode_id, source_path, quality='1080p', upload_to_sto
             f.write(encryption_key)
 
         # Key Info File for FFmpeg
-        key_uri = f"/api/key/{encryption_key}/"
+        # Security Fix: Use VideoFile ID (UUID) in URL, not the key itself.
+        key_uri = f"/api/key/{video.id}/"
         key_info_path = os.path.join(output_dir, 'key_info.txt')
         with open(key_info_path, 'w') as f:
             f.write(f"{key_uri}\n")
@@ -164,16 +173,12 @@ def encode_episode(self, episode_id, source_path, quality='1080p', upload_to_sto
                 logger.warning(f"Storage upload failed, keeping local: {e}")
 
         # Save to Database
-        VideoFile.objects.update_or_create(
-            episode=episode,
-            quality=quality,
-            defaults={
-                'hls_path': hls_output,
-                'encryption_key': encryption_key,
-                'file_size_bytes': total_size,
-                'is_hardcoded': False
-            }
-        )
+        # Update existing video object
+        video.hls_path = hls_output
+        video.encryption_key = encryption_key
+        video.file_size_bytes = total_size
+        video.is_hardcoded = False
+        video.save()
 
         logger.info(f"Successfully encoded {episode} to {quality} ({total_size} bytes)")
         return f"Successfully encoded {episode} to {quality}"

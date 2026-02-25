@@ -1,3 +1,5 @@
+from django.http import HttpResponse, Http404
+from rest_framework.views import APIView
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -80,3 +82,17 @@ class HomeViewSet(viewsets.ViewSet):
             'seasonal': AnimeListSerializer(seasonal, many=True).data
         })
 
+
+class KeyServeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        # Lookup by ID (UUID) not encryption_key (Secret)
+        video = get_object_or_404(VideoFile.objects.select_related('episode__season__anime'), pk=pk)
+
+        # Premium Check: 1080p requires premium
+        if video.quality == '1080p' and not getattr(request.user, 'is_premium', False):
+            return Response({'detail': 'Premium required for 1080p'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Return key content as text/plain (since it is stored as hex string in file)
+        return HttpResponse(video.encryption_key, content_type='text/plain')
