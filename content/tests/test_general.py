@@ -29,7 +29,8 @@ class ContentTests(TestCase):
 class KeyServeTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.user = User.objects.create_user(username='testuser', password='password')
+        # User needs to be premium for 1080p access
+        self.user = User.objects.create_user(username='testuser', password='password', is_premium=True)
         self.anime = Anime.objects.create(title="Test Anime")
         self.season = Season.objects.create(anime=self.anime, number=1, title="Season 1")
         self.episode = Episode.objects.create(season=self.season, number=1, title="Test Ep")
@@ -39,9 +40,9 @@ class KeyServeTests(TestCase):
             hls_path='test.m3u8',
             encryption_key=uuid.uuid4().hex
         )
-        # Assuming the URL pattern is /api/key/<str:key_token>/
+        # Assuming the URL pattern is /api/key/<uuid:pk>/
         # content/urls.py name is 'video-key'
-        self.url = reverse('video-key', args=[self.video.encryption_key])
+        self.url = reverse('video-key', args=[self.video.id])
 
     def test_key_access_authenticated(self):
         self.client.force_login(self.user)
@@ -51,7 +52,7 @@ class KeyServeTests(TestCase):
 
     def test_key_access_unauthenticated(self):
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
 
 class CacheTests(TestCase):
