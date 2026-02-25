@@ -34,6 +34,8 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
                 'seasons__episodes',
                 'anime_characters__character',
                 'seasons__episodes__video_files',
+                # Optimization: Prefetch fansub groups to avoid N+1 queries when accessing video_files.fansub_group
+                'seasons__episodes__video_files__fansub_group',
                 'seasons__episodes__external_sources'
             )
         return queryset.prefetch_related('genres')
