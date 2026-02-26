@@ -3,6 +3,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
 from asgiref.sync import sync_to_async
+from django.utils.html import escape
 from .models import ChatMessage
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -85,15 +86,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             username = text_data_json.get('username', 'Anonymous')
 
+        # Sanitize message to prevent Stored XSS
+        # Using django.utils.html.escape to escape special characters
+        sanitized_message = escape(message)
+
         # Save to DB
-        await self.save_message(username, message)
+        await self.save_message(username, sanitized_message)
 
         # Send message to room group
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'message': message,
+                'message': sanitized_message,
                 'username': username,
             }
         )

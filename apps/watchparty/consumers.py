@@ -4,6 +4,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils.html import escape
 from django.core.cache import cache
+from asgiref.sync import sync_to_async
 from .models import Room, Participant, Message
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,13 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         if not self.user.is_authenticated:
             return
 
+        # Rate Limit Check for chat messages
+        if msg_type == 'chat':
+            if not await self.check_rate_limit():
+                # Silently ignore or send error?
+                # Sending error might be better but let's just ignore to prevent spam
+                return
+
         if msg_type == 'sync':
             # Video Sync (Host -> Viewers)
             if await self.is_host(self.room_uuid, self.user):
@@ -65,6 +73,11 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         elif msg_type == 'chat':
             # Chat Message
             message = data.get('message')
+
+            # Input Validation: Max Length
+            if message and len(message) > 500:
+                message = message[:500]
+
             # Sanitize message to prevent XSS
             if message:
                 sanitized_message = escape(message)
@@ -152,3 +165,19 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_participants(self, uuid):
         return list(Participant.objects.filter(room_id=uuid, is_online=True).values('user__username', 'user__id'))
+
+    @sync_to_async
+    def check_rate_limit(self):
+        if not self.user or not self.user.is_authenticated:
+            return False # Should not happen as we check auth in receive
+
+        key = f"wp_chat_limit_user_{self.user.id}"
+
+        # Limit: 10 messages per 10 seconds (slightly more lenient than global chat)
+        try:
+            count = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout=10)
+            count = 1
+
+        return count <= 10
