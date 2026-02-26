@@ -69,6 +69,12 @@ class Anime(models.Model):
         ordering = ['-created_at']
         verbose_name = _("Anime")
         verbose_name_plural = _("Animes")
+        indexes = [
+            models.Index(fields=['popularity']),
+            models.Index(fields=['score']),
+            models.Index(fields=['status']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
         return self.title
@@ -163,6 +169,11 @@ class Episode(models.Model):
     title = models.CharField(max_length=255, blank=True)
     thumbnail = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self):
         return f"{self.season.anime.title} - S{self.season.number}E{self.number}"
