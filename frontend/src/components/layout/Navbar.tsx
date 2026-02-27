@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -19,6 +19,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Avatar,
+  Kbd,
 } from "@nextui-org/react";
 import { motion } from "framer-motion";
 
@@ -32,6 +33,19 @@ const navItems = [
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <NextUINavbar
@@ -87,11 +101,12 @@ export default function Navbar() {
         {/* Search */}
         <NavbarItem className="hidden md:flex">
           <Input
+            ref={searchInputRef}
             classNames={{
               base: "max-w-[220px]",
               input: "text-sm",
               inputWrapper:
-                "bg-surface border-white/10 hover:border-primary/50",
+                "bg-surface border-white/10 hover:border-primary/50 pr-1",
             }}
             placeholder="Search anime..."
             size="sm"
@@ -111,6 +126,11 @@ export default function Navbar() {
                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                 />
               </svg>
+            }
+            endContent={
+              <Kbd keys={["command"]} className="hidden lg:inline-block shadow-none border-none bg-transparent text-foreground/50 text-[10px]">
+                K
+              </Kbd>
             }
             type="search"
           />
