@@ -5,9 +5,14 @@ from .views import KeyServeView
 #     SubscribeAnimeAPIView, search_view, create_watch_party, watch_party_detail
 # )
 
+from django.urls import include
+
 urlpatterns = [
     # API for serving HLS keys securely
     path('api/key/<uuid:pk>/', KeyServeView.as_view(), name='video-key'),
+
+    # Review API routes
+    path('api/content/', include('content.api.urls')),
 
     # The following views are currently missing or broken.
     # We comment them out to prevent ImportError on startup, but keep them for reference.

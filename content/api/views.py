@@ -17,7 +17,8 @@ class ReviewSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    queryset = Review.objects.all().order_by('-created_at')
+    # Optimization: Use select_related('user') to avoid N+1 queries when serializing the user field
+    queryset = Review.objects.select_related('user').all().order_by('-created_at')
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
