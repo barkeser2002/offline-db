@@ -48,6 +48,9 @@ export default function Footer() {
               <a
                 href="#"
                 className="text-foreground/50 hover:text-primary transition-colors"
+                aria-label="Twitter"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <svg
                   className="w-5 h-5"
@@ -60,6 +63,9 @@ export default function Footer() {
               <a
                 href="#"
                 className="text-foreground/50 hover:text-primary transition-colors"
+                aria-label="Discord"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <svg
                   className="w-5 h-5"
@@ -72,6 +78,9 @@ export default function Footer() {
               <a
                 href="#"
                 className="text-foreground/50 hover:text-primary transition-colors"
+                aria-label="GitHub"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <svg
                   className="w-5 h-5"
