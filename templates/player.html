@@ -58,7 +58,7 @@
 
                 <div class="mt-4 pt-4 border-t border-gray-700">
                     <h4 class="font-bold text-sm mb-2 text-white">Actions</h4>
-                    <a href="{% url 'create_watch_party' episode.id %}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition text-sm font-semibold">
+                    <a href="{% url 'create_watch_party' episode.id %}" class="inline-block bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-800 focus-visible:ring-brand">
                         🎉 Start Watch Party
                     </a>
                 </div>
@@ -88,12 +88,14 @@
             <div class="p-3 bg-gray-900 border-t border-gray-700">
                 <div class="flex gap-2">
                     <input type="text" id="chat-input"
-                        class="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand"
+                        class="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                        aria-label="Chat message"
                         placeholder="Say something..."
                         {% if not user.is_authenticated %}disabled title="Login to chat"{% endif %}
                     >
                     <button id="chat-send"
-                        class="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="bg-brand text-white px-4 py-2 rounded-lg hover:bg-brand-dark transition disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                        aria-label="Send message"
                         {% if not user.is_authenticated %}disabled{% endif %}
                     >
                         Send
