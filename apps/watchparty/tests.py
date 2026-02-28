@@ -50,3 +50,39 @@ def test_room_list_queries():
     # )
     # Total expected: 1 + 10 * (1 + 1 + 1 + 1 + 1) = 51 queries?
     # Actually VideoFileSerializer and ExternalSourceSerializer are used inside EpisodeSerializer.
+
+@pytest.mark.django_db
+def test_room_host_authorization():
+    # Setup data
+    host_user = User.objects.create_user(username='hostuser', password='password')
+    other_user = User.objects.create_user(username='otheruser', password='password')
+    anime = Anime.objects.create(title='Test Anime')
+    season = Season.objects.create(anime=anime, number=1)
+    episode = Episode.objects.create(season=season, number=1, title='Episode 1')
+
+    room = Room.objects.create(episode=episode, host=host_user)
+
+    client = Client()
+    url = reverse('room-detail', kwargs={'pk': room.uuid})
+
+    # 1. Test unauthenticated access (should not be able to patch)
+    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    assert response.status_code == 401 # Unauthorized
+
+    # 2. Test authenticated but not host access (should be forbidden)
+    client.force_login(other_user)
+    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    assert response.status_code == 403 # Forbidden
+
+    # Verify is_active wasn't changed
+    room.refresh_from_db()
+    assert room.is_active is True
+
+    # 3. Test host access (should be allowed)
+    client.force_login(host_user)
+    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    assert response.status_code == 200 # OK
+
+    # Verify is_active was changed
+    room.refresh_from_db()
+    assert room.is_active is False
