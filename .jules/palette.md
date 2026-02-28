@@ -7,3 +7,7 @@
 ## 2026-02-26 - [Keyboard Focus Visibility]
 **Learning:** Use `focus-visible` utility classes to add accessible focus rings for keyboard users without affecting mouse interactions.
 **Action:** Replace `focus:outline-none` with `focus:outline-none focus-visible:ring-2` to maintain accessibility while preserving clean visual design.
+
+## 2026-03-02 - [Native Alerts vs Custom Toasts]
+**Learning:** Native `alert()` calls disrupt the user experience by blocking the browser thread and looking visually jarring. Replacing them with non-blocking, stylized toasts improves interaction smoothness significantly.
+**Action:** Consistently replace `alert()` with `window.showToast()` (or equivalent) for user feedback across the application.

@@ -7,7 +7,7 @@
             <h1 class="text-3xl font-bold text-white">Watch Party: {{ episode.season.anime.title }}</h1>
             <h2 class="text-xl text-gray-400">Host: {{ party.host.username }} | Episode {{ episode.number }}</h2>
         </div>
-        <button onclick="navigator.clipboard.writeText(window.location.href); alert('Invite link copied!');" class="bg-brand text-white px-4 py-2 rounded hover:bg-brand-dark transition">
+        <button onclick="navigator.clipboard.writeText(window.location.href); if(window.showToast) { window.showToast({title: 'Success', message: 'Invite link copied!'}); } else { alert('Invite link copied!'); }" class="bg-brand text-white px-4 py-2 rounded hover:bg-brand-dark transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
             Copy Invite Link
         </button>
     </div>
