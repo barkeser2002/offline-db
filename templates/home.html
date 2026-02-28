@@ -3,8 +3,8 @@
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
     {% for episode in latest_episodes %}
-    <div class="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition transform shadow-lg border border-gray-700">
-        <a href="{% url 'watch' episode.id %}">
+    <div class="bg-gray-800 rounded-lg overflow-hidden hover:scale-105 transition transform shadow-lg border border-gray-700 focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-2 focus-within:ring-offset-darkbg">
+        <a href="{% url 'watch' episode.id %}" class="focus:outline-none block w-full h-full">
             <div class="relative">
                 {% if episode.thumbnail %}
                 <img src="{{ episode.thumbnail }}" alt="{{ episode.title }}" class="w-full h-48 object-cover">

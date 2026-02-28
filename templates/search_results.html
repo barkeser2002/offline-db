@@ -28,7 +28,7 @@
     {% if results %}
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {% for anime in results %}
-                <a href="{% url 'anime_detail' anime.id %}" class="group block relative rounded-xl overflow-hidden bg-gray-800 hover:shadow-2xl transition transform hover:-translate-y-1">
+                <a href="{% url 'anime_detail' anime.id %}" class="group block relative rounded-xl overflow-hidden bg-gray-800 hover:shadow-2xl transition transform hover:-translate-y-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-darkbg focus-visible:ring-brand">
                     <div class="aspect-w-2 aspect-h-3 bg-gray-700">
                         {% if anime.cover_image %}
                             <img src="{{ anime.cover_image }}" alt="{{ anime.title }}" class="object-cover w-full h-full">

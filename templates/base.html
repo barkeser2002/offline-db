@@ -29,7 +29,7 @@
             <!-- Search Bar -->
             <form role="search" aria-label="Site Search" action="{% url 'search' %}" method="get" class="hidden md:flex items-center bg-gray-800 rounded-lg px-3 py-1 border border-gray-700 focus-within:border-brand">
                 <input type="text" name="q" aria-label="Search query" placeholder="Search..." class="bg-transparent text-sm text-white focus:outline-none w-48">
-                <button type="submit" aria-label="Submit search" class="text-gray-400 hover:text-white">
+                <button type="submit" aria-label="Submit search" class="text-gray-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
@@ -61,7 +61,7 @@
                                 <div class="p-4 text-center text-gray-500 text-sm">Loading...</div>
                             </div>
                             <div class="p-2 border-t border-gray-700 text-center bg-gray-800">
-                                <a href="#" class="text-xs text-gray-400 hover:text-white transition">View All</a>
+                                <a href="#" class="text-xs text-gray-400 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded px-1">View All</a>
                             </div>
                         </div>
                     </div>
