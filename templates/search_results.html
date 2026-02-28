@@ -13,15 +13,15 @@
             {% endif %}
         </h1>
 
-        <form action="{% url 'search' %}" method="get" class="flex gap-2">
-            <input type="text" name="q" value="{{ query|default:'' }}" placeholder="Search..." class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-brand">
-            <select name="genre" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:border-brand">
+        <form role="search" aria-label="Search Results Filters" action="{% url 'search' %}" method="get" class="flex gap-2">
+            <input type="text" name="q" aria-label="Search query" value="{{ query|default:'' }}" placeholder="Search..." class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus:border-brand">
+            <select name="genre" aria-label="Filter by genre" class="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus:border-brand">
                 <option value="">All Genres</option>
                 {% for genre in genres %}
                     <option value="{{ genre.name }}" {% if selected_genre == genre.name %}selected{% endif %}>{{ genre.name }}</option>
                 {% endfor %}
             </select>
-            <button type="submit" class="bg-brand text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition">Filter</button>
+            <button type="submit" aria-label="Apply filters" class="bg-brand text-white px-6 py-2 rounded-lg hover:bg-opacity-80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">Filter</button>
         </form>
     </div>
 
