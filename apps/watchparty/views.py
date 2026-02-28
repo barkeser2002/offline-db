@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Room
 from .serializers import RoomSerializer
+from .permissions import IsHostOrReadOnly
 
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.filter(is_active=True).select_related(
@@ -13,7 +14,7 @@ class RoomViewSet(viewsets.ModelViewSet):
         'episode__external_sources'
     )
     serializer_class = RoomSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly, IsHostOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
