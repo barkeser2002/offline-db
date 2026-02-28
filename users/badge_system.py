@@ -65,12 +65,18 @@ class ReviewBadgeStrategy(BadgeStrategy):
 
 class WatchTimeBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
-        # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
-        if 'binge-watcher' not in awarded_slugs:
+        # Optimization: Fetch 24h count once for both binge-watcher and marathon-runner
+        if 'binge-watcher' not in awarded_slugs or 'marathon-runner' not in awarded_slugs:
             last_24h = timezone.now() - timedelta(hours=24)
-            count = WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values('episode').distinct().count()
-            if count >= 5:
+            count_24h = WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values('episode').distinct().count()
+
+            # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
+            if 'binge-watcher' not in awarded_slugs and count_24h >= 5:
                 self._award(user, 'binge-watcher', awarded_slugs, all_badges, new_badges)
+
+            # 32. Marathon Runner: Watched 12+ episodes in the last 24 hours.
+            if 'marathon-runner' not in awarded_slugs and count_24h >= 12:
+                self._award(user, 'marathon-runner', awarded_slugs, all_badges, new_badges)
 
         # 1.1 Weekend Warrior: Watched 5+ episodes on a single weekend day.
         if 'weekend-warrior' not in awarded_slugs:
@@ -108,13 +114,6 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
             count = WatchLog.objects.filter(user=user, watched_at__gte=last_hour).values('episode').distinct().count()
             if count >= 3:
                 self._award(user, 'speedster', awarded_slugs, all_badges, new_badges)
-
-        # 32. Marathon Runner: Watched 12+ episodes in the last 24 hours.
-        if 'marathon-runner' not in awarded_slugs:
-            last_24h = timezone.now() - timedelta(hours=24)
-            count = WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values('episode').distinct().count()
-            if count >= 12:
-                self._award(user, 'marathon-runner', awarded_slugs, all_badges, new_badges)
 
 class ConsistencyBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges):
