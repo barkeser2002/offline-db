@@ -290,6 +290,7 @@ export default function DiscoveryPage() {
                   color={viewMode === "grid" ? "primary" : "default"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
+                  aria-label="Grid view"
                 >
                   <svg
                     className="w-4 h-4"
@@ -305,6 +306,7 @@ export default function DiscoveryPage() {
                   color={viewMode === "list" ? "primary" : "default"}
                   size="sm"
                   onClick={() => setViewMode("list")}
+                  aria-label="List view"
                 >
                   <svg
                     className="w-4 h-4"
