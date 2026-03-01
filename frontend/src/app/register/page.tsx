@@ -175,7 +175,8 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-foreground/40 hover:text-foreground"
+                      className="text-foreground/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md px-1"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? "Hide" : "Show"}
                     </button>

@@ -121,7 +121,8 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-foreground/40 hover:text-foreground"
+                    className="text-foreground/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <svg
