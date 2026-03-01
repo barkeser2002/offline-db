@@ -10,7 +10,7 @@ class BadgeStrategy:
     """
     Abstract base class for badge awarding strategies.
     """
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         """
         Checks if the user qualifies for badges handled by this strategy.
         Appends new UserBadge instances to new_badges list.
@@ -26,7 +26,7 @@ class BadgeStrategy:
             awarded_slugs.add(slug)
 
 class ReviewBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         needed = False
         for slug in ['critic', 'opinionated', 'review-guru', 'star-power']:
             if slug not in awarded_slugs:
@@ -64,7 +64,7 @@ class ReviewBadgeStrategy(BadgeStrategy):
                 self._award(user, 'star-power', awarded_slugs, all_badges, new_badges)
 
 class WatchTimeBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch 24h count once for both binge-watcher and marathon-runner
         if 'binge-watcher' not in awarded_slugs or 'marathon-runner' not in awarded_slugs:
             last_24h = timezone.now() - timedelta(hours=24)
@@ -89,7 +89,12 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
         # Optimization: Fetch last log once for time-of-day badges
         time_badges = ['night-owl', 'morning-glory', 'early-bird']
         if any(b not in awarded_slugs for b in time_badges):
-            last_log = WatchLog.objects.filter(user=user).select_related('episode').order_by('-watched_at').first()
+            if cache is not None:
+                if 'last_log' not in cache:
+                    cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+                last_log = cache['last_log']
+            else:
+                last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
 
             if last_log:
                 # 4. Night Owl: Watched an episode between 2 AM and 5 AM.
@@ -116,7 +121,7 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
                 self._award(user, 'speedster', awarded_slugs, all_badges, new_badges)
 
 class ConsistencyBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # 12. Streak Master: Watched anime for 7 consecutive days.
         if 'streak-master' not in awarded_slugs:
             today = timezone.now().date()
@@ -136,7 +141,7 @@ class ConsistencyBadgeStrategy(BadgeStrategy):
                 self._award(user, 'daily-viewer', awarded_slugs, all_badges, new_badges)
 
 class AccountBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # 2. Supporter: Is Premium.
         if 'supporter' not in awarded_slugs and user.is_premium:
             self._award(user, 'supporter', awarded_slugs, all_badges, new_badges)
@@ -152,7 +157,7 @@ class AccountBadgeStrategy(BadgeStrategy):
                 self._award(user, 'collector', awarded_slugs, all_badges, new_badges)
 
 class ConsumptionBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch episode count once
         if 'marathoner' not in awarded_slugs or 'century-club' not in awarded_slugs or 'millennium-club' not in awarded_slugs:
             distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
@@ -171,7 +176,12 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
 
         # 11. Loyal Fan: Watched 10 episodes of the same anime.
         if 'loyal-fan' not in awarded_slugs:
-            last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+            if cache is not None:
+                if 'last_log' not in cache:
+                    cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+                last_log = cache['last_log']
+            else:
+                last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
             if last_log:
                 anime = last_log.episode.season.anime
                 count = WatchLog.objects.filter(user=user, episode__season__anime=anime).values('episode').distinct().count()
@@ -209,10 +219,15 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
                     self._award(user, 'ova-enthusiast', awarded_slugs, all_badges, new_badges)
 
 class CompletionBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch last log once for both season-completist and super-fan
         if 'season-completist' not in awarded_slugs or 'super-fan' not in awarded_slugs:
-            last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+            if cache is not None:
+                if 'last_log' not in cache:
+                    cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+                last_log = cache['last_log']
+            else:
+                last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
             if last_log:
                 season = last_log.episode.season
                 anime = season.anime
@@ -235,7 +250,12 @@ class CompletionBadgeStrategy(BadgeStrategy):
 
         # 26. Otaku: Completed 5 different anime series.
         if 'otaku' not in awarded_slugs:
-            watched_anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+            if cache is not None:
+                if 'anime_ids' not in cache:
+                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+                watched_anime_ids = cache['anime_ids']
+            else:
+                watched_anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
             if watched_anime_ids:
                 total_episodes_qs = Episode.objects.filter(season__anime_id__in=watched_anime_ids).values('season__anime_id').annotate(total=Count('id'))
                 total_map = {i['season__anime_id']: i['total'] for i in total_episodes_qs}
@@ -252,21 +272,34 @@ class CompletionBadgeStrategy(BadgeStrategy):
                     self._award(user, 'otaku', awarded_slugs, all_badges, new_badges)
 
 class GenreBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
+        anime_ids = None
+
+        def get_anime_ids():
+            nonlocal anime_ids
+            if anime_ids is not None:
+                return anime_ids
+            if cache is not None:
+                if 'anime_ids' not in cache:
+                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+                anime_ids = cache['anime_ids']
+            else:
+                anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+            return anime_ids
+
         # 10. Genre Explorer: Watched anime from 5 different genres.
         if 'genre-explorer' not in awarded_slugs:
-            # Optimize: Get anime IDs first
-            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
-            count = Anime.objects.filter(id__in=anime_ids).values('genres__id').distinct().count()
+            ids = get_anime_ids()
+            count = Anime.objects.filter(id__in=ids).values('genres__id').distinct().count()
             if count >= 5:
                 self._award(user, 'genre-explorer', awarded_slugs, all_badges, new_badges)
 
         # 14. Genre Master: Watched 10 different anime from the same genre.
         if 'genre-master' not in awarded_slugs:
-            anime_ids = WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct()
-            if anime_ids:
-                qs = Genre.objects.filter(animes__id__in=anime_ids).annotate(
-                    user_anime_count=Count('animes', filter=Q(animes__id__in=anime_ids))
+            ids = get_anime_ids()
+            if ids:
+                qs = Genre.objects.filter(animes__id__in=ids).annotate(
+                    user_anime_count=Count('animes', filter=Q(animes__id__in=ids))
                 )
                 if qs.filter(user_anime_count__gte=10).exists():
                     self._award(user, 'genre-master', awarded_slugs, all_badges, new_badges)
@@ -282,7 +315,7 @@ class GenreBadgeStrategy(BadgeStrategy):
                     self._award(user, 'genre-savant', awarded_slugs, all_badges, new_badges)
 
 class SpecificGenreBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch all genre counts once to handle case-insensitivity
         if 'nightmare' not in awarded_slugs or 'comedy-gold' not in awarded_slugs:
             genre_counts_qs = Anime.objects.filter(
@@ -308,7 +341,7 @@ class SpecificGenreBadgeStrategy(BadgeStrategy):
                     self._award(user, 'comedy-gold', awarded_slugs, all_badges, new_badges)
 
 class CommunityBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # 16. Party Host: Hosted 5 Watch Parties.
         if 'party-host' not in awarded_slugs:
             if Room.objects.filter(host=user).count() >= 5:
@@ -325,7 +358,7 @@ class CommunityBadgeStrategy(BadgeStrategy):
                 self._award(user, 'content-creator', awarded_slugs, all_badges, new_badges)
 
 class ChatBadgeStrategy(BadgeStrategy):
-    def check(self, user, awarded_slugs, all_badges, new_badges):
+    def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # 5. Commentator: Posted 50 chat messages.
         if 'commentator' not in awarded_slugs:
             if ChatMessage.objects.filter(user=user).count() >= 50:

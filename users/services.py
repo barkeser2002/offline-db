@@ -49,10 +49,11 @@ def check_badges(user):
     # Bulk fetch badges and awarded status
     all_badges = {b.slug: b for b in Badge.objects.all()}
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
+    cache = {}
     new_badges = []
 
     for strategy in GENERAL_BADGE_STRATEGIES:
-        strategy.check(user, awarded_slugs, all_badges, new_badges)
+        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=cache)
 
     # Commit all new badges
     if new_badges:
@@ -67,10 +68,11 @@ def check_chat_badges(user):
     """
     all_badges = {b.slug: b for b in Badge.objects.all()}
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
+    cache = {}
     new_badges = []
 
     for strategy in CHAT_BADGE_STRATEGIES:
-        strategy.check(user, awarded_slugs, all_badges, new_badges)
+        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=cache)
 
     # Commit all new badges
     if new_badges:
