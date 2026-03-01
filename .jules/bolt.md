@@ -9,3 +9,7 @@
 ## 2025-03-01 - Global Badge System Optimization (Cache Context)
 **Learning:** We had individual strategies successfully optimized internally, but different strategies shared the exact same queries (e.g. `WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()`). Due to isolation in strategy pattern, redundant database calls were made.
 **Action:** Introduced a `cache` argument into the base `BadgeStrategy.check()` signature and propagated a `cache` dictionary instance from the service layer, enabling strategies to store and retrieve results of expensive or commonly repeated queries (e.g., `last_log`, `anime_ids`) across boundaries.
+
+## 2025-03-01 - Global Badge System Optimization (Avoid Heavy WatchLog Joins)
+**Learning:** Multiple badge strategies (`ConsumptionBadgeStrategy`, `SpecificGenreBadgeStrategy`, `GenreBadgeStrategy`) were performing expensive `JOIN`s from `Anime` down to `WatchLog` (e.g., `seasons__episodes__watch_logs__user=user`) multiple times per evaluation cycle. This was particularly heavy given `WatchLog` is the largest table in the database.
+**Action:** Changed the strategies to reuse the locally cached list of `anime_ids` and `episode_ids` and replaced the heavy 4-table join with a simple `id__in=anime_ids` and `id__in=episode_ids` check directly against the `Anime` and `Genre` queries.

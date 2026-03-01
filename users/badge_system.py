@@ -197,8 +197,15 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
         # Optimization: Fetch type counts once
         type_badges = ['movie-buff', 'tv-addict', 'ova-enthusiast']
         if any(b not in awarded_slugs for b in type_badges):
+            if cache is not None:
+                if 'anime_ids' not in cache:
+                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+                anime_ids = cache['anime_ids']
+            else:
+                anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+
             type_counts_qs = Anime.objects.filter(
-                seasons__episodes__watch_logs__user=user
+                id__in=anime_ids
             ).values('type').annotate(count=Count('id', distinct=True))
 
             type_counts = {item['type']: item['count'] for item in type_counts_qs}
@@ -306,7 +313,12 @@ class GenreBadgeStrategy(BadgeStrategy):
 
         # 19. Genre Savant: Watched 50 episodes of a single genre.
         if 'genre-savant' not in awarded_slugs:
-            episode_ids = WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct()
+            if cache is not None:
+                if 'episode_ids' not in cache:
+                    cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+                episode_ids = cache['episode_ids']
+            else:
+                episode_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
             if episode_ids:
                 qs = Genre.objects.filter(animes__seasons__episodes__id__in=episode_ids).annotate(
                     user_episode_count=Count('animes__seasons__episodes', filter=Q(animes__seasons__episodes__id__in=episode_ids), distinct=True)
@@ -318,8 +330,15 @@ class SpecificGenreBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch all genre counts once to handle case-insensitivity
         if 'nightmare' not in awarded_slugs or 'comedy-gold' not in awarded_slugs:
+            if cache is not None:
+                if 'anime_ids' not in cache:
+                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+                anime_ids = cache['anime_ids']
+            else:
+                anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+
             genre_counts_qs = Anime.objects.filter(
-                seasons__episodes__watch_logs__user=user
+                id__in=anime_ids
             ).values('genres__name').annotate(count=Count('id', distinct=True))
 
             # Map genre name lowercased
