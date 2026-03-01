@@ -97,6 +97,7 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
                 size="sm"
                 variant="flat"
                 onPress={() => onSendEmote(emote)}
+                aria-label={`Send ${emote} emote`}
               >
                 {emote}
               </Button>

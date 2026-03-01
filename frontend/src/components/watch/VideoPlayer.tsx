@@ -325,6 +325,7 @@ export default function VideoPlayer({
                         ? videoRef.current?.pause()
                         : videoRef.current?.play()
                     }
+                    aria-label={isPlaying ? "Pause" : "Play"}
                   >
                     {isPlaying ? "⏸" : "▶"}
                   </Button>
@@ -333,6 +334,7 @@ export default function VideoPlayer({
                     variant="light"
                     className="text-white"
                     onClick={() => setIsMuted(!isMuted)}
+                    aria-label={isMuted ? "Unmute" : "Mute"}
                   >
                     {isMuted ? "🔇" : "🔊"}
                   </Button>
@@ -357,6 +359,7 @@ export default function VideoPlayer({
                     variant="light"
                     className="text-white"
                     onClick={toggleFullscreen}
+                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                   >
                     ⛶
                   </Button>

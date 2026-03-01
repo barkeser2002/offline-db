@@ -185,6 +185,7 @@ export default function SchedulePage() {
                             isIconOnly
                             variant="bordered"
                             className="border-white/10 hover:border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label={`Set reminder for ${item.title}`}
                           >
                             <svg
                               className="w-5 h-5"
