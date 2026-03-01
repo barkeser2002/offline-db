@@ -88,7 +88,7 @@ export default function RegisterPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
+              <Input isRequired
                 type="text"
                 label="Username"
                 placeholder="anime_lover_42"
@@ -116,7 +116,7 @@ export default function RegisterPage() {
                 }
               />
 
-              <Input
+              <Input isRequired
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
@@ -145,7 +145,7 @@ export default function RegisterPage() {
               />
 
               <div>
-                <Input
+                <Input isRequired
                   type={showPassword ? "text" : "password"}
                   label="Password"
                   placeholder="••••••••"
@@ -204,7 +204,7 @@ export default function RegisterPage() {
                 )}
               </div>
 
-              <Input
+              <Input isRequired
                 type={showPassword ? "text" : "password"}
                 label="Confirm Password"
                 placeholder="••••••••"

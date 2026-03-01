@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
 
             {!isSubmitted ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
+                <Input isRequired
                   type="email"
                   label="Email"
                   placeholder="you@example.com"
