@@ -154,10 +154,11 @@ export default function DiscoveryPage() {
               <CardBody className="p-6 space-y-6">
                 {/* Search */}
                 <div>
-                  <label className="text-sm font-medium text-foreground/70 mb-2 block">
+                  <label htmlFor="search-input" className="text-sm font-medium text-foreground/70 mb-2 block">
                     Search
                   </label>
                   <Input
+                    id="search-input"
                     placeholder="Search anime..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -185,10 +186,10 @@ export default function DiscoveryPage() {
 
                 {/* Genres */}
                 <div>
-                  <label className="text-sm font-medium text-foreground/70 mb-2 block">
+                  <label id="genres-label" className="text-sm font-medium text-foreground/70 mb-2 block">
                     Genres
                   </label>
-                  <div className="flex flex-wrap gap-2">
+                  <div role="group" aria-labelledby="genres-label" className="flex flex-wrap gap-2">
                     {genres.slice(0, 8).map((genre) => (
                       <Chip
                         key={genre}
@@ -216,10 +217,11 @@ export default function DiscoveryPage() {
 
                 {/* Year */}
                 <div>
-                  <label className="text-sm font-medium text-foreground/70 mb-2 block">
+                  <label htmlFor="year-select" className="text-sm font-medium text-foreground/70 mb-2 block">
                     Year
                   </label>
                   <Select
+                    id="year-select"
                     placeholder="Any year"
                     selectedKeys={selectedYear ? [selectedYear] : []}
                     onSelectionChange={(keys) =>
@@ -240,10 +242,11 @@ export default function DiscoveryPage() {
 
                 {/* Score Range */}
                 <div>
-                  <label className="text-sm font-medium text-foreground/70 mb-2 block">
+                  <label id="score-label" className="text-sm font-medium text-foreground/70 mb-2 block">
                     Score: {scoreRange[0]} - {scoreRange[1]}
                   </label>
                   <Slider
+                    aria-labelledby="score-label"
                     step={0.5}
                     minValue={0}
                     maxValue={10}
