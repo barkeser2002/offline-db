@@ -16,3 +16,9 @@
 ## 2026-03-02 - [HTML5 Validation and UX via isRequired]
 **Learning:** Adding the `isRequired` property to NextUI `<Input>` components provides immediate visual feedback (an asterisk) and enforces native HTML validation, significantly improving the user experience for mandatory fields like login and registration without adding custom validation logic.
 **Action:** Always verify if form inputs that are logically required have the `isRequired` prop set.
+## 2026-03-02 - Native Button Focus & ARIA
+**Learning:** While @nextui-org/react components usually have ARIA labels correctly mapped out, native `<button>` tags scattered in layouts (e.g., admin sidebar toggles) frequently omit `aria-label` and the `focus-visible:ring-2 focus-visible:ring-primary` accessibility styling. Also, triggering  states in Playwright might require keyboard simulation (`page.keyboard.press('Tab')`) instead of standard `.focus()`.
+**Action:** Add proper `aria-label` and keyboard `focus-visible` classes to raw HTML `<button>` tags whenever updating frontend code to maintain WCAG standards.
+## 2026-03-02 - Native Button Focus & ARIA
+**Learning:** Native `<button>` tags scattered in Next.js layouts frequently omit `aria-label` and the `focus-visible` accessibility styling. Triggering `focus-visible` states in Playwright requires keyboard simulation (`page.keyboard.press('Tab')`) instead of standard `.focus()`.
+**Action:** Add proper `aria-label` and keyboard `focus-visible` classes to raw HTML `<button>` tags.
