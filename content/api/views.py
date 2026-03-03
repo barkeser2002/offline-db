@@ -1,7 +1,6 @@
 from rest_framework import serializers, viewsets, permissions, status
 from rest_framework.response import Response
 from django.db import IntegrityError
-from users.services import check_badges
 from ..models import Review, Anime
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
@@ -47,5 +46,4 @@ class ReviewViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         serializer.save(user=user)
-        # Check for Critic badge
-        check_badges(user)
+        # Note: Critic badge check is handled automatically via post_save signal in users.signals

@@ -7,7 +7,6 @@ from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from .models import Notification, UserBadge, WatchLog, Badge
 from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
-from .services import check_badges
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
@@ -65,7 +64,7 @@ class WatchLogViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
-        check_badges(self.request.user)
+        # Note: Badge checks are handled automatically via post_save signal in users.signals
 
 class UserProfileAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]

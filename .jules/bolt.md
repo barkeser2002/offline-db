@@ -13,3 +13,7 @@
 ## 2025-03-01 - Global Badge System Optimization (Avoid Heavy WatchLog Joins)
 **Learning:** Multiple badge strategies (`ConsumptionBadgeStrategy`, `SpecificGenreBadgeStrategy`, `GenreBadgeStrategy`) were performing expensive `JOIN`s from `Anime` down to `WatchLog` (e.g., `seasons__episodes__watch_logs__user=user`) multiple times per evaluation cycle. This was particularly heavy given `WatchLog` is the largest table in the database.
 **Action:** Changed the strategies to reuse the locally cached list of `anime_ids` and `episode_ids` and replaced the heavy 4-table join with a simple `id__in=anime_ids` and `id__in=episode_ids` check directly against the `Anime` and `Genre` queries.
+
+## 2025-03-03 - Badge System Optimization (Eliminate Redundant check_badges calls)
+**Learning:** `check_badges(user)` was being called manually in DRF viewsets (e.g., `ReviewViewSet.perform_create`, `WatchLogViewSet.perform_create`) even though `post_save` signals for `Review` and `WatchLog` were already configured to trigger `check_badges` automatically. This double-fired the entire badge evaluation logic for common user actions.
+**Action:** Removed redundant `check_badges(user)` calls from views that are already covered by Django signals, halving the database overhead on `WatchLog` and `Review` creations.
