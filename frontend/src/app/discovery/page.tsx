@@ -430,7 +430,7 @@ export default function DiscoveryPage() {
             {/* Empty State */}
             {filteredAnimes.length === 0 && (
               <Card className="bg-surface border border-white/5">
-                <CardBody className="p-12 text-center">
+                <CardBody className="p-12 flex flex-col items-center text-center text-foreground/50">
                   <svg
                     className="w-16 h-16 mx-auto text-foreground/20 mb-4"
                     fill="none"
@@ -447,9 +447,21 @@ export default function DiscoveryPage() {
                   <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                     No anime found
                   </h3>
-                  <p className="text-foreground/50">
+                  <p className="text-foreground/50 mb-6">
                     Try adjusting your filters
                   </p>
+                  <Button
+                    color="primary"
+                    variant="flat"
+                    onPress={() => {
+                      setSearchQuery("");
+                      setSelectedGenres([]);
+                      setSelectedYear("");
+                      setScoreRange([0, 10]);
+                    }}
+                  >
+                    Clear All Filters
+                  </Button>
                 </CardBody>
               </Card>
             )}
