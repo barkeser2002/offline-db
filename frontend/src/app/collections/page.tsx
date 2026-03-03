@@ -118,6 +118,7 @@ export default function CollectionsPage() {
 
         {/* Tabs */}
         <Tabs
+          aria-label="Collection categories"
           selectedKey={selectedTab}
           onSelectionChange={(key) => setSelectedTab(key as string)}
           variant="underlined"

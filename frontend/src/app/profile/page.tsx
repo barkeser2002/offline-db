@@ -158,6 +158,7 @@ export default function ProfilePage() {
 
         {/* Tabs */}
         <Tabs
+          aria-label="Profile sections"
           selectedKey={selectedTab}
           onSelectionChange={(key) => setSelectedTab(key as string)}
           variant="underlined"
