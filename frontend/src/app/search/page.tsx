@@ -79,6 +79,7 @@ function SearchContent() {
         <>
           {/* Results Tabs */}
           <Tabs
+            aria-label="Search result categories"
             selectedKey={selectedTab}
             onSelectionChange={(key) => setSelectedTab(key as string)}
             variant="underlined"

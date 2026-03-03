@@ -121,6 +121,7 @@ export default function CommunityPage() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <Tabs
+              aria-label="Community sections"
               selectedKey={selectedTab}
               onSelectionChange={(key) => setSelectedTab(key as string)}
               variant="underlined"
