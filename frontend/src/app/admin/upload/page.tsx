@@ -53,6 +53,7 @@ export default function UploadPage() {
       </h1>
 
       <Tabs
+        aria-label="Upload options"
         selectedKey={selectedTab}
         onSelectionChange={(key) => setSelectedTab(key as string)}
         variant="underlined"

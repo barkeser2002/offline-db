@@ -92,6 +92,7 @@ export default function SchedulePage() {
 
         {/* Day Tabs */}
         <Tabs
+          aria-label="Schedule days"
           selectedKey={selectedDay}
           onSelectionChange={(key) => setSelectedDay(key as string)}
           variant="underlined"
