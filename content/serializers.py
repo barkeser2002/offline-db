@@ -34,7 +34,8 @@ class VideoFileSerializer(serializers.ModelSerializer):
         model = VideoFile
         fields = [
             'id', 'file_url', 'quality', 'is_hardcoded',
-            'fansub_group', 'created_at', 'encryption_key'
+            'fansub_group', 'created_at'
+            # Security: Never expose encryption_key here. It is served securely via KeyServeView.
         ]
 
 class ExternalSourceSerializer(serializers.ModelSerializer):
