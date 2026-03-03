@@ -228,9 +228,18 @@ export default function SchedulePage() {
                 <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                   No releases scheduled
                 </h3>
-                <p className="text-foreground/50">
+                <p className="text-foreground/50 mb-6">
                   Check back later for new episodes on {selectedDay}
                 </p>
+                {selectedDay !== today && (
+                  <Button
+                    color="primary"
+                    variant="flat"
+                    onPress={() => setSelectedDay(today)}
+                  >
+                    View Today's Schedule
+                  </Button>
+                )}
               </CardBody>
             </Card>
           )}
