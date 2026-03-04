@@ -250,11 +250,20 @@ export default function NotificationsPage() {
               <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                 No notifications
               </h3>
-              <p className="text-foreground/50">
+              <p className="text-foreground/50 mb-6">
                 {showUnreadOnly
                   ? "No unread notifications"
                   : "You're all caught up!"}
               </p>
+              {showUnreadOnly && (
+                <Button
+                  color="primary"
+                  variant="flat"
+                  onPress={() => setShowUnreadOnly(false)}
+                >
+                  View All Notifications
+                </Button>
+              )}
             </CardBody>
           </Card>
         )}
