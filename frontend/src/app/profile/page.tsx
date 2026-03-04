@@ -313,6 +313,7 @@ export default function ProfilePage() {
               <Card className="bg-surface border border-white/5">
                 <CardBody className="p-6 space-y-4">
                   <Input
+                    isRequired
                     label="Username"
                     value={userData.username}
                     variant="bordered"
@@ -321,6 +322,7 @@ export default function ProfilePage() {
                     }}
                   />
                   <Input
+                    isRequired
                     label="Email"
                     type="email"
                     value={userData.email}

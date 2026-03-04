@@ -17,11 +17,13 @@ export default function AdminSettingsPage() {
               General Configuration
             </h3>
             <Input
+              isRequired
               label="Site Name"
               defaultValue="AniScrap"
               variant="bordered"
             />
             <Input
+              isRequired
               label="Support Email"
               defaultValue="support@aniscrap.com"
               variant="bordered"
@@ -54,12 +56,14 @@ export default function AdminSettingsPage() {
               API Keys
             </h3>
             <Input
+              isRequired
               label="DeepL API Key"
               type="password"
               defaultValue="************************"
               variant="bordered"
             />
             <Input
+              isRequired
               label="Jikan API Limit (Rate)"
               defaultValue="3"
               type="number"
