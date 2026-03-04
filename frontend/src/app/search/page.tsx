@@ -54,6 +54,7 @@ function SearchContent() {
           onChange={(e) => setQuery(e.target.value)}
           size="lg"
           variant="bordered"
+          aria-label="Search"
           classNames={{
             inputWrapper: "bg-surface border-white/10 hover:border-primary/50",
           }}
