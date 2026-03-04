@@ -10,7 +10,7 @@
 **Learning:** We had individual strategies successfully optimized internally, but different strategies shared the exact same queries (e.g. `WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()`). Due to isolation in strategy pattern, redundant database calls were made.
 **Action:** Introduced a `cache` argument into the base `BadgeStrategy.check()` signature and propagated a `cache` dictionary instance from the service layer, enabling strategies to store and retrieve results of expensive or commonly repeated queries (e.g., `last_log`, `anime_ids`) across boundaries.
 
-## 2025-03-01 - Global Badge System Optimization (Avoid Heavy WatchLog Joins)
+## 2025-03-01 - Global Global Badge System Optimization (Avoid Heavy WatchLog Joins)
 **Learning:** Multiple badge strategies (`ConsumptionBadgeStrategy`, `SpecificGenreBadgeStrategy`, `GenreBadgeStrategy`) were performing expensive `JOIN`s from `Anime` down to `WatchLog` (e.g., `seasons__episodes__watch_logs__user=user`) multiple times per evaluation cycle. This was particularly heavy given `WatchLog` is the largest table in the database.
 **Action:** Changed the strategies to reuse the locally cached list of `anime_ids` and `episode_ids` and replaced the heavy 4-table join with a simple `id__in=anime_ids` and `id__in=episode_ids` check directly against the `Anime` and `Genre` queries.
 
@@ -21,3 +21,7 @@
 ## 2025-03-03 - Badge System Optimization (Cache All Badges)
 **Learning:** Even with strategies optimized internally, `Badge.objects.all()` was being queried from the database every single time `check_badges` or `check_chat_badges` was executed. Because badges change very infrequently, this is a prime candidate for application-level caching.
 **Action:** Introduced Django's `cache` mechanism to store the `all_badges` dictionary for 1 hour, retrieving it from memory instead of the database, saving a redundant SQL lookup on every badge evaluation trigger.
+
+## 2025-03-03 - Template Tag Query Optimization
+**Learning:** Template tags like `get_ad` that are used in the main application layout (`base.html`) and contain database queries (e.g., fetching an `AdSlot`) cause a hidden N+1-like issue by triggering an independent query on *every single page load* for non-premium users.
+**Action:** Cached the output of the template tag via Django's `core.cache` and added signal hooks to invalidate the cache only when the underlying `AdSlot` model is saved or deleted.
