@@ -129,6 +129,7 @@ export default async function AnimeDetail({
                                   <img
                                     src={ep.cover_image}
                                     className="w-full h-full object-cover"
+                                    alt={`Episode ${ep.number} thumbnail`}
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center text-xs text-white/30">
@@ -228,7 +229,13 @@ function Avatar({ src, size }: { src: string; size?: string }) {
     <div
       className={`rounded-full overflow-hidden bg-white/10 flex-shrink-0 ${size === "md" ? "w-10 h-10" : "w-8 h-8"}`}
     >
-      {src ? <img src={src} className="w-full h-full object-cover" /> : null}
+      {src ? (
+        <img
+          src={src}
+          className="w-full h-full object-cover"
+          alt="Avatar"
+        />
+      ) : null}
     </div>
   );
 }
