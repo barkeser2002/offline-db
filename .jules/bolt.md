@@ -17,3 +17,7 @@
 ## 2025-03-03 - Badge System Optimization (Eliminate Redundant check_badges calls)
 **Learning:** `check_badges(user)` was being called manually in DRF viewsets (e.g., `ReviewViewSet.perform_create`, `WatchLogViewSet.perform_create`) even though `post_save` signals for `Review` and `WatchLog` were already configured to trigger `check_badges` automatically. This double-fired the entire badge evaluation logic for common user actions.
 **Action:** Removed redundant `check_badges(user)` calls from views that are already covered by Django signals, halving the database overhead on `WatchLog` and `Review` creations.
+
+## 2025-03-03 - Badge System Optimization (Cache All Badges)
+**Learning:** Even with strategies optimized internally, `Badge.objects.all()` was being queried from the database every single time `check_badges` or `check_chat_badges` was executed. Because badges change very infrequently, this is a prime candidate for application-level caching.
+**Action:** Introduced Django's `cache` mechanism to store the `all_badges` dictionary for 1 hour, retrieving it from memory instead of the database, saving a redundant SQL lookup on every badge evaluation trigger.

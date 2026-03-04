@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import timedelta, datetime
 from django.db.models import Count, Q
 from asgiref.sync import async_to_sync
@@ -47,13 +48,16 @@ def check_badges(user):
     Refactored to use Strategy Pattern.
     """
     # Bulk fetch badges and awarded status
-    all_badges = {b.slug: b for b in Badge.objects.all()}
+    all_badges = cache.get('all_badges_dict')
+    if all_badges is None:
+        all_badges = {b.slug: b for b in Badge.objects.all()}
+        cache.set('all_badges_dict', all_badges, 3600)
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
-    cache = {}
+    strategy_cache = {}
     new_badges = []
 
     for strategy in GENERAL_BADGE_STRATEGIES:
-        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=cache)
+        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=strategy_cache)
 
     # Commit all new badges
     if new_badges:
@@ -66,13 +70,16 @@ def check_chat_badges(user):
     Optimized to minimize DB queries.
     Refactored to use Strategy Pattern.
     """
-    all_badges = {b.slug: b for b in Badge.objects.all()}
+    all_badges = cache.get('all_badges_dict')
+    if all_badges is None:
+        all_badges = {b.slug: b for b in Badge.objects.all()}
+        cache.set('all_badges_dict', all_badges, 3600)
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
-    cache = {}
+    strategy_cache = {}
     new_badges = []
 
     for strategy in CHAT_BADGE_STRATEGIES:
-        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=cache)
+        strategy.check(user, awarded_slugs, all_badges, new_badges, cache=strategy_cache)
 
     # Commit all new badges
     if new_badges:
