@@ -52,6 +52,8 @@ function SearchContent() {
           placeholder="Search anime, characters..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onClear={() => setQuery("")}
+          isClearable
           size="lg"
           variant="bordered"
           aria-label="Search"
