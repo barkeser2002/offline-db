@@ -25,3 +25,7 @@
 ## 2025-03-03 - Template Tag Query Optimization
 **Learning:** Template tags like `get_ad` that are used in the main application layout (`base.html`) and contain database queries (e.g., fetching an `AdSlot`) cause a hidden N+1-like issue by triggering an independent query on *every single page load* for non-premium users.
 **Action:** Cached the output of the template tag via Django's `core.cache` and added signal hooks to invalidate the cache only when the underlying `AdSlot` model is saved or deleted.
+
+## 2025-03-05 - Badge System Query Count Optimization
+**Learning:** `CommunityBadgeStrategy`, `ChatBadgeStrategy`, and `ConsistencyBadgeStrategy` were issuing multiple independent `.count()` and `.exists()` queries against the database to evaluate different thresholds of the same data (e.g., checking if a user hosted 5 rooms, then immediately checking if they hosted a room with 5 participants).
+**Action:** Replaced separate DB aggregation queries with a single query that fetches the relevant distinct rows into the shared `cache` dictionary (e.g., `Room.objects.filter(host=user).values('max_participants')`). The `.count()` and `.exists()` logic is then evaluated in memory using Python's `len()`, `any()`, and `sum()`, drastically reducing the total database queries per badge evaluation cycle.

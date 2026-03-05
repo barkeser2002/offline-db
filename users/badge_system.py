@@ -122,23 +122,29 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
 
 class ConsistencyBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
-        # 12. Streak Master: Watched anime for 7 consecutive days.
-        if 'streak-master' not in awarded_slugs:
+        if 'streak-master' not in awarded_slugs or 'daily-viewer' not in awarded_slugs:
             today = timezone.now().date()
-            start_date = today - timedelta(days=6)
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-            days = WatchLog.objects.filter(user=user, watched_at__gte=start_datetime).values('watched_at__date').distinct().count()
-            if days >= 7:
-                self._award(user, 'streak-master', awarded_slugs, all_badges, new_badges)
+            start_date_30 = today - timedelta(days=29)
+            start_datetime_30 = timezone.make_aware(datetime.combine(start_date_30, datetime.min.time()))
 
-        # 13. Daily Viewer: Watched anime for 30 consecutive days.
-        if 'daily-viewer' not in awarded_slugs:
-            today = timezone.now().date()
-            start_date = today - timedelta(days=29)
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-            days = WatchLog.objects.filter(user=user, watched_at__gte=start_datetime).values('watched_at__date').distinct().count()
-            if days >= 30:
-                self._award(user, 'daily-viewer', awarded_slugs, all_badges, new_badges)
+            if cache is not None:
+                if 'watched_dates_30' not in cache:
+                    cache['watched_dates_30'] = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
+                dates_30 = cache['watched_dates_30']
+            else:
+                dates_30 = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
+
+            # 13. Daily Viewer: Watched anime for 30 consecutive days.
+            if 'daily-viewer' not in awarded_slugs:
+                if len(dates_30) >= 30:
+                    self._award(user, 'daily-viewer', awarded_slugs, all_badges, new_badges)
+
+            # 12. Streak Master: Watched anime for 7 consecutive days.
+            if 'streak-master' not in awarded_slugs:
+                start_date_7 = today - timedelta(days=6)
+                dates_7 = [d for d in dates_30 if d >= start_date_7]
+                if len(dates_7) >= 7:
+                    self._award(user, 'streak-master', awarded_slugs, all_badges, new_badges)
 
 class AccountBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
@@ -361,15 +367,23 @@ class SpecificGenreBadgeStrategy(BadgeStrategy):
 
 class CommunityBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
-        # 16. Party Host: Hosted 5 Watch Parties.
-        if 'party-host' not in awarded_slugs:
-            if Room.objects.filter(host=user).count() >= 5:
-                self._award(user, 'party-host', awarded_slugs, all_badges, new_badges)
+        if 'party-host' not in awarded_slugs or 'trendsetter' not in awarded_slugs:
+            if cache is not None:
+                if 'hosted_rooms' not in cache:
+                    cache['hosted_rooms'] = list(Room.objects.filter(host=user).values('max_participants'))
+                rooms = cache['hosted_rooms']
+            else:
+                rooms = list(Room.objects.filter(host=user).values('max_participants'))
 
-        # 22. Trendsetter: Hosted a Watch Party with 5 concurrent viewers.
-        if 'trendsetter' not in awarded_slugs:
-            if Room.objects.filter(host=user, max_participants__gte=5).exists():
-                self._award(user, 'trendsetter', awarded_slugs, all_badges, new_badges)
+            # 16. Party Host: Hosted 5 Watch Parties.
+            if 'party-host' not in awarded_slugs:
+                if len(rooms) >= 5:
+                    self._award(user, 'party-host', awarded_slugs, all_badges, new_badges)
+
+            # 22. Trendsetter: Hosted a Watch Party with 5 concurrent viewers.
+            if 'trendsetter' not in awarded_slugs:
+                if any(r['max_participants'] >= 5 for r in rooms):
+                    self._award(user, 'trendsetter', awarded_slugs, all_badges, new_badges)
 
         # 18. Content Creator: Uploaded 5 videos.
         if 'content-creator' not in awarded_slugs:
@@ -378,21 +392,34 @@ class CommunityBadgeStrategy(BadgeStrategy):
 
 class ChatBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
-        # 5. Commentator: Posted 50 chat messages.
-        if 'commentator' not in awarded_slugs:
-            if ChatMessage.objects.filter(user=user).count() >= 50:
-                self._award(user, 'commentator', awarded_slugs, all_badges, new_badges)
+        if 'commentator' not in awarded_slugs or 'social-butterfly' not in awarded_slugs or 'party-animal' not in awarded_slugs:
+            if cache is not None:
+                if 'chat_stats' not in cache:
+                    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
+                    cache['chat_stats'] = list(stats)
+                    cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
+                room_names = [s['room_name'] for s in cache['chat_stats']]
+                total_msgs = cache['total_msgs']
+            else:
+                stats = list(ChatMessage.objects.filter(user=user).values('room_name').distinct())
+                room_names = [s['room_name'] for s in stats]
+                total_msgs = ChatMessage.objects.filter(user=user).count()
 
-        # 6. Social Butterfly: Participated in 5 different chat rooms.
-        if 'social-butterfly' not in awarded_slugs:
-            if ChatMessage.objects.filter(user=user).values('room_name').distinct().count() >= 5:
-                self._award(user, 'social-butterfly', awarded_slugs, all_badges, new_badges)
+            # 5. Commentator: Posted 50 chat messages.
+            if 'commentator' not in awarded_slugs:
+                if total_msgs >= 50:
+                    self._award(user, 'commentator', awarded_slugs, all_badges, new_badges)
 
-        # 17. Party Animal: Participated in 5 different Watch Parties.
-        if 'party-animal' not in awarded_slugs:
-            count = ChatMessage.objects.filter(user=user, room_name__startswith='party_').values('room_name').distinct().count()
-            if count >= 5:
-                self._award(user, 'party-animal', awarded_slugs, all_badges, new_badges)
+            # 6. Social Butterfly: Participated in 5 different chat rooms.
+            if 'social-butterfly' not in awarded_slugs:
+                if len(room_names) >= 5:
+                    self._award(user, 'social-butterfly', awarded_slugs, all_badges, new_badges)
+
+            # 17. Party Animal: Participated in 5 different Watch Parties.
+            if 'party-animal' not in awarded_slugs:
+                party_rooms = sum(1 for r in room_names if r.startswith('party_'))
+                if party_rooms >= 5:
+                    self._award(user, 'party-animal', awarded_slugs, all_badges, new_badges)
 
 
 # Strategy Lists
