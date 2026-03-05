@@ -164,6 +164,7 @@ export default function DiscoveryPage() {
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onClear={() => setSearchQuery("")}
                     isClearable
+                    type="search"
                     variant="bordered"
                     classNames={{
                       inputWrapper: "bg-background/50 border-white/10",
