@@ -111,6 +111,7 @@ export default function Navbar() {
             placeholder="Search anime..."
             size="sm"
             aria-label="Search anime"
+            isClearable
             startContent={
               <svg
                 className="w-4 h-4 text-foreground/50"
@@ -189,6 +190,7 @@ export default function Navbar() {
             placeholder="Search anime..."
             size="lg"
             aria-label="Search anime"
+            isClearable
             startContent={
               <svg
                 className="w-5 h-5 text-foreground/50"

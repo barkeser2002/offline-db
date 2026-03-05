@@ -162,6 +162,8 @@ export default function DiscoveryPage() {
                     placeholder="Search anime..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onClear={() => setSearchQuery("")}
+                    isClearable
                     variant="bordered"
                     classNames={{
                       inputWrapper: "bg-background/50 border-white/10",

@@ -8,3 +8,7 @@
 ## 2024-05-18 - Semantic Accessibility with NextUI Forms
 **Learning:** NextUI's `Input` components don't automatically add `aria-required` or visual mandatory indicators unless the `isRequired` prop is explicitly provided. Since many configuration and profile pages (e.g., admin settings or profile data) consist of mandatory fields, neglecting `isRequired` reduces the accessibility of these forms significantly, preventing screen readers from clearly announcing their status.
 **Action:** When working on form inputs with NextUI, always determine if a field is logically mandatory and, if so, ensure the `isRequired` prop is included to provide semantic accessibility context (`aria-required="true"`) and visual asterisks for sighted users.
+
+## 2024-05-25 - Quick Input Reset Contextual Actions
+**Learning:** NextUI `<Input>` components used for search or extensive text entry can trap users when they want to clear their query or text input to reset their view. Providing the built-in `isClearable` prop (and `onClear` for controlled inputs) adds a critical inline contextual action (an 'X' button) to clear the query, improving the usability of filters and search bars.
+**Action:** Always provide `isClearable` and `onClear` properties to NextUI `Input` elements used for search filtering to give users a quick way to reset their input state.
