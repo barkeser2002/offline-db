@@ -35,7 +35,7 @@ export default function AdminSettingsPage() {
                   Disable site access for regular users
                 </p>
               </div>
-              <Switch />
+              <Switch aria-label="Toggle Maintenance Mode" />
             </div>
             <div className="flex items-center justify-between py-2">
               <div>
@@ -44,7 +44,7 @@ export default function AdminSettingsPage() {
                   Allow new users to sign up
                 </p>
               </div>
-              <Switch defaultSelected />
+              <Switch aria-label="Toggle User Registration" defaultSelected />
             </div>
           </CardBody>
         </Card>
