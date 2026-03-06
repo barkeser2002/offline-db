@@ -83,6 +83,7 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
+              aria-label="Type a message"
             />
             <Button size="sm" color="primary" onPress={handleSend}>
               Send
