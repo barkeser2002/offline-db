@@ -166,7 +166,12 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         # Optimization: Fetch episode count once
         if 'marathoner' not in awarded_slugs or 'century-club' not in awarded_slugs or 'millennium-club' not in awarded_slugs:
-            distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+            if cache is not None:
+                if 'episode_ids' not in cache:
+                    cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+                distinct_episodes = len(cache['episode_ids'])
+            else:
+                distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
 
             # 9. Marathoner: Watched 50 episodes in total.
             if 'marathoner' not in awarded_slugs and distinct_episodes >= 50:
@@ -303,7 +308,10 @@ class GenreBadgeStrategy(BadgeStrategy):
         # 10. Genre Explorer: Watched anime from 5 different genres.
         if 'genre-explorer' not in awarded_slugs:
             ids = get_anime_ids()
-            count = Anime.objects.filter(id__in=ids).values('genres__id').distinct().count()
+            if ids:
+                count = Anime.objects.filter(id__in=ids).values('genres__id').distinct().count()
+            else:
+                count = 0
             if count >= 5:
                 self._award(user, 'genre-explorer', awarded_slugs, all_badges, new_badges)
 
