@@ -33,3 +33,7 @@
 ## 2025-03-07 - Badge System Strategy Caching
 **Learning:** Even though we had implemented caching inside `users/badge_system.py` using a shared `cache` dict, it was partially unused in strategies that needed a `.distinct().count()`. Querying `.distinct().count()` skips memory and always hits the database.
 **Action:** Used `len(cache['episode_ids'])` where `episode_ids` was already stored as a flat list, saving a whole `.distinct().count()` aggregation query from `ConsumptionBadgeStrategy`. This demonstrates that when you already have a distinct list of IDs cached, doing `len()` in python is much faster and saves an extra DB query.
+
+## 2025-03-09 - Badge System Pilot Connoisseur Optimization
+**Learning:** `pilot-connoisseur` badge check was performing an expensive `JOIN` traversing `WatchLog`, `Episode`, `Season` and `Anime` to count distinct anime series. And because `.distinct().count()` skips memory and hits the DB, it was issuing a new heavy aggregation query.
+**Action:** Leveraged the shared `cache['episode_ids']` and replaced the expensive `WatchLog` join with an `id__in=episode_ids` check directly on the `Episode` model. Additionally, fetched the results as a flat list and evaluated uniqueness in memory using Python's `len(set(...))` to prevent the `.distinct().count()` database query overhead.
