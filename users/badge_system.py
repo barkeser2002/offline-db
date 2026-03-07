@@ -201,7 +201,18 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
 
         # 20. Pilot Connoisseur: Watched the first episode of 5 different anime series.
         if 'pilot-connoisseur' not in awarded_slugs:
-            count = WatchLog.objects.filter(user=user, episode__number=1).values('episode__season__anime').distinct().count()
+            if cache is not None:
+                if 'episode_ids' not in cache:
+                    cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+                episode_ids = cache['episode_ids']
+            else:
+                episode_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+
+            if episode_ids:
+                count = len(set(Episode.objects.filter(id__in=episode_ids, number=1).values_list('season__anime_id', flat=True)))
+            else:
+                count = 0
+
             if count >= 5:
                 self._award(user, 'pilot-connoisseur', awarded_slugs, all_badges, new_badges)
 
