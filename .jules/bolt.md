@@ -29,3 +29,7 @@
 ## 2025-03-05 - Badge System Query Count Optimization
 **Learning:** `CommunityBadgeStrategy`, `ChatBadgeStrategy`, and `ConsistencyBadgeStrategy` were issuing multiple independent `.count()` and `.exists()` queries against the database to evaluate different thresholds of the same data (e.g., checking if a user hosted 5 rooms, then immediately checking if they hosted a room with 5 participants).
 **Action:** Replaced separate DB aggregation queries with a single query that fetches the relevant distinct rows into the shared `cache` dictionary (e.g., `Room.objects.filter(host=user).values('max_participants')`). The `.count()` and `.exists()` logic is then evaluated in memory using Python's `len()`, `any()`, and `sum()`, drastically reducing the total database queries per badge evaluation cycle.
+
+## 2025-03-07 - Badge System Strategy Caching
+**Learning:** Even though we had implemented caching inside `users/badge_system.py` using a shared `cache` dict, it was partially unused in strategies that needed a `.distinct().count()`. Querying `.distinct().count()` skips memory and always hits the database.
+**Action:** Used `len(cache['episode_ids'])` where `episode_ids` was already stored as a flat list, saving a whole `.distinct().count()` aggregation query from `ConsumptionBadgeStrategy`. This demonstrates that when you already have a distinct list of IDs cached, doing `len()` in python is much faster and saves an extra DB query.
