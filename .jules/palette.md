@@ -4,3 +4,6 @@
 ## 2025-03-06 - Always Provide Meaningful `alt` Text to Custom Image/Avatar Components
 **Learning:** In React UI components that wrap `<img>` tags (e.g., custom `Avatar` components), it's a common oversight to hardcode the `alt` attribute or leave it out entirely, making dynamic images inaccessible to screen readers. For example, rendering character avatars with `alt="Avatar"` fails to identify *who* the avatar represents.
 **Action:** When creating or modifying custom React image components (like `Avatar`), ensure the component signature accepts an `alt` prop and passes it down to the underlying `<img>` tag. At the call site, always provide descriptive `alt` text (e.g., `alt={char.character.name}`) rather than relying on generic fallbacks.
+## 2024-03-08 - Empty State Filtering Logic
+**Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
+**Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
