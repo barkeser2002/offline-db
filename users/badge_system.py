@@ -316,24 +316,27 @@ class GenreBadgeStrategy(BadgeStrategy):
                 anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
             return anime_ids
 
-        # 10. Genre Explorer: Watched anime from 5 different genres.
-        if 'genre-explorer' not in awarded_slugs:
-            ids = get_anime_ids()
-            if ids:
-                count = Anime.objects.filter(id__in=ids).values('genres__id').distinct().count()
-            else:
-                count = 0
-            if count >= 5:
-                self._award(user, 'genre-explorer', awarded_slugs, all_badges, new_badges)
+        from collections import Counter
 
-        # 14. Genre Master: Watched 10 different anime from the same genre.
-        if 'genre-master' not in awarded_slugs:
+        # Optimization: Fetch genre ids once
+        if 'genre-explorer' not in awarded_slugs or 'genre-master' not in awarded_slugs:
             ids = get_anime_ids()
             if ids:
-                qs = Genre.objects.filter(animes__id__in=ids).annotate(
-                    user_anime_count=Count('animes', filter=Q(animes__id__in=ids))
-                )
-                if qs.filter(user_anime_count__gte=10).exists():
+                genre_ids = list(Anime.objects.filter(id__in=ids).values_list('genres__id', flat=True))
+                # Remove None if anime has no genre
+                genre_ids = [g for g in genre_ids if g is not None]
+            else:
+                genre_ids = []
+
+            # 10. Genre Explorer: Watched anime from 5 different genres.
+            if 'genre-explorer' not in awarded_slugs:
+                if len(set(genre_ids)) >= 5:
+                    self._award(user, 'genre-explorer', awarded_slugs, all_badges, new_badges)
+
+            # 14. Genre Master: Watched 10 different anime from the same genre.
+            if 'genre-master' not in awarded_slugs:
+                counts = Counter(genre_ids)
+                if any(count >= 10 for count in counts.values()):
                     self._award(user, 'genre-master', awarded_slugs, all_badges, new_badges)
 
         # 19. Genre Savant: Watched 50 episodes of a single genre.
@@ -344,11 +347,13 @@ class GenreBadgeStrategy(BadgeStrategy):
                 episode_ids = cache['episode_ids']
             else:
                 episode_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+
             if episode_ids:
-                qs = Genre.objects.filter(animes__seasons__episodes__id__in=episode_ids).annotate(
-                    user_episode_count=Count('animes__seasons__episodes', filter=Q(animes__seasons__episodes__id__in=episode_ids), distinct=True)
-                )
-                if qs.filter(user_episode_count__gte=50).exists():
+                # Optimized query avoiding the reverse relationship annotations
+                ep_genres = list(Episode.objects.filter(id__in=episode_ids).values_list('season__anime__genres__id', flat=True))
+                ep_genres = [g for g in ep_genres if g is not None]
+                counts = Counter(ep_genres)
+                if any(count >= 50 for count in counts.values()):
                     self._award(user, 'genre-savant', awarded_slugs, all_badges, new_badges)
 
 class SpecificGenreBadgeStrategy(BadgeStrategy):
