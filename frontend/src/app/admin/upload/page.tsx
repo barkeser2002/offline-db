@@ -158,6 +158,7 @@ export default function UploadPage() {
             <Card className="bg-surface border border-white/5">
               <CardBody className="p-6 space-y-4">
                 <Input
+                  isRequired
                   label="Magnet Link / Torrent URL"
                   placeholder="magnet:?xt=urn:btih:..."
                   variant="bordered"
