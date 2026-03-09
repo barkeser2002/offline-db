@@ -46,8 +46,18 @@ class NewBadgeTests(TestCase):
         mock_qs.values.return_value = mock_qs
         mock_qs.distinct.return_value = mock_qs
 
+        # For the new cache-based approach, it checks len(cache['episode_ids'])
+        mock_qs.values_list.return_value = mock_qs
+
         # Case 1: 999 episodes
         mock_qs.count.return_value = 999
+        mock_qs_list = MagicMock()
+        mock_qs_list.count.return_value = 999
+        mock_qs_list.__iter__.return_value = iter(range(999))
+        mock_qs.distinct.return_value = mock_qs_list
+        mock_qs.select_related.return_value = mock_qs
+        mock_qs.order_by.return_value = mock_qs
+        mock_qs.first.return_value = None
 
         # Trigger check (we need to trigger it manually or via a signal on a dummy object)
         # Since we are mocking WatchLog.objects.filter, we can't easily rely on real WatchLog creation to trigger it naturally
@@ -65,18 +75,21 @@ class NewBadgeTests(TestCase):
         awarded_slugs = set()
         all_badges = {b.slug: b for b in Badge.objects.all()}
         new_badges = []
+        cache = {'episode_ids': list(range(999))}
 
         # Check with 999
-        strategy.check(self.user, awarded_slugs, all_badges, new_badges)
+        strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache=cache)
 
         # Should NOT be in new_badges
         self.assertFalse(any(b.badge.slug == 'millennium-club' for b in new_badges))
 
         # Case 2: 1000 episodes
-        mock_qs.count.return_value = 1000
+        mock_qs_list.count.return_value = 1000
+        mock_qs_list.__iter__.return_value = iter(range(1000))
         new_badges = [] # Reset
+        cache = {'episode_ids': list(range(1000))}
 
-        strategy.check(self.user, awarded_slugs, all_badges, new_badges)
+        strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache=cache)
 
         # Should BE in new_badges
         self.assertTrue(any(b.badge.slug == 'millennium-club' for b in new_badges))
