@@ -195,7 +195,15 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
                 last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
             if last_log:
                 anime = last_log.episode.season.anime
-                count = WatchLog.objects.filter(user=user, episode__season__anime=anime).values('episode').distinct().count()
+                if cache is not None:
+                    if 'episode_ids' not in cache:
+                        cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+                    user_ep_ids = cache['episode_ids']
+                else:
+                    user_ep_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+
+                anime_ep_ids = set(Episode.objects.filter(season__anime=anime).values_list('id', flat=True))
+                count = len(anime_ep_ids.intersection(user_ep_ids))
                 if count >= 10:
                     self._award(user, 'loyal-fan', awarded_slugs, all_badges, new_badges)
 
@@ -261,19 +269,28 @@ class CompletionBadgeStrategy(BadgeStrategy):
                 season = last_log.episode.season
                 anime = season.anime
 
+                if cache is not None:
+                    if 'episode_ids' not in cache:
+                        cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+                    user_ep_ids = cache['episode_ids']
+                else:
+                    user_ep_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+
                 # 8. Season Completist: Completed an entire season.
                 if 'season-completist' not in awarded_slugs:
-                    total_season = season.episodes.count()
+                    season_ep_ids = set(season.episodes.values_list('id', flat=True))
+                    total_season = len(season_ep_ids)
                     if total_season > 0:
-                        watched_season = WatchLog.objects.filter(user=user, episode__season=season).values('episode').distinct().count()
+                        watched_season = len(season_ep_ids.intersection(user_ep_ids))
                         if watched_season >= total_season:
                             self._award(user, 'season-completist', awarded_slugs, all_badges, new_badges)
 
                 # 23. Super Fan: Completed all episodes of an anime series.
                 if 'super-fan' not in awarded_slugs:
-                    total_anime = Episode.objects.filter(season__anime=anime).count()
+                    anime_ep_ids = set(Episode.objects.filter(season__anime=anime).values_list('id', flat=True))
+                    total_anime = len(anime_ep_ids)
                     if total_anime > 0:
-                        watched_anime = WatchLog.objects.filter(user=user, episode__season__anime=anime).values('episode').distinct().count()
+                        watched_anime = len(anime_ep_ids.intersection(user_ep_ids))
                         if watched_anime >= total_anime:
                             self._award(user, 'super-fan', awarded_slugs, all_badges, new_badges)
 
