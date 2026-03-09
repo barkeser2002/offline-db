@@ -2,6 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from .models import Room
 from .serializers import RoomSerializer
 from .permissions import IsHostOrReadOnly
@@ -18,6 +19,16 @@ class RoomViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
+
+    def perform_update(self, serializer):
+        if serializer.instance.host != self.request.user:
+            raise PermissionDenied("You do not have permission to edit this room.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.host != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this room.")
+        instance.delete()
 
     @action(detail=False, methods=['get'])
     def my_rooms(self, request):
