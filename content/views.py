@@ -4,6 +4,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch
@@ -13,6 +14,11 @@ from .serializers import (
     AnimeListSerializer, AnimeDetailSerializer, EpisodeSerializer,
     SubscriptionSerializer
 )
+
+from rest_framework.throttling import UserRateThrottle
+
+class SubscribeRateThrottle(UserRateThrottle):
+    scope = 'subscribe'
 
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Anime.objects.all().order_by('-created_at')
@@ -40,7 +46,7 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
             )
         return queryset.prefetch_related('genres')
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[SubscribeRateThrottle])
     def subscribe(self, request, pk=None):
         anime = self.get_object()
         subscription, created = Subscription.objects.get_or_create(
@@ -59,7 +65,9 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EpisodeSerializer
     
     def get_queryset(self):
-        return Episode.objects.select_related('season__anime').prefetch_related(
+        # Optimization: Removed unnecessary select_related('season__anime')
+        # since EpisodeSerializer does not use Season or Anime fields.
+        return Episode.objects.prefetch_related(
             'video_files__fansub_group',
             'external_sources'
         )
@@ -71,10 +79,14 @@ class HomeViewSet(viewsets.ViewSet):
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]
-        latest_episodes = Episode.objects.select_related('season__anime').prefetch_related(
+
+        # Optimization: Removed unnecessary select_related('season__anime')
+        # since EpisodeSerializer does not use Season or Anime fields.
+        latest_episodes = Episode.objects.prefetch_related(
             'video_files__fansub_group',
             'external_sources'
         ).order_by('-created_at')[:12]
+
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         seasonal = Anime.objects.filter(status='Currently Airing').prefetch_related('genres').order_by('-score')[:10]
         

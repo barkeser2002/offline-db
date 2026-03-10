@@ -467,18 +467,14 @@ class LocalStorage(StorageManager):
     """
     
     def __init__(self):
-        self.base_path = os.path.abspath(settings.MEDIA_ROOT)
-        if not self.base_path.endswith(os.path.sep):
-            self.base_path += os.path.sep
+        self.base_path = settings.MEDIA_ROOT
         self.base_url = settings.MEDIA_URL
 
     def _get_safe_path(self, remote_path: str) -> str:
-        # Strip leading slashes to prevent absolute path injection
-        remote_path = remote_path.lstrip('/')
         full_path = os.path.abspath(os.path.join(self.base_path, remote_path))
-        # Ensure the resolved path is inside base_path (Path Traversal Protection)
-        if not full_path.startswith(self.base_path):
-            raise StorageError(f"Invalid path traversal attempt: {remote_path}")
+        base_path_abs = os.path.abspath(self.base_path)
+        if os.path.commonpath([base_path_abs, full_path]) != base_path_abs:
+            raise StorageError(f"Invalid path: {remote_path}")
         return full_path
     
     def upload(self, local_path: str, remote_path: str) -> str:
@@ -505,8 +501,7 @@ class LocalStorage(StorageManager):
     
     def exists(self, remote_path: str) -> bool:
         try:
-            full_path = self._get_safe_path(remote_path)
-            return os.path.exists(full_path)
+            return os.path.exists(self._get_safe_path(remote_path))
         except StorageError:
             return False
     

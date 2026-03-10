@@ -8,7 +8,7 @@
 **Learning:** Django Rest Framework's `ModelSerializer` will expose sensitive fields if they are explicitly listed in the `fields` array of the `Meta` class, bypassing the intended secure serving mechanisms (like `KeyServeView`).
 **Prevention:** Never include sensitive fields (passwords, encryption keys, tokens) in standard API serializers unless explicitly required and protected. Serve them securely via dedicated endpoints with appropriate authentication and authorization checks.
 
-## 2025-03-05 - [Path Traversal in Local Storage Gateway]
-**Vulnerability:** The `LocalStorage` class in `core/storage.py` used `os.path.join(self.base_path, remote_path)` directly without validating the resulting absolute path. This allowed potential attackers to read/write arbitrary files on the filesystem by passing `remote_path` strings like `../../etc/passwd`.
-**Learning:** Using `os.path.join` with user-provided relative paths requires stripping leading slashes and explicit path resolution to ensure the resulting path does not traverse out of the intended directory.
-**Prevention:** Always use `os.path.abspath(os.path.join(base, path.lstrip('/')))` and verify `full_path.startswith(base)` when handling paths for storage or file manipulation.
+## 2026-03-07 - [Path Traversal in StorageManager]
+**Vulnerability:** Path traversal vulnerability in `LocalStorage` where `remote_path` is directly joined with `base_path` using `os.path.join(self.base_path, remote_path)` without verifying that the resulting path is strictly contained within the base directory. A malicious user could potentially exploit this to delete arbitrary files, upload files to arbitrary locations, or check for existence of arbitrary files on the filesystem.
+**Learning:** `os.path.join` does not protect against path traversal attacks if the right-hand path is an absolute path or contains `..` components. Furthermore, checking if a path starts with another using `.startswith` is vulnerable to sibling directory attacks.
+**Prevention:** Always use `os.path.abspath(os.path.join(base, path))` and ensure the resulting string is strictly a sub-path using `os.path.commonpath([base, resulting_path]) == base` before proceeding with file operations.
