@@ -13,3 +13,6 @@
 ## 2025-03-01 - Global Badge System Optimization (Avoid Heavy WatchLog Joins)
 **Learning:** Multiple badge strategies (`ConsumptionBadgeStrategy`, `SpecificGenreBadgeStrategy`, `GenreBadgeStrategy`) were performing expensive `JOIN`s from `Anime` down to `WatchLog` (e.g., `seasons__episodes__watch_logs__user=user`) multiple times per evaluation cycle. This was particularly heavy given `WatchLog` is the largest table in the database.
 **Action:** Changed the strategies to reuse the locally cached list of `anime_ids` and `episode_ids` and replaced the heavy 4-table join with a simple `id__in=anime_ids` and `id__in=episode_ids` check directly against the `Anime` and `Genre` queries.
+## 2026-03-10 - WebSocket Notifications Performance Optimization
+**Learning:** The `notify_subscribers` signal performed O(N) synchronous `async_to_sync(channel_layer.group_send)` calls directly within the Django `post_save` request-response cycle, blocking the main thread during Episode creation for animes with many subscribers.
+**Action:** Offloaded the WebSocket broadcast loop to a new Celery `@shared_task` (`send_websocket_notifications_task`) to ensure the HTTP response isn't delayed by real-time notification dispatching.
