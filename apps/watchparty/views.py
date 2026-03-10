@@ -2,13 +2,16 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from .models import Room
 from .serializers import RoomSerializer
 from .permissions import IsHostOrReadOnly
 
 class RoomViewSet(viewsets.ModelViewSet):
+    # Optimization: Added 'episode__season__anime' to select_related to avoid N+1 queries
+    # caused by nested __str__ calls or serializers accessing deeper relations.
     queryset = Room.objects.filter(is_active=True).select_related(
-        'episode', 'host'
+        'episode', 'host', 'episode__season__anime'
     ).prefetch_related(
         'episode__video_files__fansub_group',
         'episode__external_sources'
@@ -19,10 +22,21 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
 
+    def perform_update(self, serializer):
+        if serializer.instance.host != self.request.user:
+            raise PermissionDenied("You do not have permission to edit this room.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.host != self.request.user:
+            raise PermissionDenied("You do not have permission to delete this room.")
+        instance.delete()
+
     @action(detail=False, methods=['get'])
     def my_rooms(self, request):
+        # Optimization: Added 'episode__season__anime' to select_related to avoid N+1 queries
         rooms = Room.objects.filter(host=request.user).select_related(
-            'episode', 'host'
+            'episode', 'host', 'episode__season__anime'
         ).prefetch_related(
             'episode__video_files__fansub_group',
             'episode__external_sources'

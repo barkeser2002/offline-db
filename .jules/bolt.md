@@ -30,6 +30,22 @@
 **Learning:** `CommunityBadgeStrategy`, `ChatBadgeStrategy`, and `ConsistencyBadgeStrategy` were issuing multiple independent `.count()` and `.exists()` queries against the database to evaluate different thresholds of the same data (e.g., checking if a user hosted 5 rooms, then immediately checking if they hosted a room with 5 participants).
 **Action:** Replaced separate DB aggregation queries with a single query that fetches the relevant distinct rows into the shared `cache` dictionary (e.g., `Room.objects.filter(host=user).values('max_participants')`). The `.count()` and `.exists()` logic is then evaluated in memory using Python's `len()`, `any()`, and `sum()`, drastically reducing the total database queries per badge evaluation cycle.
 
-## 2025-03-09 - Django Admin list_display N+1 Queries
-**Learning:** Adding a `ForeignKey` field (like `owner` or `user`) to a `ModelAdmin.list_display` without also adding it to `list_select_related` will cause an N+1 query issue on the admin changelist page, executing one additional query per row.
-**Action:** Always verify that foreign keys in `list_display` are explicitly included in `list_select_related` (e.g. `list_select_related = ('owner',)`).
+## 2025-03-07 - Badge System Strategy Caching
+**Learning:** Even though we had implemented caching inside `users/badge_system.py` using a shared `cache` dict, it was partially unused in strategies that needed a `.distinct().count()`. Querying `.distinct().count()` skips memory and always hits the database.
+**Action:** Used `len(cache['episode_ids'])` where `episode_ids` was already stored as a flat list, saving a whole `.distinct().count()` aggregation query from `ConsumptionBadgeStrategy`. This demonstrates that when you already have a distinct list of IDs cached, doing `len()` in python is much faster and saves an extra DB query.
+
+## 2025-03-09 - Badge System Pilot Connoisseur Optimization
+**Learning:** `pilot-connoisseur` badge check was performing an expensive `JOIN` traversing `WatchLog`, `Episode`, `Season` and `Anime` to count distinct anime series. And because `.distinct().count()` skips memory and hits the DB, it was issuing a new heavy aggregation query.
+**Action:** Leveraged the shared `cache['episode_ids']` and replaced the expensive `WatchLog` join with an `id__in=episode_ids` check directly on the `Episode` model. Additionally, fetched the results as a flat list and evaluated uniqueness in memory using Python's `len(set(...))` to prevent the `.distinct().count()` database query overhead.
+
+## 2025-03-09 - Badge System Genre Optimization
+**Learning:** `GenreBadgeStrategy` queries for `genre-explorer`, `genre-master`, and `genre-savant` were extremely inefficient. They relied on `.distinct().count()`, reverse relationship `.annotate(Count())`, and complex 4-table `.exists()` lookups which bypassed our previously implemented memory caching and heavily taxed the database with redundant JOIN operations on the largest tables (`WatchLog` and `Episode`).
+**Action:** Replaced these heavy database queries with simpler `values_list(..., flat=True)` queries to fetch raw IDs directly related to the user's cached `anime_ids` and `episode_ids`. We then process these IDs in-memory using pure Python (e.g., `len(set())` and `collections.Counter()`). This dramatically reduces database CPU load and memory usage by offloading computation to the Python runtime, and drops total queries per user evaluation cycle.
+
+## 2024-10-28 - Badge System distinct().count() Optimization
+**Learning:** `CompletionBadgeStrategy` (`season-completist`, `super-fan`) and `ConsumptionBadgeStrategy` (`loyal-fan`) were issuing `.distinct().count()` aggregation queries with JOINs on `WatchLog` to evaluate watched episodes for specific seasons and animes. Since `.distinct().count()` skips memory and always hits the database, these queries were adding unnecessary database load.
+**Action:** Refactored these strategies to utilize the shared `cache['episode_ids']`. By fetching the target `Episode` IDs (e.g., for a season or anime) as a flat list and intersecting them with the cached `episode_ids` set in memory using Python (`len(target_ep_ids.intersection(user_ep_ids))`), we eliminate the heavy `WatchLog` joins and redundant aggregation queries, significantly reducing database load per evaluation cycle.
+
+## 2025-03-09 - WatchTimeBadgeStrategy count optimization
+**Learning:** `WatchTimeBadgeStrategy` checks for `binge-watcher`, `marathon-runner`, `weekend-warrior`, and `speedster` badges were issuing `.distinct().count()` aggregation queries with JOINs on `WatchLog`. Since `.distinct().count()` skips memory and always hits the database, these queries were adding unnecessary database load.
+**Action:** Replaced these heavy database queries with `len(set(WatchLog.objects.filter(...).values_list('episode_id', flat=True)))`. This pattern avoids the expensive database-level `.distinct().count()` aggregation by executing a simpler select and evaluating uniqueness and size in Python memory, reducing database load per evaluation cycle.
