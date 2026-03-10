@@ -81,6 +81,8 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
               size="sm"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onClear={() => setMessage("")}
+              isClearable
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
               aria-label="Type a message"
