@@ -34,6 +34,17 @@ class AdSlot(models.Model):
     def __str__(self):
         return self.position
 
+# Invalidate cache when an AdSlot is saved or deleted
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+
+@receiver(post_save, sender=AdSlot)
+@receiver(post_delete, sender=AdSlot)
+def clear_adslot_cache(sender, instance, **kwargs):
+    cache_key = f'ad_slot_{instance.position}'
+    cache.delete(cache_key)
+
 class SiteSettings(models.Model):
     deepl_api_keys = models.TextField(default="", help_text=_("Comma separated DeepL API keys"))
     maintenance_mode = models.BooleanField(default=False)

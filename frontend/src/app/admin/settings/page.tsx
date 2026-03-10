@@ -17,11 +17,13 @@ export default function AdminSettingsPage() {
               General Configuration
             </h3>
             <Input
+              isRequired
               label="Site Name"
               defaultValue="AniScrap"
               variant="bordered"
             />
             <Input
+              isRequired
               label="Support Email"
               defaultValue="support@aniscrap.com"
               variant="bordered"
@@ -33,7 +35,7 @@ export default function AdminSettingsPage() {
                   Disable site access for regular users
                 </p>
               </div>
-              <Switch />
+              <Switch aria-label="Toggle Maintenance Mode" />
             </div>
             <div className="flex items-center justify-between py-2">
               <div>
@@ -42,7 +44,7 @@ export default function AdminSettingsPage() {
                   Allow new users to sign up
                 </p>
               </div>
-              <Switch defaultSelected />
+              <Switch aria-label="Toggle User Registration" defaultSelected />
             </div>
           </CardBody>
         </Card>
@@ -54,12 +56,14 @@ export default function AdminSettingsPage() {
               API Keys
             </h3>
             <Input
+              isRequired
               label="DeepL API Key"
               type="password"
               defaultValue="************************"
               variant="bordered"
             />
             <Input
+              isRequired
               label="Jikan API Limit (Rate)"
               defaultValue="3"
               type="number"

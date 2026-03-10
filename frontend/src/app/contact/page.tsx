@@ -51,7 +51,7 @@ export default function ContactPage() {
             Get in <span className="gradient-text">Touch</span>
           </h1>
           <p className="text-foreground/60">
-            Have a question? We'd love to hear from you.
+            Have a question? We&apos;d love to hear from you.
           </p>
         </motion.div>
 
@@ -147,6 +147,7 @@ export default function ContactPage() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input
+                        isRequired
                         label="Name"
                         placeholder="Your name"
                         value={formData.name}
@@ -159,6 +160,7 @@ export default function ContactPage() {
                         }}
                       />
                       <Input
+                        isRequired
                         label="Email"
                         type="email"
                         placeholder="you@example.com"
@@ -174,6 +176,7 @@ export default function ContactPage() {
                     </div>
 
                     <Select
+                      isRequired
                       label="Reason"
                       placeholder="Select reason"
                       selectedKeys={formData.reason ? [formData.reason] : []}
@@ -194,6 +197,7 @@ export default function ContactPage() {
                     </Select>
 
                     <Input
+                      isRequired
                       label="Subject"
                       placeholder="Subject"
                       value={formData.subject}
@@ -207,6 +211,7 @@ export default function ContactPage() {
                     />
 
                     <Textarea
+                      isRequired
                       label="Message"
                       placeholder="Your message..."
                       value={formData.message}
@@ -251,7 +256,7 @@ export default function ContactPage() {
                       Message Sent!
                     </h3>
                     <p className="text-foreground/60 mb-4">
-                      We'll get back to you within 24-48 hours.
+                      We&apos;ll get back to you within 24-48 hours.
                     </p>
                     <Button
                       color="primary"

@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Card, CardBody, Input, Chip, Tabs, Tab } from "@nextui-org/react";
+import { Card, CardBody, Input, Chip, Tabs, Tab, Button } from "@nextui-org/react";
 import Link from "next/link";
 
 // Sample search results
@@ -38,6 +38,26 @@ function SearchContent() {
   const [query, setQuery] = useState(initialQuery);
   const [selectedTab, setSelectedTab] = useState("all");
 
+  const filteredAnime = query
+    ? sampleResults.anime.filter((a) =>
+        a.title.toLowerCase().includes(query.toLowerCase())
+      )
+    : sampleResults.anime;
+
+  const filteredCharacters = query
+    ? sampleResults.characters.filter((c) =>
+        c.name.toLowerCase().includes(query.toLowerCase())
+      )
+    : sampleResults.characters;
+
+  const hasNoResults =
+    query &&
+    ((selectedTab === "all" &&
+      filteredAnime.length === 0 &&
+      filteredCharacters.length === 0) ||
+      (selectedTab === "anime" && filteredAnime.length === 0) ||
+      (selectedTab === "characters" && filteredCharacters.length === 0));
+
   return (
     <>
       {/* Search Header */}
@@ -52,8 +72,11 @@ function SearchContent() {
           placeholder="Search anime, characters..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onClear={() => setQuery("")}
+          isClearable
           size="lg"
           variant="bordered"
+          aria-label="Search"
           classNames={{
             inputWrapper: "bg-surface border-white/10 hover:border-primary/50",
           }}
@@ -79,6 +102,7 @@ function SearchContent() {
         <>
           {/* Results Tabs */}
           <Tabs
+            aria-label="Search result categories"
             selectedKey={selectedTab}
             onSelectionChange={(key) => setSelectedTab(key as string)}
             variant="underlined"
@@ -94,8 +118,7 @@ function SearchContent() {
                 <div className="flex items-center gap-2">
                   All{" "}
                   <Chip size="sm" variant="flat">
-                    {sampleResults.anime.length +
-                      sampleResults.characters.length}
+                    {filteredAnime.length + filteredCharacters.length}
                   </Chip>
                 </div>
               }
@@ -106,7 +129,7 @@ function SearchContent() {
                 <div className="flex items-center gap-2">
                   Anime{" "}
                   <Chip size="sm" variant="flat">
-                    {sampleResults.anime.length}
+                    {filteredAnime.length}
                   </Chip>
                 </div>
               }
@@ -117,7 +140,7 @@ function SearchContent() {
                 <div className="flex items-center gap-2">
                   Characters{" "}
                   <Chip size="sm" variant="flat">
-                    {sampleResults.characters.length}
+                    {filteredCharacters.length}
                   </Chip>
                 </div>
               }
@@ -126,14 +149,33 @@ function SearchContent() {
 
           {/* Results */}
           <div className="mt-6 space-y-6">
+            {/* Empty State for No Results */}
+            {hasNoResults && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12"
+              >
+                <h3 className="text-xl font-semibold text-foreground/70 mb-2">
+                  No results found
+                </h3>
+                <p className="text-foreground/50 mb-6">
+                  We couldn&apos;t find anything matching &quot;{query}&quot;
+                </p>
+                <Button color="primary" variant="flat" onClick={() => setQuery("")}>
+                  Clear Search
+                </Button>
+              </motion.div>
+            )}
+
             {/* Anime Results */}
-            {(selectedTab === "all" || selectedTab === "anime") && (
+            {!hasNoResults && (selectedTab === "all" || selectedTab === "anime") && filteredAnime.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-4">
                   Anime
                 </h2>
                 <div className="space-y-3">
-                  {sampleResults.anime.map((anime, index) => (
+                  {filteredAnime.map((anime, index) => (
                     <motion.div
                       key={anime.id}
                       initial={{ opacity: 0, x: -20 }}
@@ -171,13 +213,13 @@ function SearchContent() {
             )}
 
             {/* Character Results */}
-            {(selectedTab === "all" || selectedTab === "characters") && (
+            {!hasNoResults && (selectedTab === "all" || selectedTab === "characters") && filteredCharacters.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-4">
                   Characters
                 </h2>
                 <div className="space-y-3">
-                  {sampleResults.characters.map((char, index) => (
+                  {filteredCharacters.map((char, index) => (
                     <motion.div
                       key={char.id}
                       initial={{ opacity: 0, x: -20 }}

@@ -63,7 +63,7 @@ export default function LoginPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
+              <Input isRequired
                 type="email"
                 label="Email"
                 placeholder="you@example.com"
@@ -91,7 +91,7 @@ export default function LoginPage() {
                 }
               />
 
-              <Input
+              <Input isRequired
                 type={showPassword ? "text" : "password"}
                 label="Password"
                 placeholder="••••••••"

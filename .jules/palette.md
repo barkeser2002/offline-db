@@ -1,14 +1,12 @@
-# Palette's Journal
-
-## 2026-03-01 - [Notifications and Search Accessibility]
-**Learning:** Adding ARIA attributes to vanilla JS dropdowns and search forms is a low-effort, high-impact win for accessibility.
-**Action:** Always check for `aria-label` on icon-only buttons and `aria-expanded` on custom dropdowns.
-
-## 2026-02-26 - [Keyboard Focus Visibility]
-**Learning:** Use `focus-visible` utility classes to add accessible focus rings for keyboard users without affecting mouse interactions.
-**Action:** Replace `focus:outline-none` with `focus:outline-none focus-visible:ring-2` to maintain accessibility while preserving clean visual design.
-
-## 2026-03-02 - [Native Alerts vs Custom Toasts]
-**Learning:** Native `alert()` calls disrupt the user experience by blocking the browser thread and looking visually jarring. Replacing them with non-blocking, stylized toasts improves interaction smoothness significantly.
-**Action:** Consistently replace `alert()` with `window.showToast()` (or equivalent) for user feedback across the application.
-\n## 2026-05-18 - Missing Focus States\n**Learning:** The application extensively uses `a` and `button` tags but rarely provides visual feedback for keyboard navigation via `focus-visible`. Since `focus-visible:ring-2 focus-visible:ring-brand` is used in the nav, it should be uniformly applied across all interactive elements (like cards, buttons, inputs).\n**Action:** Apply `focus:outline-none focus-visible:ring-2 focus-visible:ring-brand` (with `focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900` for dark backgrounds where appropriate) to all missing interactive elements.
+## 2024-03-05 - Add aria-labels to NextUI Switch components
+**Learning:** In the frontend Next.js application, NextUI `<Switch>` components do not inherently expose accessible names to screen readers when they lack an explicit `<label>` element wrapping them. This can cause screen readers to simply announce "switch" without providing context on what the switch actually toggles, leading to a poor accessibility experience.
+**Action:** When using NextUI `<Switch>` components that act as standalone toggles or don't have a dedicated, associated `<label>` element, always include an explicit `aria-label` attribute (e.g., `aria-label="Toggle Maintenance Mode"`) to ensure the control's purpose is accurately communicated to assistive technologies.
+## 2025-03-06 - Always Provide Meaningful `alt` Text to Custom Image/Avatar Components
+**Learning:** In React UI components that wrap `<img>` tags (e.g., custom `Avatar` components), it's a common oversight to hardcode the `alt` attribute or leave it out entirely, making dynamic images inaccessible to screen readers. For example, rendering character avatars with `alt="Avatar"` fails to identify *who* the avatar represents.
+**Action:** When creating or modifying custom React image components (like `Avatar`), ensure the component signature accepts an `alt` prop and passes it down to the underlying `<img>` tag. At the call site, always provide descriptive `alt` text (e.g., `alt={char.character.name}`) rather than relying on generic fallbacks.
+## 2024-03-08 - Empty State Filtering Logic
+**Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
+**Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
+## 2025-03-09 - Accessible Tooltips for Icon-Only Buttons
+**Learning:** While relying on `aria-label` for `isIconOnly` buttons is sufficient for screen readers, it leaves sighted users (especially those on desktop using a mouse) guessing the function of ambiguous icons.
+**Action:** When using ambiguous icon-only buttons (like Grid/List views, or Action toggles), always wrap the button in a NextUI `<Tooltip>` component to provide an immediate, accessible textual description for sighted users on hover or focus, complementing the existing `aria-label`.

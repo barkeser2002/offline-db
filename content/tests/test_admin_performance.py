@@ -39,3 +39,31 @@ class SeasonAdminPerformanceTest(TestCase):
         #     print(q['sql'])
 
         self.assertLess(len(ctx.captured_queries), 10)
+
+from content.models import FansubGroup
+
+class FansubGroupAdminPerformanceTest(TestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser('admin2', 'admin2@example.com', 'password')
+        self.client.force_login(self.admin_user)
+
+        # Create 10 FansubGroups with 10 different owners
+        for i in range(10):
+            user = User.objects.create_user(username=f'user{i}', password='password')
+            FansubGroup.objects.create(name=f'Fansub {i}', owner=user)
+
+    def test_fansubgroup_admin_changelist_performance(self):
+        url = reverse('admin:content_fansubgroup_changelist')
+
+        # Initial request to warm up
+        self.client.get(url)
+
+        # Expected queries:
+        # 1. Session check
+        # 2. User auth
+        # 3. COUNT(*)
+        # 4. Main query for FansubGroup + select_related('owner')
+        # Without optimization, this would be ~14 queries.
+        with self.assertNumQueries(5):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 200)

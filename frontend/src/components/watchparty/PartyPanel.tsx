@@ -81,10 +81,18 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
               size="sm"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onClear={() => setMessage("")}
+              isClearable
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Type a message..."
+              aria-label="Type a message"
             />
-            <Button size="sm" color="primary" onPress={handleSend}>
+            <Button
+              size="sm"
+              color="primary"
+              onPress={handleSend}
+              isDisabled={!message.trim()}
+            >
               Send
             </Button>
           </div>
@@ -108,7 +116,7 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
           <div className="p-4 flex flex-col gap-2">
             {participants.map((p, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <Avatar name={p.username} size="sm" />
+                <Avatar name={p.username} size="sm" alt={`Avatar for ${p.username}`} />
                 <span className="text-small">{p.username}</span>
               </div>
             ))}
