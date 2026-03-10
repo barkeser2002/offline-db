@@ -467,13 +467,28 @@ class LocalStorage(StorageManager):
     """
     
     def __init__(self):
-        self.base_path = settings.MEDIA_ROOT
+        self.base_path = os.path.abspath(settings.MEDIA_ROOT)
         self.base_url = settings.MEDIA_URL
+
+    def _get_safe_path(self, remote_path: str) -> str:
+        """
+        Validates and returns a safe absolute path to prevent directory traversal.
+        """
+        # Remove leading slashes from remote_path to ensure os.path.join
+        # appends it to base_path instead of treating it as an absolute root.
+        remote_path = remote_path.lstrip('/')
+        full_path = os.path.abspath(os.path.join(self.base_path, remote_path))
+
+        if not full_path.startswith(self.base_path + os.sep) and full_path != self.base_path:
+            logger.error(f"Path traversal attempt detected: {remote_path}")
+            raise StorageError("Invalid file path")
+
+        return full_path
     
     def upload(self, local_path: str, remote_path: str) -> str:
         import shutil
         
-        dest_path = os.path.join(self.base_path, remote_path)
+        dest_path = self._get_safe_path(remote_path)
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         shutil.copy2(local_path, dest_path)
         logger.info(f"Local: Copied {local_path} to {dest_path}")
@@ -481,10 +496,12 @@ class LocalStorage(StorageManager):
     
     def delete(self, remote_path: str) -> bool:
         try:
-            full_path = os.path.join(self.base_path, remote_path)
+            full_path = self._get_safe_path(remote_path)
             os.remove(full_path)
             logger.info(f"Local: Deleted {full_path}")
             return True
+        except StorageError:
+            return False
         except Exception as e:
             logger.error(f"Local delete failed: {e}")
             return False
@@ -493,7 +510,11 @@ class LocalStorage(StorageManager):
         return urljoin(self.base_url, remote_path)
     
     def exists(self, remote_path: str) -> bool:
-        return os.path.exists(os.path.join(self.base_path, remote_path))
+        try:
+            full_path = self._get_safe_path(remote_path)
+            return os.path.exists(full_path)
+        except StorageError:
+            return False
     
     def health_check(self) -> bool:
         return os.path.exists(self.base_path) and os.access(self.base_path, os.W_OK)
