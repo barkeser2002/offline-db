@@ -84,7 +84,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         if user and user.is_authenticated:
             username = user.username
         else:
-            username = text_data_json.get('username', 'Anonymous')
+            raw_username = text_data_json.get('username', 'Anonymous')
+            # Limit length and sanitize username to prevent Stored XSS
+            username = escape(str(raw_username)[:50])
 
         # Sanitize message to prevent Stored XSS
         # Using django.utils.html.escape to escape special characters
