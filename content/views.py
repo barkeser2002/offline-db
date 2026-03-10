@@ -102,7 +102,8 @@ class KeyServeView(APIView):
 
     def get(self, request, pk):
         # Lookup by ID (UUID) not encryption_key (Secret)
-        video = get_object_or_404(VideoFile.objects.select_related('episode__season__anime'), pk=pk)
+        # Optimization: Removed `select_related('episode__season__anime')` as we only access `quality` and `encryption_key`.
+        video = get_object_or_404(VideoFile, pk=pk)
 
         # Premium Check: 1080p requires premium
         if video.quality == '1080p' and not getattr(request.user, 'is_premium', False):
