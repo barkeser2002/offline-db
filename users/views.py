@@ -2,11 +2,25 @@ from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle, AnonRateThrottle
 from rest_framework.decorators import action
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 from .models import Notification, UserBadge, WatchLog, Badge
 from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
+
+class LoginThrottle(AnonRateThrottle):
+    scope = 'login'
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    throttle_classes = [LoginThrottle]
+
+class WatchLogCreateThrottle(UserRateThrottle):
+    scope = 'watchlog'
+    def allow_request(self, request, view):
+        if request.method != 'POST':
+            return True
+        return super().allow_request(request, view)
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
@@ -58,6 +72,7 @@ class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
 class WatchLogViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = WatchLogSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [WatchLogCreateThrottle]
     
     def get_queryset(self):
         return WatchLog.objects.filter(user=self.request.user).order_by('-watched_at')
