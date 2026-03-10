@@ -168,6 +168,7 @@ export default function UploadPage() {
                 />
                 <div className="flex gap-4">
                   <Select
+                    isRequired
                     label="Quality"
                     placeholder="Auto"
                     variant="bordered"
@@ -191,6 +192,7 @@ export default function UploadPage() {
             <Card className="bg-surface border border-white/5">
               <CardBody className="p-6 space-y-4">
                 <Input
+                  isRequired
                   label="Source URL"
                   placeholder="https://gogoanime..."
                   variant="bordered"
@@ -200,6 +202,7 @@ export default function UploadPage() {
                 />
                 <div className="flex gap-4">
                   <Select
+                    isRequired
                     label="Provider"
                     placeholder="Select provider"
                     variant="bordered"
