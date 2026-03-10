@@ -84,7 +84,8 @@ export default function AdminLayout({
         <div className="p-4 border-t border-white/10">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="w-full flex items-center justify-center p-2 text-foreground/50 hover:text-foreground transition-colors"
+            className="w-full flex items-center justify-center p-2 text-foreground/50 hover:text-foreground transition-colors rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
             {isSidebarOpen ? "◀ Collapse" : "▶"}
           </button>

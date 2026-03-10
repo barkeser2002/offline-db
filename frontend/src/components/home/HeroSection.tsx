@@ -158,7 +158,7 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
             onClick={() => setCurrentSlide(idx)}
             aria-label={`Go to slide ${idx + 1}`}
             aria-current={idx === currentSlide ? "true" : undefined}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
+            className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               idx === currentSlide
                 ? "w-8 bg-primary"
                 : "w-2 bg-white/30 hover:bg-white/50"
