@@ -87,7 +87,12 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
               placeholder="Type a message..."
               aria-label="Type a message"
             />
-            <Button size="sm" color="primary" onPress={handleSend}>
+            <Button
+              size="sm"
+              color="primary"
+              onPress={handleSend}
+              isDisabled={!message.trim()}
+            >
               Send
             </Button>
           </div>
