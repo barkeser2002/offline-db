@@ -122,7 +122,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] `django-debug-toolbar` + `nplusone` kur (sadece development)
 - [ ] `billing/views.py` viewset'lerini incele
 - [ ] `scraper_module/views.py` incele
-- [ ] GenreBadgeStrategy genre_savant: hâlâ list tabanlı → subquery'e geç
+- [x] GenreBadgeStrategy genre_savant: hâlâ list tabanlı → subquery'e geç
 - [ ] Bildirim endpoint'lerinde N+1 kontrol et
 
 ### 2.4 Celery Task Optimizasyonları
@@ -361,7 +361,7 @@ Bu proje bir anime izleme platformudur:
 ## ⚠️ Bilinen Sorunlar & Teknik Borç
 
 - `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
-- `users/badge_system.py` GenreBadgeStrategy `genre_savant`: hâlâ list tabanlı `episode_ids` kullanıyor → subquery'e çevir
+- `users/badge_system.py` GenreBadgeStrategy `genre_savant`: hâlâ list tabanlı `episode_ids` kullanıyor → subquery'e çevir (YAPILDI)
 - `scraper_module/` — test coverage %0, teknik borç yüksek
 - `blueprints/` klasörü boş — ne içereceği belirsiz, silinebilir veya dokümante edilmeli
 - `replace.py`, `patch_test.py`, `verify_navbar.py` vb. root klasördeki artefact dosyaları — temizle

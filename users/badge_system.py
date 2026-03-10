@@ -336,13 +336,14 @@ class GenreBadgeStrategy(BadgeStrategy):
 
         # 19. Genre Savant: Watched 50 episodes of a single genre.
         if 'genre-savant' not in awarded_slugs:
-            episode_qs = WatchLog.objects.filter(user=user).values('episode_id')
-
-            # Count distinct episodes per genre
-            genre_counts_qs = Episode.objects.filter(
-                id__in=episode_qs,
-                season__anime__genres__isnull=False
-            ).values('season__anime__genres__id').annotate(count=Count('id', distinct=True))
+            # Optimize to avoid loading episode_ids into memory for DB lookup
+            # Count distinct episodes per genre purely at the database level
+            genre_counts_qs = WatchLog.objects.filter(
+                user=user,
+                episode__season__anime__genres__isnull=False
+            ).values('episode__season__anime__genres__id').annotate(
+                count=Count('episode_id', distinct=True)
+            )
 
             if any(item['count'] >= 50 for item in genre_counts_qs):
                 self._award(user, 'genre-savant', awarded_slugs, all_badges, new_badges)
