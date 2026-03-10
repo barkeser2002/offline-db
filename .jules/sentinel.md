@@ -7,3 +7,8 @@
 **Vulnerability:** The `encryption_key` field was included in the `VideoFileSerializer`, exposing the HLS video encryption key in plain text via the API.
 **Learning:** Django Rest Framework's `ModelSerializer` will expose sensitive fields if they are explicitly listed in the `fields` array of the `Meta` class, bypassing the intended secure serving mechanisms (like `KeyServeView`).
 **Prevention:** Never include sensitive fields (passwords, encryption keys, tokens) in standard API serializers unless explicitly required and protected. Serve them securely via dedicated endpoints with appropriate authentication and authorization checks.
+
+## 2025-03-05 - [Path Traversal in Local Storage Gateway]
+**Vulnerability:** The `LocalStorage` class in `core/storage.py` used `os.path.join(self.base_path, remote_path)` directly without validating the resulting absolute path. This allowed potential attackers to read/write arbitrary files on the filesystem by passing `remote_path` strings like `../../etc/passwd`.
+**Learning:** Using `os.path.join` with user-provided relative paths requires stripping leading slashes and explicit path resolution to ensure the resulting path does not traverse out of the intended directory.
+**Prevention:** Always use `os.path.abspath(os.path.join(base, path.lstrip('/')))` and verify `full_path.startswith(base)` when handling paths for storage or file manipulation.
