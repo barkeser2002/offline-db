@@ -138,6 +138,7 @@ export default function NotificationsPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-foreground/60">Unread only</span>
               <Switch
+                aria-label="Show unread notifications only"
                 size="sm"
                 isSelected={showUnreadOnly}
                 onValueChange={setShowUnreadOnly}

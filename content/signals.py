@@ -5,7 +5,7 @@ from django.urls import reverse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from .models import Episode, Subscription, Genre, Season
-from .tasks import send_new_episode_email_task
+from .tasks import send_new_episode_email_task, send_websocket_notifications_task
 
 @receiver(post_save, sender=Genre)
 @receiver(post_delete, sender=Genre)
@@ -55,19 +55,13 @@ def notify_subscribers(sender, instance, created, **kwargs):
         if notifications:
             Notification.objects.bulk_create(notifications)
 
-            # Send real-time notifications via WebSockets
-            channel_layer = get_channel_layer()
-            for notification in notifications:
-                group_name = f"user_{notification.user.id}"
-                async_to_sync(channel_layer.group_send)(
-                    group_name,
-                    {
-                        'type': 'notification_message',
-                        'title': notification.title,
-                        'message': notification.message,
-                        'link': notification.link,
-                    }
-                )
+            # Send real-time notifications via WebSockets using a background task
+            # to prevent blocking the main thread with O(N) network operations.
+            user_ids = [sub.user.id for sub in subscribers]
+            title = f"New Episode: {anime.title}"
+            message = f"Episode {instance.number} of {anime.title} is now available!"
+            link = reverse('watch', args=[instance.id])
+            send_websocket_notifications_task.delay(user_ids, title, message, link)
 
         # Trigger Email Task (Async)
         send_new_episode_email_task.delay(instance.id)
