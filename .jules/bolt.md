@@ -45,3 +45,7 @@
 ## 2024-10-28 - Badge System distinct().count() Optimization
 **Learning:** `CompletionBadgeStrategy` (`season-completist`, `super-fan`) and `ConsumptionBadgeStrategy` (`loyal-fan`) were issuing `.distinct().count()` aggregation queries with JOINs on `WatchLog` to evaluate watched episodes for specific seasons and animes. Since `.distinct().count()` skips memory and always hits the database, these queries were adding unnecessary database load.
 **Action:** Refactored these strategies to utilize the shared `cache['episode_ids']`. By fetching the target `Episode` IDs (e.g., for a season or anime) as a flat list and intersecting them with the cached `episode_ids` set in memory using Python (`len(target_ep_ids.intersection(user_ep_ids))`), we eliminate the heavy `WatchLog` joins and redundant aggregation queries, significantly reducing database load per evaluation cycle.
+
+## 2025-03-10 - Django Admin List Filter N+1 Queries
+**Learning:** Placing a `ForeignKey` in a Django Admin `list_filter` causes Django to fetch all distinct values of that related model to build the sidebar dropdown. If the related model's `__str__` method performs additional database lookups (e.g., `Season` accessing `anime.title`), this results in severe N+1 query performance degradation on the admin changelist page.
+**Action:** Replace problematic foreign key `list_filter` entries with `autocomplete_fields` and define `search_fields` on the related ModelAdmin to provide a performant and searchable UI without pre-loading the entire relationship tree into memory.
