@@ -52,3 +52,7 @@
 ## 2026-03-05 - Bolt: Convert genre_savant episode_ids to subquery
 **Learning:** Fetching a large dataset of IDs into a Python list (`list(values_list("episode_id", flat=True))`) to perform in-memory aggregations or subquery lookups creates massive SQL queries and high memory overhead, especially for complex relationships like genre counts.
 **Action:** Replaced the in-memory list with an un-evaluated Django QuerySet subquery (`episode_qs = WatchLog.objects.filter(user=user).values("episode_id")`), and utilized `.annotate(count=Count("id", distinct=True))` to evaluate genre distributions purely at the database level without transferring records.
+
+## 2025-03-10 - [Optimize genre-savant badge strategy]
+**Learning:** `WatchLog.objects.filter(user=user).values('episode_id')` would pull episode ids into memory which were then passed to `.filter(id__in=episode_qs)`. This resulted in excessive database fetching and memory use.
+**Action:** Substituted the two-step evaluation process into a single optimized query string that handles filtering, related joins, and aggregations purely at the database level by traversing models via double-underscores (`episode__season__anime__genres__id`).
