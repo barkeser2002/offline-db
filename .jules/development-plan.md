@@ -61,11 +61,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.1 CSRF & Session Güvenliği
 **Hedef dosyalar**: `aniscrap_core/settings.py`, `users/views.py`
-- [ ] CSRF_TRUSTED_ORIGINS kontrolü — production URL'leri ekle
-- [ ] Session cookie güvenlik ayarları: `SESSION_COOKIE_SECURE=True`, `SESSION_COOKIE_HTTPONLY=True`, `SESSION_COOKIE_SAMESITE='Lax'`
-- [ ] `SECURE_BROWSER_XSS_FILTER = True` ayarı
-- [ ] `SECURE_CONTENT_TYPE_NOSNIFF = True` ayarı
-- [ ] `X_FRAME_OPTIONS = 'DENY'` confirm edilmesi
+- [x] CSRF_TRUSTED_ORIGINS kontrolü — production URL'leri ekle
+- [x] Session cookie güvenlik ayarları: `SESSION_COOKIE_SECURE=True`, `SESSION_COOKIE_HTTPONLY=True`, `SESSION_COOKIE_SAMESITE='Lax'`
+- [x] `SECURE_BROWSER_XSS_FILTER = True` ayarı
+- [x] `SECURE_CONTENT_TYPE_NOSNIFF = True` ayarı
+- [x] `X_FRAME_OPTIONS = 'DENY'` confirm edilmesi
 
 ### 1.2 API Rate Limiting Genişletme
 **Hedef dosyalar**: `aniscrap_core/settings.py`, `users/views.py`, `content/views.py`
