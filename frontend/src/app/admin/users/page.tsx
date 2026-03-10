@@ -68,7 +68,7 @@ export default function AdminUsersPage() {
                 >
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <Avatar name={user.name} size="sm" alt={`Avatar for ${user.name}`} />
+                      <Avatar name={user.name} size="sm" alt={user.name} />
                       <div>
                         <p className="font-medium text-foreground">
                           {user.name}

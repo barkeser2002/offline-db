@@ -100,7 +100,7 @@ export default function CommunityLive() {
                       name={activity.username}
                       size="sm"
                       className="bg-primary"
-                      alt={`Avatar for ${activity.username}`}
+                      alt={activity.username}
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground">

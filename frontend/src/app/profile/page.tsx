@@ -66,7 +66,7 @@ export default function ProfilePage() {
                 <Avatar
                   name={userData.username}
                   className="w-24 h-24 text-3xl bg-primary"
-                  alt={`Avatar for ${userData.username}`}
+                  alt={userData.username}
                 />
                 <div className="text-center md:text-left flex-1">
                   <h1 className="text-2xl font-bold text-foreground mb-1">
@@ -76,12 +76,10 @@ export default function ProfilePage() {
                   {isEditing ? (
                     <div className="flex gap-2 max-w-md">
                       <Input
-                        aria-label="Edit bio"
                         size="sm"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         classNames={{ inputWrapper: "bg-background/50" }}
-                        aria-label="Edit bio"
                       />
                       <Button
                         size="sm"

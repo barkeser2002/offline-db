@@ -147,7 +147,7 @@ export default function CommunityPage() {
                               name={activity.user}
                               size="md"
                               className="bg-primary/20 text-primary"
-                              alt={`Avatar for ${activity.user}`}
+                              alt={activity.user}
                             />
                             <div className="flex-1">
                               <p className="text-foreground">
@@ -265,7 +265,7 @@ export default function CommunityPage() {
                         name={user.username}
                         size="sm"
                         className="bg-primary/20 text-primary"
-                        alt={`Avatar for ${user.username}`}
+                        alt={user.username}
                       />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">

@@ -145,7 +145,7 @@ export default function AboutPage() {
                   name={member.name}
                   size="lg"
                   className="w-24 h-24 bg-primary text-xl mb-4"
-                  alt={`Avatar for ${member.name}`}
+                  alt={member.name}
                 />
                 <h3 className="font-semibold text-foreground">{member.name}</h3>
                 <p className="text-foreground/60 text-sm">{member.role}</p>
