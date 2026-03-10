@@ -318,6 +318,9 @@ REST_FRAMEWORK = {
         'user': '10000/day',
         'subscribe': '60/minute',
         'notifications': '100/minute',
+        'login': '5/minute',
+        'watchlog': '10/minute',
+        'review': '5/hour',
     }
 }
 

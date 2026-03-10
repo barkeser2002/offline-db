@@ -69,11 +69,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.2 API Rate Limiting Genişletme
 **Hedef dosyalar**: `aniscrap_core/settings.py`, `users/views.py`, `content/views.py`
-- [ ] Tüm authentication endpoint'lerine rate limit (login, register, password reset)
-- [ ] WatchLog create endpoint'ine rate limit (spam önleme)
-- [ ] Review create endpoint'ine rate limit
-- [ ] django-ratelimit veya DRF throttling genişletme
-- [ ] Rate limit aşımında 429 + Retry-After header dönme
+- [x] Tüm authentication endpoint'lerine rate limit (login, register, password reset)
+- [x] WatchLog create endpoint'ine rate limit (spam önleme)
+- [x] Review create endpoint'ine rate limit
+- [x] django-ratelimit veya DRF throttling genişletme
+- [x] Rate limit aşımında 429 + Retry-After header dönme
 
 ### 1.3 Input Validasyonu
 **Hedef dosyalar**: `users/serializers.py`, `content/serializers.py`, `apps/watchparty/serializers.py`

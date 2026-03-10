@@ -1,7 +1,15 @@
 from rest_framework import serializers, viewsets, permissions, status
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from django.db import IntegrityError
 from ..models import Review, Anime
+
+class ReviewCreateThrottle(UserRateThrottle):
+    scope = 'review'
+    def allow_request(self, request, view):
+        if request.method != 'POST':
+            return True
+        return super().allow_request(request, view)
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
@@ -33,6 +41,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.select_related('user').all().order_by('-created_at')
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    throttle_classes = [ReviewCreateThrottle]
 
     def create(self, request, *args, **kwargs):
         try:
