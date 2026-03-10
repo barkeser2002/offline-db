@@ -11,6 +11,7 @@ import {
   Select,
   SelectItem,
   Slider,
+  Tooltip,
 } from "@nextui-org/react";
 import Link from "next/link";
 
@@ -162,6 +163,9 @@ export default function DiscoveryPage() {
                     placeholder="Search anime..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    onClear={() => setSearchQuery("")}
+                    isClearable
+                    type="search"
                     variant="bordered"
                     classNames={{
                       inputWrapper: "bg-background/50 border-white/10",
@@ -222,6 +226,7 @@ export default function DiscoveryPage() {
                   </label>
                   <Select
                     id="year-select"
+                    aria-label="Year"
                     placeholder="Any year"
                     selectedKeys={selectedYear ? [selectedYear] : []}
                     onSelectionChange={(keys) =>
@@ -287,42 +292,46 @@ export default function DiscoveryPage() {
                 anime
               </p>
               <div className="flex gap-2">
-                <Button
-                  isIconOnly
-                  variant={viewMode === "grid" ? "solid" : "light"}
-                  color={viewMode === "grid" ? "primary" : "default"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                  aria-label="Grid view"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+                <Tooltip content="Grid view" placement="top">
+                  <Button
+                    isIconOnly
+                    variant={viewMode === "grid" ? "solid" : "light"}
+                    color={viewMode === "grid" ? "primary" : "default"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    aria-label="Grid view"
                   >
-                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </Button>
-                <Button
-                  isIconOnly
-                  variant={viewMode === "list" ? "solid" : "light"}
-                  color={viewMode === "list" ? "primary" : "default"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                  aria-label="List view"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  </Button>
+                </Tooltip>
+                <Tooltip content="List view" placement="top">
+                  <Button
+                    isIconOnly
+                    variant={viewMode === "list" ? "solid" : "light"}
+                    color={viewMode === "list" ? "primary" : "default"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    aria-label="List view"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </Button>
+                    <svg
+                      className="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </Button>
+                </Tooltip>
               </div>
             </div>
 
@@ -430,7 +439,7 @@ export default function DiscoveryPage() {
             {/* Empty State */}
             {filteredAnimes.length === 0 && (
               <Card className="bg-surface border border-white/5">
-                <CardBody className="p-12 text-center">
+                <CardBody className="p-12 flex flex-col items-center text-center text-foreground/50">
                   <svg
                     className="w-16 h-16 mx-auto text-foreground/20 mb-4"
                     fill="none"
@@ -447,9 +456,21 @@ export default function DiscoveryPage() {
                   <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                     No anime found
                   </h3>
-                  <p className="text-foreground/50">
+                  <p className="text-foreground/50 mb-6">
                     Try adjusting your filters
                   </p>
+                  <Button
+                    color="primary"
+                    variant="flat"
+                    onPress={() => {
+                      setSearchQuery("");
+                      setSelectedGenres([]);
+                      setSelectedYear("");
+                      setScoreRange([0, 10]);
+                    }}
+                  >
+                    Clear All Filters
+                  </Button>
                 </CardBody>
               </Card>
             )}

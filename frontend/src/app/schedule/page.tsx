@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Card, CardBody, Chip, Tabs, Tab, Button } from "@nextui-org/react";
+import { Card, CardBody, Chip, Tabs, Tab, Button, Tooltip } from "@nextui-org/react";
 import Link from "next/link";
 
 // Days of the week
@@ -92,6 +92,7 @@ export default function SchedulePage() {
 
         {/* Day Tabs */}
         <Tabs
+          aria-label="Schedule days"
           selectedKey={selectedDay}
           onSelectionChange={(key) => setSelectedDay(key as string)}
           variant="underlined"
@@ -181,26 +182,28 @@ export default function SchedulePage() {
                           </div>
 
                           {/* Bell Icon */}
-                          <Button
-                            isIconOnly
-                            variant="bordered"
-                            className="border-white/10 hover:border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                            aria-label={`Set reminder for ${item.title}`}
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                          <Tooltip content={`Set reminder for ${item.title}`} placement="top">
+                            <Button
+                              isIconOnly
+                              variant="bordered"
+                              className="border-white/10 hover:border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                              aria-label={`Set reminder for ${item.title}`}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                              />
-                            </svg>
-                          </Button>
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                                />
+                              </svg>
+                            </Button>
+                          </Tooltip>
                         </div>
                       </CardBody>
                     </Card>
@@ -227,9 +230,18 @@ export default function SchedulePage() {
                 <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                   No releases scheduled
                 </h3>
-                <p className="text-foreground/50">
+                <p className="text-foreground/50 mb-6">
                   Check back later for new episodes on {selectedDay}
                 </p>
+                {selectedDay !== today && (
+                  <Button
+                    color="primary"
+                    variant="flat"
+                    onPress={() => setSelectedDay(today)}
+                  >
+                    View Today's Schedule
+                  </Button>
+                )}
               </CardBody>
             </Card>
           )}

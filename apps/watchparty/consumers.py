@@ -2,6 +2,7 @@ import json
 import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from channels.exceptions import DenyConnection
 from django.utils.html import escape
 from django.core.cache import cache
 from asgiref.sync import sync_to_async
@@ -15,10 +16,13 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f'party_{self.room_uuid}'
         self.user = self.scope.get('user')
 
+        # Require authentication for connection
+        if not self.user or not self.user.is_authenticated:
+            raise DenyConnection()
+
         # Verify Room Exists
         if not await self.room_exists(self.room_uuid):
-            await self.close()
-            return
+            raise DenyConnection()
 
         # Join room group
         await self.channel_layer.group_add(
@@ -27,18 +31,17 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
 
-        if self.user.is_authenticated:
-            # Add/Update Participant
-            await self.add_participant(self.room_uuid, self.user)
-            await self.broadcast_system_message(f"{self.user.username} joined the party.")
-            await self.send_participants_list()
+        # Add/Update Participant
+        await self.add_participant(self.room_uuid, self.user)
+        await self.broadcast_system_message(f"{self.user.username} joined the party.")
+        await self.send_participants_list()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
-        if self.user.is_authenticated:
+        if self.user and self.user.is_authenticated:
             await self.remove_participant(self.room_uuid, self.user)
             await self.broadcast_system_message(f"{self.user.username} left the party.")
             await self.send_participants_list()

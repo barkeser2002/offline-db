@@ -138,6 +138,7 @@ export default function NotificationsPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-foreground/60">Unread only</span>
               <Switch
+                aria-label="Show unread notifications only"
                 size="sm"
                 isSelected={showUnreadOnly}
                 onValueChange={setShowUnreadOnly}
@@ -250,11 +251,20 @@ export default function NotificationsPage() {
               <h3 className="text-xl font-semibold text-foreground/70 mb-2">
                 No notifications
               </h3>
-              <p className="text-foreground/50">
+              <p className="text-foreground/50 mb-6">
                 {showUnreadOnly
                   ? "No unread notifications"
                   : "You're all caught up!"}
               </p>
+              {showUnreadOnly && (
+                <Button
+                  color="primary"
+                  variant="flat"
+                  onPress={() => setShowUnreadOnly(false)}
+                >
+                  View All Notifications
+                </Button>
+              )}
             </CardBody>
           </Card>
         )}

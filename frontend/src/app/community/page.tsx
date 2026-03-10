@@ -121,6 +121,7 @@ export default function CommunityPage() {
           {/* Main Content */}
           <div className="lg:col-span-2">
             <Tabs
+              aria-label="Community sections"
               selectedKey={selectedTab}
               onSelectionChange={(key) => setSelectedTab(key as string)}
               variant="underlined"
@@ -146,6 +147,7 @@ export default function CommunityPage() {
                               name={activity.user}
                               size="md"
                               className="bg-primary/20 text-primary"
+                              alt={`Avatar for ${activity.user}`}
                             />
                             <div className="flex-1">
                               <p className="text-foreground">
@@ -263,6 +265,7 @@ export default function CommunityPage() {
                         name={user.username}
                         size="sm"
                         className="bg-primary/20 text-primary"
+                        alt={`Avatar for ${user.username}`}
                       />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">
