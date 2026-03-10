@@ -224,7 +224,7 @@ export default async function AnimeDetail({
 }
 
 // Helper needed because I used Avatar above without import
-function Avatar({ src, size, alt }: { src: string; size?: string; alt: string }) {
+function Avatar({ src, size, alt }: { src: string; size?: string; alt?: string }) {
   return (
     <div
       className={`rounded-full overflow-hidden bg-white/10 flex-shrink-0 ${size === "md" ? "w-10 h-10" : "w-8 h-8"}`}
@@ -233,7 +233,7 @@ function Avatar({ src, size, alt }: { src: string; size?: string; alt: string })
         <img
           src={src}
           className="w-full h-full object-cover"
-          alt={alt}
+          alt={alt ?? "Character avatar"}
         />
       ) : null}
     </div>
