@@ -469,11 +469,18 @@ class LocalStorage(StorageManager):
     def __init__(self):
         self.base_path = settings.MEDIA_ROOT
         self.base_url = settings.MEDIA_URL
+
+    def _get_safe_path(self, remote_path: str) -> str:
+        full_path = os.path.abspath(os.path.join(self.base_path, remote_path))
+        base_path_abs = os.path.abspath(self.base_path)
+        if os.path.commonpath([base_path_abs, full_path]) != base_path_abs:
+            raise StorageError(f"Invalid path: {remote_path}")
+        return full_path
     
     def upload(self, local_path: str, remote_path: str) -> str:
         import shutil
         
-        dest_path = os.path.join(self.base_path, remote_path)
+        dest_path = self._get_safe_path(remote_path)
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         shutil.copy2(local_path, dest_path)
         logger.info(f"Local: Copied {local_path} to {dest_path}")
@@ -481,7 +488,7 @@ class LocalStorage(StorageManager):
     
     def delete(self, remote_path: str) -> bool:
         try:
-            full_path = os.path.join(self.base_path, remote_path)
+            full_path = self._get_safe_path(remote_path)
             os.remove(full_path)
             logger.info(f"Local: Deleted {full_path}")
             return True
@@ -493,7 +500,10 @@ class LocalStorage(StorageManager):
         return urljoin(self.base_url, remote_path)
     
     def exists(self, remote_path: str) -> bool:
-        return os.path.exists(os.path.join(self.base_path, remote_path))
+        try:
+            return os.path.exists(self._get_safe_path(remote_path))
+        except StorageError:
+            return False
     
     def health_check(self) -> bool:
         return os.path.exists(self.base_path) and os.access(self.base_path, os.W_OK)
