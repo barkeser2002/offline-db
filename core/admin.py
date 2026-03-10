@@ -15,6 +15,7 @@ class BlogAdmin(ModelAdmin):
 class SupportTicketAdmin(ModelAdmin):
     list_display = ('subject', 'user', 'status', 'created_at')
     list_filter = ('status',)
+    list_select_related = ('user',)
 
 @admin.register(AdSlot)
 class AdSlotAdmin(ModelAdmin):

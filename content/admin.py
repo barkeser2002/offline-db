@@ -124,18 +124,21 @@ class SeasonAdmin(ModelAdmin):
     list_display = ('anime', 'number', 'title')
     list_filter = ('anime',)
     list_select_related = ('anime',)
+    search_fields = ('title', 'anime__title')
 
 @admin.register(Episode)
 class EpisodeAdmin(ModelAdmin):
     list_display = ('season', 'number', 'title')
     list_select_related = ('season', 'season__anime')
-    list_filter = ('season__anime', 'season')
+    list_filter = ('season__anime',)  # Removed 'season' from list_filter because it has too many choices and causes N+1
+    autocomplete_fields = ('season',)
     search_fields = ('title', 'season__anime__title')
 
 @admin.register(FansubGroup)
 class FansubGroupAdmin(ModelAdmin):
     list_display = ('name', 'website', 'owner')
     search_fields = ('name',)
+    list_select_related = ('owner',)
 
 @admin.register(VideoFile)
 class VideoFileAdmin(ModelAdmin):

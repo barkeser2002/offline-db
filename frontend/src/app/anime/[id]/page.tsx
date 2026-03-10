@@ -205,7 +205,7 @@ export default async function AnimeDetail({
             <div className="grid grid-cols-2 gap-3">
               {anime.characters?.slice(0, 6).map((char) => (
                 <div key={char.id} className="flex items-center gap-2">
-                  <Avatar src={char.character.image_url} size="md" />{" "}
+                  <Avatar src={char.character.image_url} size="md" alt={char.character.name} />{" "}
                   {/* Assuming Avatar component available/imported or use img */}
                   <div className="overflow-hidden">
                     <p className="text-sm font-medium truncate">
@@ -224,7 +224,7 @@ export default async function AnimeDetail({
 }
 
 // Helper needed because I used Avatar above without import
-function Avatar({ src, size }: { src: string; size?: string }) {
+function Avatar({ src, size, alt }: { src: string; size?: string; alt?: string }) {
   return (
     <div
       className={`rounded-full overflow-hidden bg-white/10 flex-shrink-0 ${size === "md" ? "w-10 h-10" : "w-8 h-8"}`}
@@ -233,7 +233,7 @@ function Avatar({ src, size }: { src: string; size?: string }) {
         <img
           src={src}
           className="w-full h-full object-cover"
-          alt="Avatar"
+          alt={alt ?? "Character avatar"}
         />
       ) : null}
     </div>

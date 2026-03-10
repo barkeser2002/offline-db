@@ -1,14 +1,12 @@
-## 2024-05-24 - Inline Contextual Actions
-**Learning:** When using zero-results empty states (such as a search yielding no results with active filters), adding an inline 'Clear Filters' action directly underneath the message greatly reduces user friction and preserves contextual focus without requiring the user to navigate to a global filter control element.
-**Action:** Always insert a visible, prominent Reset/Clear button within empty state layouts when empty outcomes are driven by user-set filters or configurations.
-## 2024-05-19 - Missing Alt Text on Dynamic Images
-**Learning:** Dynamic images rendered from API data (like episode cover images and character avatars) frequently lack `alt` attributes, as the alt text isn't a static string. This creates accessibility barriers for screen reader users who just hear the image URL or "image".
-**Action:** When adding or reviewing images that consume dynamic data, ensure a descriptive `alt` attribute is constructed using the available data (e.g., ``alt={`Episode ${ep.number} thumbnail`}``) or a sensible generic fallback (e.g., `alt="Avatar"`) if specific context is missing.
-
-## 2024-05-18 - Semantic Accessibility with NextUI Forms
-**Learning:** NextUI's `Input` components don't automatically add `aria-required` or visual mandatory indicators unless the `isRequired` prop is explicitly provided. Since many configuration and profile pages (e.g., admin settings or profile data) consist of mandatory fields, neglecting `isRequired` reduces the accessibility of these forms significantly, preventing screen readers from clearly announcing their status.
-**Action:** When working on form inputs with NextUI, always determine if a field is logically mandatory and, if so, ensure the `isRequired` prop is included to provide semantic accessibility context (`aria-required="true"`) and visual asterisks for sighted users.
-
-## 2024-05-25 - Quick Input Reset Contextual Actions
-**Learning:** NextUI `<Input>` components used for search or extensive text entry can trap users when they want to clear their query or text input to reset their view. Providing the built-in `isClearable` prop (and `onClear` for controlled inputs) adds a critical inline contextual action (an 'X' button) to clear the query, improving the usability of filters and search bars.
-**Action:** Always provide `isClearable` and `onClear` properties to NextUI `Input` elements used for search filtering to give users a quick way to reset their input state.
+## 2024-03-05 - Add aria-labels to NextUI Switch components
+**Learning:** In the frontend Next.js application, NextUI `<Switch>` components do not inherently expose accessible names to screen readers when they lack an explicit `<label>` element wrapping them. This can cause screen readers to simply announce "switch" without providing context on what the switch actually toggles, leading to a poor accessibility experience.
+**Action:** When using NextUI `<Switch>` components that act as standalone toggles or don't have a dedicated, associated `<label>` element, always include an explicit `aria-label` attribute (e.g., `aria-label="Toggle Maintenance Mode"`) to ensure the control's purpose is accurately communicated to assistive technologies.
+## 2025-03-06 - Always Provide Meaningful `alt` Text to Custom Image/Avatar Components
+**Learning:** In React UI components that wrap `<img>` tags (e.g., custom `Avatar` components), it's a common oversight to hardcode the `alt` attribute or leave it out entirely, making dynamic images inaccessible to screen readers. For example, rendering character avatars with `alt="Avatar"` fails to identify *who* the avatar represents.
+**Action:** When creating or modifying custom React image components (like `Avatar`), ensure the component signature accepts an `alt` prop and passes it down to the underlying `<img>` tag. At the call site, always provide descriptive `alt` text (e.g., `alt={char.character.name}`) rather than relying on generic fallbacks.
+## 2024-03-08 - Empty State Filtering Logic
+**Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
+**Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
+## 2025-03-09 - Accessible Tooltips for Icon-Only Buttons
+**Learning:** While relying on `aria-label` for `isIconOnly` buttons is sufficient for screen readers, it leaves sighted users (especially those on desktop using a mouse) guessing the function of ambiguous icons.
+**Action:** When using ambiguous icon-only buttons (like Grid/List views, or Action toggles), always wrap the button in a NextUI `<Tooltip>` component to provide an immediate, accessible textual description for sighted users on hover or focus, complementing the existing `aria-label`.

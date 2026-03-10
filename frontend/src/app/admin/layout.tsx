@@ -113,7 +113,7 @@ export default function AdminLayout({
                     </p>
                     <p className="text-xs text-foreground/50">Super Admin</p>
                   </div>
-                  <Avatar name="Admin" className="bg-primary text-white" />
+                  <Avatar name="Admin" className="bg-primary text-white" alt="Admin" />
                 </div>
               </DropdownTrigger>
               <DropdownMenu aria-label="Admin Profile">
