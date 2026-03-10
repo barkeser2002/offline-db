@@ -72,7 +72,7 @@ class UserProfileAPIView(APIView):
     def get(self, request):
         user = request.user
         badges = UserBadge.objects.filter(user=user).select_related('badge')
-        history = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at')[:10]
+        history = WatchLog.objects.filter(user=user).order_by('-watched_at')[:10]
         
         # Note: In a real app, create a ProfileSerializer.
         # Here constructing ad-hoc response for speed as per migration plan.

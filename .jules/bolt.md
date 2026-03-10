@@ -29,3 +29,7 @@
 ## 2025-03-05 - Badge System Query Count Optimization
 **Learning:** `CommunityBadgeStrategy`, `ChatBadgeStrategy`, and `ConsistencyBadgeStrategy` were issuing multiple independent `.count()` and `.exists()` queries against the database to evaluate different thresholds of the same data (e.g., checking if a user hosted 5 rooms, then immediately checking if they hosted a room with 5 participants).
 **Action:** Replaced separate DB aggregation queries with a single query that fetches the relevant distinct rows into the shared `cache` dictionary (e.g., `Room.objects.filter(host=user).values('max_participants')`). The `.count()` and `.exists()` logic is then evaluated in memory using Python's `len()`, `any()`, and `sum()`, drastically reducing the total database queries per badge evaluation cycle.
+
+## 2025-03-05 - Redundant Eager Loading Optimization
+**Learning:** `UserProfileAPIView` was eagerly loading related objects (`episode__season__anime`) for the `history` queryset (a `WatchLog`). However, the serializer (`WatchLogSerializer`) only returned the `episode` primary key, meaning the nested relationship data wasn't even being utilized.
+**Action:** Removed the `select_related('episode__season__anime')` to prevent the database from doing three unnecessary joins on the `WatchLog` list endpoint. Always match `select_related`/`prefetch_related` closely to what the generic serializer actually accesses to avoid over-fetching.
