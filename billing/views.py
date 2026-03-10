@@ -6,6 +6,7 @@ from django.utils import timezone
 from .models import ShopierPayment
 from users.models import User
 from django.conf import settings
+from core.utils import get_client_ip
 import hmac
 import hashlib
 import base64
@@ -61,7 +62,7 @@ def shopier_callback(request):
     by HMAC signature verification in verify_shopier_signature().
     """
     # Log the IP address for security auditing
-    ip = request.META.get('REMOTE_ADDR')
+    ip = get_client_ip(request)
     logger.info(f"Shopier callback received from IP: {ip}")
 
     # Verify signature

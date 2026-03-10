@@ -3,28 +3,32 @@ from django.urls import reverse
 from users.models import UserBadge, Badge, WatchLog
 from content.models import Anime, Episode, Season
 
+from rest_framework.test import APIClient
+
 @pytest.mark.django_db
-def test_profile_view_access(client, django_user_model):
+def test_profile_view_access(django_user_model):
     """Test that the profile view returns 200 for logged-in users."""
+    client = APIClient()
     user = django_user_model.objects.create_user(username='testuser', password='password')
-    client.force_login(user)
-    url = reverse('profile')
+    client.force_authenticate(user=user)
+    url = reverse('user-profile')
     response = client.get(url)
     assert response.status_code == 200
-    assert 'profile.html' in [t.name for t in response.templates]
 
 @pytest.mark.django_db
-def test_profile_view_redirect_anonymous(client):
+def test_profile_view_redirect_anonymous():
     """Test that anonymous users are redirected to login."""
-    url = reverse('profile')
+    client = APIClient()
+    url = reverse('user-profile')
     response = client.get(url)
-    assert response.status_code == 302
+    assert response.status_code == 401
 
 @pytest.mark.django_db
-def test_profile_view_context(client, django_user_model):
+def test_profile_view_context(django_user_model):
     """Test that badges and history are passed to the context."""
+    client = APIClient()
     user = django_user_model.objects.create_user(username='testuser2', password='password')
-    client.force_login(user)
+    client.force_authenticate(user=user)
 
     # Create a badge and award it
     badge = Badge.objects.create(name="Test Badge", slug="test-badge")
@@ -36,12 +40,13 @@ def test_profile_view_context(client, django_user_model):
     episode = Episode.objects.create(season=season, number=1)
     WatchLog.objects.create(user=user, episode=episode, duration=100)
 
-    url = reverse('profile')
+    url = reverse('user-profile')
     response = client.get(url)
 
     assert response.status_code == 200
     # Check that Test Badge is present (other badges might be awarded automatically via signals)
-    assert any(b.badge.name == "Test Badge" for b in response.context['badges'])
-    assert len(response.context['history']) == 1
+    data = response.json()
+    assert any(b['badge']['name'] == "Test Badge" for b in data['badges'])
+    assert len(data['recent_history']) == 1
     # Check that episode is related correctly
-    assert response.context['history'][0].episode == episode
+    assert data['recent_history'][0]['episode'] == episode.id

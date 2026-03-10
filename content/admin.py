@@ -138,6 +138,7 @@ class EpisodeAdmin(ModelAdmin):
 class FansubGroupAdmin(ModelAdmin):
     list_display = ('name', 'website', 'owner')
     search_fields = ('name',)
+    list_select_related = ('owner',)
 
 @admin.register(VideoFile)
 class VideoFileAdmin(ModelAdmin):
