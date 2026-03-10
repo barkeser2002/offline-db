@@ -156,31 +156,35 @@ export default function UploadPage() {
         <Tab key="magnet" title="Magnet Link">
           <div className="mt-6">
             <Card className="bg-surface border border-white/5">
-              <CardBody className="p-6 space-y-4">
-                <Input
-                  isRequired
-                  label="Magnet Link / Torrent URL"
-                  placeholder="magnet:?xt=urn:btih:..."
-                  variant="bordered"
-                  classNames={{
-                    inputWrapper: "bg-background/50 border-white/10",
-                  }}
-                />
-                <div className="flex gap-4">
-                  <Select
+              <CardBody className="p-6">
+                <div className="space-y-4">
+                  <Input
                     isRequired
-                    label="Quality"
-                    placeholder="Auto"
+                    label="Magnet Link / Torrent URL"
                     variant="bordered"
-                    className="max-w-xs"
-                  >
-                    <SelectItem key="1080">1080p</SelectItem>
-                    <SelectItem key="720">720p</SelectItem>
-                    <SelectItem key="480">480p</SelectItem>
-                  </Select>
-                  <Button color="primary" size="lg" className="flex-1">
-                    Start Download
-                  </Button>
+                    classNames={{
+                      inputWrapper: "bg-background/50 border-white/10",
+                      label: "text-foreground"
+                    }}
+                  />
+                  <div className="flex gap-4 items-center">
+                    <Select
+                      isRequired
+                      label="Quality"
+                      variant="bordered"
+                      className="max-w-xs"
+                      classNames={{
+                        label: "text-foreground"
+                      }}
+                    >
+                      <SelectItem key="1080">1080p</SelectItem>
+                      <SelectItem key="720">720p</SelectItem>
+                      <SelectItem key="480">480p</SelectItem>
+                    </Select>
+                    <Button color="primary" size="lg" className="flex-1 h-14">
+                      Start Download
+                    </Button>
+                  </div>
                 </div>
               </CardBody>
             </Card>
@@ -190,31 +194,35 @@ export default function UploadPage() {
         <Tab key="scrape" title="Scrape URL">
           <div className="mt-6">
             <Card className="bg-surface border border-white/5">
-              <CardBody className="p-6 space-y-4">
-                <Input
-                  isRequired
-                  label="Source URL"
-                  placeholder="https://gogoanime..."
-                  variant="bordered"
-                  classNames={{
-                    inputWrapper: "bg-background/50 border-white/10",
-                  }}
-                />
-                <div className="flex gap-4">
-                  <Select
+              <CardBody className="p-6">
+                <div className="space-y-4">
+                  <Input
                     isRequired
-                    label="Provider"
-                    placeholder="Select provider"
+                    label="Source URL"
                     variant="bordered"
-                    className="max-w-xs"
-                  >
-                    <SelectItem key="gogo">GogoAnime</SelectItem>
-                    <SelectItem key="zoro">Zoro/HiAnime</SelectItem>
-                    <SelectItem key="9anime">9Anime</SelectItem>
-                  </Select>
-                  <Button color="primary" size="lg" className="flex-1">
-                    Scrape & Download
-                  </Button>
+                    classNames={{
+                      inputWrapper: "bg-background/50 border-white/10",
+                      label: "text-foreground"
+                    }}
+                  />
+                  <div className="flex gap-4 items-center">
+                    <Select
+                      isRequired
+                      label="Provider"
+                      variant="bordered"
+                      className="max-w-xs"
+                      classNames={{
+                        label: "text-foreground"
+                      }}
+                    >
+                      <SelectItem key="gogo">GogoAnime</SelectItem>
+                      <SelectItem key="zoro">Zoro/HiAnime</SelectItem>
+                      <SelectItem key="9anime">9Anime</SelectItem>
+                    </Select>
+                    <Button color="primary" size="lg" className="flex-1 h-14">
+                      Scrape & Download
+                    </Button>
+                  </div>
                 </div>
               </CardBody>
             </Card>
