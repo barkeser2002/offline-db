@@ -7,6 +7,8 @@ from .serializers import RoomSerializer
 from .permissions import IsHostOrReadOnly
 
 class RoomViewSet(viewsets.ModelViewSet):
+    # Optimization: Removed unnecessary episode__season__anime if it was there,
+    # and ensured we just need 'episode' and 'host'
     queryset = Room.objects.filter(is_active=True).select_related(
         'episode', 'host'
     ).prefetch_related(

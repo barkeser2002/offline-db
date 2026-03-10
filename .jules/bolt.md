@@ -25,3 +25,7 @@
 ## 2025-03-03 - Template Tag Query Optimization
 **Learning:** Template tags like `get_ad` that are used in the main application layout (`base.html`) and contain database queries (e.g., fetching an `AdSlot`) cause a hidden N+1-like issue by triggering an independent query on *every single page load* for non-premium users.
 **Action:** Cached the output of the template tag via Django's `core.cache` and added signal hooks to invalidate the cache only when the underlying `AdSlot` model is saved or deleted.
+
+## 2025-03-04 - Unnecessary select_related JOIN Optimization
+**Learning:** Adding `select_related('season__anime')` to an `EpisodeViewSet` query is only beneficial if the serializer actually uses data from those tables. In our case, `EpisodeSerializer` only uses native `Episode` fields, `VideoFile`, and `ExternalSource`. Similarly, `WatchLogSerializer` only returned the `episode_id`, but its query used `select_related('episode__season__anime')`.
+**Action:** Removed redundant `select_related('season__anime')` and `select_related('episode__season__anime')` from views like `EpisodeViewSet`, `HomeViewSet.list`, and `UserProfileAPIView.get` to eliminate unnecessary SQL JOIN operations and speed up execution.

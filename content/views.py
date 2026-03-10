@@ -59,7 +59,9 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EpisodeSerializer
     
     def get_queryset(self):
-        return Episode.objects.select_related('season__anime').prefetch_related(
+        # Optimization: Removed unnecessary select_related('season__anime')
+        # since EpisodeSerializer does not use Season or Anime fields.
+        return Episode.objects.prefetch_related(
             'video_files__fansub_group',
             'external_sources'
         )
@@ -71,10 +73,14 @@ class HomeViewSet(viewsets.ViewSet):
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]
-        latest_episodes = Episode.objects.select_related('season__anime').prefetch_related(
+
+        # Optimization: Removed unnecessary select_related('season__anime')
+        # since EpisodeSerializer does not use Season or Anime fields.
+        latest_episodes = Episode.objects.prefetch_related(
             'video_files__fansub_group',
             'external_sources'
         ).order_by('-created_at')[:12]
+
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         seasonal = Anime.objects.filter(status='Currently Airing').prefetch_related('genres').order_by('-score')[:10]
         
