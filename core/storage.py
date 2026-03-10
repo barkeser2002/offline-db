@@ -473,7 +473,11 @@ class LocalStorage(StorageManager):
     def upload(self, local_path: str, remote_path: str) -> str:
         import shutil
         
-        dest_path = os.path.join(self.base_path, remote_path)
+        dest_path = os.path.abspath(os.path.join(self.base_path, remote_path))
+        base_abspath = os.path.abspath(self.base_path)
+        if os.path.commonpath([base_abspath, dest_path]) != base_abspath:
+            raise StorageError("Path traversal detected")
+
         os.makedirs(os.path.dirname(dest_path), exist_ok=True)
         shutil.copy2(local_path, dest_path)
         logger.info(f"Local: Copied {local_path} to {dest_path}")
@@ -481,7 +485,11 @@ class LocalStorage(StorageManager):
     
     def delete(self, remote_path: str) -> bool:
         try:
-            full_path = os.path.join(self.base_path, remote_path)
+            full_path = os.path.abspath(os.path.join(self.base_path, remote_path))
+            base_abspath = os.path.abspath(self.base_path)
+            if os.path.commonpath([base_abspath, full_path]) != base_abspath:
+                raise StorageError("Path traversal detected")
+
             os.remove(full_path)
             logger.info(f"Local: Deleted {full_path}")
             return True
@@ -493,7 +501,12 @@ class LocalStorage(StorageManager):
         return urljoin(self.base_url, remote_path)
     
     def exists(self, remote_path: str) -> bool:
-        return os.path.exists(os.path.join(self.base_path, remote_path))
+        full_path = os.path.abspath(os.path.join(self.base_path, remote_path))
+        base_abspath = os.path.abspath(self.base_path)
+        if os.path.commonpath([base_abspath, full_path]) != base_abspath:
+            return False
+
+        return os.path.exists(full_path)
     
     def health_check(self) -> bool:
         return os.path.exists(self.base_path) and os.access(self.base_path, os.W_OK)
