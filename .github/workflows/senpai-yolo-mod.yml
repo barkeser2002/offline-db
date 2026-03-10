@@ -1,109 +1,188 @@
-name: ⚡ Senpai's Blind Trust (Auto-Merge ALL)
+name: ⚡ Senpai YOLO — Jules Auto-Accept & Conflict Resolver
 
 on:
   pull_request_target:
-    # PR açıldığında, güncellendiğinde veya tekrar açıldığında tetiklenir
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  instant-merge:
-    name: 🏎️ Hızlı ve Öfkeli Merge
+  auto-merge:
+    name: 🤖 Jules PR Otomatik Kabul
+    # Jules'dan gelen tüm PR'ları (ve diğerlerini) yakala
     runs-on: ubuntu-latest
     permissions:
-      contents: write      # Kodu birleştirmek (yazmak) için
-      pull-requests: write # PR'ı onaylamak ve kapatmak için
+      contents: write
+      pull-requests: write
+      issues: write
 
     steps:
-      - name: 🤖 Senpai Operasyona Başlıyor
+      - name: 🔑 Jules Token ile Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: 📦 Sistem Bağımlılıkları
+          token: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Araçları Kur
         run: |
-          sudo apt-get update
+          sudo apt-get update -qq
           sudo apt-get install -y jq
-      
-      - name: 🔧 Conflict Çözüm Denemesi
+
+      - name: 🔍 PR Bilgilerini Al
+        id: pr-info
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          PR_DATA=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json mergeable,isDraft,mergeStateStatus,author,title 2>/dev/null || echo '{}')
+          MERGEABLE=$(echo "$PR_DATA" | jq -r '.mergeable // "UNKNOWN"')
+          IS_DRAFT=$(echo "$PR_DATA" | jq -r '.isDraft // false')
+          STATE=$(echo "$PR_DATA" | jq -r '.mergeStateStatus // "UNKNOWN"')
+          AUTHOR=$(echo "$PR_DATA" | jq -r '.author.login // "unknown"')
+          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
+          echo "is_draft=$IS_DRAFT" >> $GITHUB_OUTPUT
+          echo "state=$STATE" >> $GITHUB_OUTPUT
+          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          echo "PR #$PR_NUMBER — mergeable=$MERGEABLE state=$STATE draft=$IS_DRAFT author=$AUTHOR"
+          # UNKNOWN ise 10 sn bekle, tekrar dene
+          if [ "$MERGEABLE" = "UNKNOWN" ]; then
+            sleep 10
+            PR_DATA2=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+              --json mergeable,mergeStateStatus 2>/dev/null || echo '{}')
+            MERGEABLE=$(echo "$PR_DATA2" | jq -r '.mergeable // "UNKNOWN"')
+            STATE=$(echo "$PR_DATA2" | jq -r '.mergeStateStatus // "UNKNOWN"')
+            echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
+            echo "state=$STATE" >> $GITHUB_OUTPUT
+            echo "Yeniden kontrol: mergeable=$MERGEABLE state=$STATE"
+          fi
+
+      - name: 📝 Draft'tan Çıkar
+        if: steps.pr-info.outputs.is_draft == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "PR draft modunda, ready for review yapılıyor..."
+          gh pr ready "$PR_NUMBER" --repo "$REPO"
+          sleep 3
+
+      - name: ✅ Temiz Merge
+        if: steps.pr-info.outputs.mergeable == 'MERGEABLE'
+        env:
+          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Conflict yok — doğrudan approve + squash merge yapılıyor."
+          gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+            --body "🤖 Senpai onayladı! Çakışma yok, merge ediliyor. 🚀"
+          sleep 2
+          gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --delete-branch
+          echo "✅ Merge tamamlandı."
+
+      - name: 🔧 Akıllı Conflict Çözümü
+        if: steps.pr-info.outputs.mergeable == 'CONFLICTING' || steps.pr-info.outputs.state == 'DIRTY'
+        env:
+          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          JULES_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
+          REPO: ${{ github.repository }}
         run: |
-          echo "🎎 Senpai: Bir PR tespit edildi! Conflict ve Draft kontrolü yapıyorum..."
-          
-          # Adım 0: Durum verilerini çek (Hem mergeable durumu hem de draft durumu)
-          # JSON çıktısından iki veriyi de aynı anda alıyoruz
-          PR_DATA=$(gh pr view "$PR_NUMBER" --json mergeable,isDraft)
-          MERGEABLE_STATUS=$(echo "$PR_DATA" | jq -r .mergeable)
-          IS_DRAFT=$(echo "$PR_DATA" | jq -r .isDraft)
-          
-          # jq yoksa alternatif (senin kullandığın yöntemle ayrı ayrı çekim):
-          if [ -z "$MERGEABLE_STATUS" ]; then
-              MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
-              IS_DRAFT=$(gh pr view "$PR_NUMBER" --json isDraft -q .isDraft)
-          fi
-          
-          if [ "$MERGEABLE_STATUS" = "MERGEABLE" ]; then
-            echo "✅ Kodda conflict yok. Draft durumu kontrol ediliyor..."
-            
-            # --- DÜZELTME BAŞLANGICI ---
-            # Eğer PR Draft ise, 'Ready for Review' durumuna çek
-            if [ "$IS_DRAFT" = "true" ]; then
-                echo "📝 PR şu an Draft modunda. Otomatik olarak 'Ready for review' yapılıyor..."
-                gh pr ready "$PR_URL"
-                echo "🔓 PR draft modundan çıkarıldı."
-            fi
-            # --- DÜZELTME BİTİŞİ ---
-            
-            echo "🚀 İşlem devam ediyor..."
-            
-            # Adım 2: PR'ı onayla (Approve)
-            gh pr review "$PR_URL" --approve --body "Senpai bu kodu beğendi ve draft'tan çıkarıp onayladı! 🚀"
-            
-            # Adım 3: Merge işlemini yap
-            gh pr merge "$PR_URL" --squash --delete-branch
-            
-            echo "✅ İşlem Tamam! Kod artık ana yapının bir parçası."
-            
-          elif [ "$MERGEABLE_STATUS" = "CONFLICTING" ]; then
-            echo "❌ PR'da conflict var! Otomatik çözüm deniyorum..."
-            
-            # Adım 2: Conflict çözüm denemesi
-            git fetch origin "$HEAD_REF"
-            git checkout "$HEAD_REF"
-            
-            # Rebase dene
-            if git rebase "origin/$BASE_REF"; then
-              echo "✅ Rebase başarılı! Push ediyorum..."
-              git push --force-with-lease origin "$HEAD_REF"
-              
-              sleep 5
-              NEW_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable -q .mergeable)
-              
-              if [ "$NEW_STATUS" = "MERGEABLE" ]; then
-                # Rebase sonrası tekrar Draft kontrolü yapmak iyi olur
-                IS_DRAFT_RECHECK=$(gh pr view "$PR_NUMBER" --json isDraft -q .isDraft)
-                if [ "$IS_DRAFT_RECHECK" = "true" ]; then
-                     gh pr ready "$PR_URL"
-                fi
-                
-                gh pr review "$PR_URL" --approve --body "Senpai conflict'leri çözdü ve onayladı! 🚀"
-                gh pr merge "$PR_URL" --squash --delete-branch
-                echo "✅ Conflict çözüldü ve merge edildi!"
+          echo "Conflict tespit edildi — akıllı çözüm başlıyor..."
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "Senpai-YoloBot"
+          git remote set-url origin "https://x-access-token:${JULES_TOKEN}@github.com/${REPO}.git"
+
+          git fetch origin --prune
+          git fetch origin "$BASE_REF" 2>/dev/null || true
+          git fetch origin "$HEAD_REF" 2>/dev/null || \
+            git fetch origin "refs/pull/${PR_NUMBER}/head:refs/remotes/origin/pr/${PR_NUMBER}"
+
+          git checkout -B "$HEAD_REF" "origin/$HEAD_REF" 2>/dev/null || \
+            git checkout -B "$HEAD_REF" "refs/remotes/origin/pr/${PR_NUMBER}"
+
+          # main'i merge et (conflict'leri manuel çözeceğiz)
+          git merge "origin/$BASE_REF" --no-edit 2>&1 || true
+
+          CONFLICTS=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
+          echo "Conflict'li dosyalar: $CONFLICTS"
+
+          if [ -n "$CONFLICTS" ]; then
+            while IFS= read -r file; do
+              [ -z "$file" ] && continue
+              if [[ "$file" == .jules/* ]]; then
+                # Jules dokümantasyon dosyaları → main'deki versiyonu koru
+                echo "  [theirs] $file (.jules doc)"
+                git checkout --theirs -- "$file"
+              elif [[ "$file" == "core/storage.py" ]] || \
+                   [[ "$file" == "apps/watchparty/views.py" ]]; then
+                # Bu dosyalar main'de zaten daha iyi versiyona sahip
+                echo "  [theirs] $file (main versiyonu korunuyor)"
+                git checkout --theirs -- "$file"
               else
-                gh pr comment "$PR_URL" --body "🤖 **Otomatik Rebase Denendi** ama hala conflict var. Lütfen manuel çözün."
+                # Tüm diğer kod dosyaları → PR'ın yeni kodunu koru
+                echo "  [ours]   $file (PR kodu korunuyor)"
+                git checkout --ours -- "$file"
               fi
-            else
-              echo "❌ Rebase başarısız! Manuel çözüm gerekli..."
-              git rebase --abort
-              gh pr comment "$PR_URL" --body "🚫 **Conflict Tespit Edildi!** Otomatik çözüm başarısız."
-            fi
-            
+              git add -- "$file"
+            done <<< "$CONFLICTS"
+            git commit --no-edit -m "🤖 Senpai: Resolve conflicts for PR #${PR_NUMBER} [skip ci]"
+          fi
+
+          git push --force-with-lease origin "HEAD:$HEAD_REF" || \
+            git push --force origin "HEAD:$HEAD_REF"
+          echo "Push tamamlandı. Merge bekleniyor..."
+
+          sleep 15
+          NEW_MERGEABLE=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json mergeable -q '.mergeable // "UNKNOWN"' 2>/dev/null)
+          echo "Merge durumu: $NEW_MERGEABLE"
+
+          if [ "$NEW_MERGEABLE" = "MERGEABLE" ]; then
+            gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+              --body "🤖 Senpai çakışmayı çözdü! \`.jules/*.md\` → main korundu, kod değişiklikleri uygulandı. 🚀"
+            sleep 3
+            gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --delete-branch
+            echo "✅ Conflict çözüldü ve merge edildi."
           else
-            echo "⏳ PR henüz hazır değil ($MERGEABLE_STATUS). Biraz bekleyip tekrar dene..."
-            gh pr comment "$PR_URL" --body "⏳ PR henüz merge edilebilir durumda değil."
+            echo "Hâlâ merge edilemiyor, 20 sn daha bekleniyor..."
+            sleep 20
+            FINAL=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+              --json mergeable -q '.mergeable // "UNKNOWN"' 2>/dev/null)
+            if [ "$FINAL" = "MERGEABLE" ]; then
+              gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+                --body "🤖 Senpai geç onayladı — merge ediliyor! 🚀"
+              sleep 2
+              gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --delete-branch
+              echo "✅ Gecikmeli merge tamamlandı."
+            else
+              gh pr comment "$PR_NUMBER" --repo "$REPO" \
+                --body "🚫 Otomatik çözüm başarısız. Durum: \`$FINAL\`. Manuel inceleme gerekli [@barkeser2002](https://github.com/barkeser2002)." || true
+              echo "❌ Manuel müdahale gerekiyor."
+            fi
+          fi
+
+      - name: ⏳ Bilinmeyen Durum — Bekle ve Dene
+        if: steps.pr-info.outputs.mergeable == 'UNKNOWN' && steps.pr-info.outputs.state != 'DIRTY'
+        env:
+          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "Durum belirsiz, 30 sn bekleniyor..."
+          sleep 30
+          RETRY=$(gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json mergeable -q '.mergeable // "UNKNOWN"' 2>/dev/null)
+          echo "Yeniden kontrol: $RETRY"
+          if [ "$RETRY" = "MERGEABLE" ]; then
+            gh pr review "$PR_NUMBER" --repo "$REPO" --approve \
+              --body "🤖 Senpai bekleyip onayladı — merge! 🚀"
+            sleep 2
+            gh pr merge "$PR_NUMBER" --repo "$REPO" --squash --delete-branch
+            echo "✅ Beklemeli merge tamamlandı."
+          else
+            echo "ℹ️ PR hâlâ hazır değil ($RETRY). Sonraki tetiklemede tekrar denenecek."
           fi
