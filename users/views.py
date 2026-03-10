@@ -72,7 +72,9 @@ class UserProfileAPIView(APIView):
     def get(self, request):
         user = request.user
         badges = UserBadge.objects.filter(user=user).select_related('badge')
-        history = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at')[:10]
+        # Optimization: Removed `select_related('episode__season__anime')` because WatchLogSerializer only serializes the `episode` ID,
+        # meaning the related Season and Anime tables were being joined and fetched unnecessarily.
+        history = WatchLog.objects.filter(user=user).order_by('-watched_at')[:10]
         
         # Note: In a real app, create a ProfileSerializer.
         # Here constructing ad-hoc response for speed as per migration plan.
