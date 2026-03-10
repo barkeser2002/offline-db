@@ -195,23 +195,16 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
                 last_log = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
             if last_log:
                 anime = last_log.episode.season.anime
-                count = WatchLog.objects.filter(user=user, episode__season__anime=anime).values('episode').distinct().count()
+                # Replaced expensive WatchLog multitable join with simple Episode subquery check
+                episode_qs = WatchLog.objects.filter(user=user).values('episode_id')
+                count = Episode.objects.filter(id__in=episode_qs, season__anime=anime).count()
                 if count >= 10:
                     self._award(user, 'loyal-fan', awarded_slugs, all_badges, new_badges)
 
         # 20. Pilot Connoisseur: Watched the first episode of 5 different anime series.
         if 'pilot-connoisseur' not in awarded_slugs:
-            if cache is not None:
-                if 'episode_ids' not in cache:
-                    cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
-                episode_ids = cache['episode_ids']
-            else:
-                episode_ids = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
-
-            if episode_ids:
-                count = len(set(Episode.objects.filter(id__in=episode_ids, number=1).values_list('season__anime_id', flat=True)))
-            else:
-                count = 0
+            episode_qs = WatchLog.objects.filter(user=user).values('episode_id')
+            count = Episode.objects.filter(id__in=episode_qs, number=1).values('season__anime_id').distinct().count()
 
             if count >= 5:
                 self._award(user, 'pilot-connoisseur', awarded_slugs, all_badges, new_badges)
@@ -219,15 +212,10 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
         # Optimization: Fetch type counts once
         type_badges = ['movie-buff', 'tv-addict', 'ova-enthusiast']
         if any(b not in awarded_slugs for b in type_badges):
-            if cache is not None:
-                if 'anime_ids' not in cache:
-                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-                anime_ids = cache['anime_ids']
-            else:
-                anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+            anime_qs = WatchLog.objects.filter(user=user).values('episode__season__anime_id')
 
             type_counts_qs = Anime.objects.filter(
-                id__in=anime_ids
+                id__in=anime_qs
             ).values('type').annotate(count=Count('id', distinct=True))
 
             type_counts = {item['type']: item['count'] for item in type_counts_qs}
@@ -279,26 +267,21 @@ class CompletionBadgeStrategy(BadgeStrategy):
 
         # 26. Otaku: Completed 5 different anime series.
         if 'otaku' not in awarded_slugs:
-            if cache is not None:
-                if 'anime_ids' not in cache:
-                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-                watched_anime_ids = cache['anime_ids']
-            else:
-                watched_anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-            if watched_anime_ids:
-                total_episodes_qs = Episode.objects.filter(season__anime_id__in=watched_anime_ids).values('season__anime_id').annotate(total=Count('id'))
-                total_map = {i['season__anime_id']: i['total'] for i in total_episodes_qs}
+            anime_qs = WatchLog.objects.filter(user=user).values('episode__season__anime_id')
 
-                user_watched_qs = WatchLog.objects.filter(user=user, episode__season__anime_id__in=watched_anime_ids).values('episode__season__anime_id').annotate(watched=Count('episode', distinct=True))
-                watched_map = {i['episode__season__anime_id']: i['watched'] for i in user_watched_qs}
+            total_episodes_qs = Episode.objects.filter(season__anime_id__in=anime_qs).values('season__anime_id').annotate(total=Count('id'))
+            total_map = {i['season__anime_id']: i['total'] for i in total_episodes_qs}
 
-                completed = 0
-                for aid in watched_anime_ids:
-                    if total_map.get(aid, 0) > 0 and watched_map.get(aid, 0) >= total_map.get(aid, 0):
-                        completed += 1
+            user_watched_qs = WatchLog.objects.filter(user=user, episode__season__anime_id__in=anime_qs).values('episode__season__anime_id').annotate(watched=Count('episode', distinct=True))
+            watched_map = {i['episode__season__anime_id']: i['watched'] for i in user_watched_qs}
 
-                if completed >= 5:
-                    self._award(user, 'otaku', awarded_slugs, all_badges, new_badges)
+            completed = 0
+            for aid, watched_count in watched_map.items():
+                if total_map.get(aid, 0) > 0 and watched_count >= total_map.get(aid, 0):
+                    completed += 1
+
+            if completed >= 5:
+                self._award(user, 'otaku', awarded_slugs, all_badges, new_badges)
 
 class GenreBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
