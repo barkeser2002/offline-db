@@ -75,6 +75,7 @@ export default function ProfilePage() {
                   {isEditing ? (
                     <div className="flex gap-2 max-w-md">
                       <Input
+                        aria-label="Edit bio"
                         size="sm"
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
