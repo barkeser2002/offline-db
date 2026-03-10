@@ -226,6 +226,7 @@ export default function DiscoveryPage() {
                   </label>
                   <Select
                     id="year-select"
+                    aria-label="Year"
                     placeholder="Any year"
                     selectedKeys={selectedYear ? [selectedYear] : []}
                     onSelectionChange={(keys) =>
