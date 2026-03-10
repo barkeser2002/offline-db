@@ -13,3 +13,6 @@
 ## 2025-03-01 - Global Badge System Optimization (Avoid Heavy WatchLog Joins)
 **Learning:** Multiple badge strategies (`ConsumptionBadgeStrategy`, `SpecificGenreBadgeStrategy`, `GenreBadgeStrategy`) were performing expensive `JOIN`s from `Anime` down to `WatchLog` (e.g., `seasons__episodes__watch_logs__user=user`) multiple times per evaluation cycle. This was particularly heavy given `WatchLog` is the largest table in the database.
 **Action:** Changed the strategies to reuse the locally cached list of `anime_ids` and `episode_ids` and replaced the heavy 4-table join with a simple `id__in=anime_ids` and `id__in=episode_ids` check directly against the `Anime` and `Genre` queries.
+## 2024-03-02 - Badge System ConsistencyBadgeStrategy Optimization
+**Learning:** `ConsistencyBadgeStrategy` was running separate DB queries for 'streak-master' (last 7 days) and 'daily-viewer' (last 30 days) that did `WatchLog.objects.filter(watched_at__gte=...).values('watched_at__date').distinct().count()`. The 30-day query is a superset of the 7-day query.
+**Action:** Combined the queries by fetching the 30-day distinct dates as a flat list once (`values_list('watched_at__date', flat=True).distinct()`), evaluated the length for the 30-day badge, and counted the subset for the 7-day badge in Python to save a redundant DB query.

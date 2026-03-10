@@ -122,23 +122,34 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
 
 class ConsistencyBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
-        # 12. Streak Master: Watched anime for 7 consecutive days.
-        if 'streak-master' not in awarded_slugs:
+        # Optimization: Fetch distinct dates once for both streak-master and daily-viewer
+        if 'streak-master' not in awarded_slugs or 'daily-viewer' not in awarded_slugs:
             today = timezone.now().date()
-            start_date = today - timedelta(days=6)
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-            days = WatchLog.objects.filter(user=user, watched_at__gte=start_datetime).values('watched_at__date').distinct().count()
-            if days >= 7:
-                self._award(user, 'streak-master', awarded_slugs, all_badges, new_badges)
+            # 30 days is the maximum range we need to check
+            start_date_30 = today - timedelta(days=29)
+            start_datetime_30 = timezone.make_aware(datetime.combine(start_date_30, datetime.min.time()))
 
-        # 13. Daily Viewer: Watched anime for 30 consecutive days.
-        if 'daily-viewer' not in awarded_slugs:
-            today = timezone.now().date()
-            start_date = today - timedelta(days=29)
-            start_datetime = timezone.make_aware(datetime.combine(start_date, datetime.min.time()))
-            days = WatchLog.objects.filter(user=user, watched_at__gte=start_datetime).values('watched_at__date').distinct().count()
-            if days >= 30:
-                self._award(user, 'daily-viewer', awarded_slugs, all_badges, new_badges)
+            # Fetch all distinct watched dates in the last 30 days
+            watched_dates_qs = WatchLog.objects.filter(
+                user=user,
+                watched_at__gte=start_datetime_30
+            ).values_list('watched_at__date', flat=True).distinct()
+
+            # Convert to list to evaluate the query once
+            watched_dates = list(watched_dates_qs)
+
+            # 12. Streak Master: Watched anime for 7 consecutive days.
+            if 'streak-master' not in awarded_slugs:
+                start_date_7 = today - timedelta(days=6)
+                # Count dates that fall within the last 7 days
+                days_7 = sum(1 for d in watched_dates if d >= start_date_7)
+                if days_7 >= 7:
+                    self._award(user, 'streak-master', awarded_slugs, all_badges, new_badges)
+
+            # 13. Daily Viewer: Watched anime for 30 consecutive days.
+            if 'daily-viewer' not in awarded_slugs:
+                if len(watched_dates) >= 30:
+                    self._award(user, 'daily-viewer', awarded_slugs, all_badges, new_badges)
 
 class AccountBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
