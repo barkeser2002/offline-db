@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status, viewsets
+from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
@@ -13,7 +13,7 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-class NotificationViewSet(viewsets.ModelViewSet):
+class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
@@ -55,7 +55,7 @@ class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return UserBadge.objects.filter(user=self.request.user).select_related('badge')
 
-class WatchLogViewSet(viewsets.ModelViewSet):
+class WatchLogViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = WatchLogSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -72,8 +72,8 @@ class UserProfileAPIView(APIView):
     def get(self, request):
         user = request.user
         badges = UserBadge.objects.filter(user=user).select_related('badge')
-        # Optimization: Removed `select_related('episode__season__anime')` because WatchLogSerializer only serializes the `episode` ID,
-        # meaning the related Season and Anime tables were being joined and fetched unnecessarily.
+        # Optimization: WatchLogSerializer only serializes the 'episode' field (ID representation),
+        # so select_related('episode__season__anime') causes an unnecessary DB join
         history = WatchLog.objects.filter(user=user).order_by('-watched_at')[:10]
         
         # Note: In a real app, create a ProfileSerializer.

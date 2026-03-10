@@ -34,6 +34,14 @@ class DeepLTranslator:
         except Exception as e:
             return f"[Error] {text}"
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0].strip()
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
 def rate_limit_ip(limit=5, period=60):
     """
     Decorator to rate limit views by IP address.
@@ -41,7 +49,7 @@ def rate_limit_ip(limit=5, period=60):
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
-            ip = request.META.get('REMOTE_ADDR')
+            ip = get_client_ip(request)
             if not ip:
                 ip = 'unknown'
 
