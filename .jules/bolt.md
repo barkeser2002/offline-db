@@ -29,3 +29,7 @@
 ## 2025-03-05 - Badge System Query Count Optimization
 **Learning:** `CommunityBadgeStrategy`, `ChatBadgeStrategy`, and `ConsistencyBadgeStrategy` were issuing multiple independent `.count()` and `.exists()` queries against the database to evaluate different thresholds of the same data (e.g., checking if a user hosted 5 rooms, then immediately checking if they hosted a room with 5 participants).
 **Action:** Replaced separate DB aggregation queries with a single query that fetches the relevant distinct rows into the shared `cache` dictionary (e.g., `Room.objects.filter(host=user).values('max_participants')`). The `.count()` and `.exists()` logic is then evaluated in memory using Python's `len()`, `any()`, and `sum()`, drastically reducing the total database queries per badge evaluation cycle.
+
+## 2025-03-09 - Django Admin list_display N+1 Queries
+**Learning:** Adding a `ForeignKey` field (like `owner` or `user`) to a `ModelAdmin.list_display` without also adding it to `list_select_related` will cause an N+1 query issue on the admin changelist page, executing one additional query per row.
+**Action:** Always verify that foreign keys in `list_display` are explicitly included in `list_select_related` (e.g. `list_select_related = ('owner',)`).
