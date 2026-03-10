@@ -66,6 +66,7 @@ export default function ProfilePage() {
                 <Avatar
                   name={userData.username}
                   className="w-24 h-24 text-3xl bg-primary"
+                  alt={userData.username}
                 />
                 <div className="text-center md:text-left flex-1">
                   <h1 className="text-2xl font-bold text-foreground mb-1">
