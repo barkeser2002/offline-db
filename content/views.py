@@ -44,6 +44,7 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
                 'seasons__episodes__video_files__fansub_group',
                 'seasons__episodes__external_sources'
             )
+        # Optimization: Prefetch genres for list action to avoid N+1 queries from AnimeListSerializer
         return queryset.prefetch_related('genres')
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[SubscribeRateThrottle])
