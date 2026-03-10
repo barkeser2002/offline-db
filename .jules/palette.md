@@ -7,3 +7,6 @@
 ## 2024-03-08 - Empty State Filtering Logic
 **Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
 **Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
+## 2025-03-09 - Accessible Tooltips for Icon-Only Buttons
+**Learning:** While relying on `aria-label` for `isIconOnly` buttons is sufficient for screen readers, it leaves sighted users (especially those on desktop using a mouse) guessing the function of ambiguous icons.
+**Action:** When using ambiguous icon-only buttons (like Grid/List views, or Action toggles), always wrap the button in a NextUI `<Tooltip>` component to provide an immediate, accessible textual description for sighted users on hover or focus, complementing the existing `aria-label`.

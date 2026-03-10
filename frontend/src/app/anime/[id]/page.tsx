@@ -233,7 +233,7 @@ function Avatar({ src, size, alt }: { src: string; size?: string; alt?: string }
         <img
           src={src}
           className="w-full h-full object-cover"
-          alt={alt || "Avatar"}
+          alt={alt ?? "Character avatar"}
         />
       ) : null}
     </div>
