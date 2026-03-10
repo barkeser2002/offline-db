@@ -27,3 +27,9 @@ class SecuritySettingsTests(SimpleTestCase):
         # We need to simulate the absence of the env var if it's not set
         if 'CORS_ALLOW_ALL_ORIGINS' not in os.environ:
              self.assertFalse(cors_allowed)
+
+    def test_secure_referrer_policy(self):
+        """
+        Verify SECURE_REFERRER_POLICY is set to 'same-origin' to prevent referer leakage.
+        """
+        self.assertEqual(getattr(settings, 'SECURE_REFERRER_POLICY', None), 'same-origin')
