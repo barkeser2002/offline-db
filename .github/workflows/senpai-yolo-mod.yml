@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📦 Araçları Kur
         run: |
@@ -29,7 +29,7 @@ jobs:
       - name: 🔍 PR Bilgilerini Al
         id: pr-info
         env:
-          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -59,7 +59,7 @@ jobs:
       - name: 📝 Draft'tan Çıkar
         if: steps.pr-info.outputs.is_draft == 'true'
         env:
-          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: ✅ Temiz Merge
         if: steps.pr-info.outputs.mergeable == 'MERGEABLE'
         env:
-          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
@@ -84,8 +84,8 @@ jobs:
       - name: 🔧 Akıllı Conflict Çözümü
         if: steps.pr-info.outputs.mergeable == 'CONFLICTING' || steps.pr-info.outputs.state == 'DIRTY'
         env:
-          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
-          JULES_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JULES_TOKEN: ${{ env.JULES_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
@@ -168,7 +168,7 @@ jobs:
       - name: ⏳ Bilinmeyen Durum — Bekle ve Dene
         if: steps.pr-info.outputs.mergeable == 'UNKNOWN' && steps.pr-info.outputs.state != 'DIRTY'
         env:
-          GH_TOKEN: ${{ secrets.JULES_API_KEY || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
