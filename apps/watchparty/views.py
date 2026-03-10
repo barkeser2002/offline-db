@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Room
@@ -19,7 +19,7 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_rooms(self, request):
         rooms = Room.objects.filter(host=request.user).select_related(
             'episode', 'host'
