@@ -7,6 +7,6 @@
 ## 2024-03-08 - Empty State Filtering Logic
 **Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
 **Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
-## 2025-03-09 - Add aria-labels to NextUI Select components
-**Learning:** In the frontend Next.js application, NextUI `<Select>` components often rely on an internal `label` prop for accessibility. When an external `<label htmlFor="...">` is used without passing the `label` prop to the NextUI `<Select>` itself, screen readers may not correctly associate the label with the custom select control, rendering it unlabeled and inaccessible.
-**Action:** When using NextUI `<Select>` components with external HTML labels rather than the built-in `label` prop, always provide an explicit `aria-label` attribute (e.g., `aria-label="Year"`) directly on the component to ensure it is properly identified by assistive technologies.
+## 2025-03-09 - Accessible Tooltips for Icon-Only Buttons
+**Learning:** While relying on `aria-label` for `isIconOnly` buttons is sufficient for screen readers, it leaves sighted users (especially those on desktop using a mouse) guessing the function of ambiguous icons.
+**Action:** When using ambiguous icon-only buttons (like Grid/List views, or Action toggles), always wrap the button in a NextUI `<Tooltip>` component to provide an immediate, accessible textual description for sighted users on hover or focus, complementing the existing `aria-label`.
