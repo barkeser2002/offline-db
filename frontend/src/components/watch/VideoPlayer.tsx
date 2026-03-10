@@ -288,6 +288,7 @@ export default function VideoPlayer({
                       color="secondary"
                       isSelected={anime4kEnabled}
                       onValueChange={setAnime4kEnabled}
+                      aria-label="Toggle Anime4K GPU Upscaling"
                     />
                   </div>
                 )}
@@ -317,28 +318,32 @@ export default function VideoPlayer({
               {/* Buttons */}
               <div className="flex justify-between items-center">
                 <div className="flex gap-2 items-center">
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    className="text-white"
-                    onClick={() =>
-                      isPlaying
-                        ? videoRef.current?.pause()
-                        : videoRef.current?.play()
-                    }
-                    aria-label={isPlaying ? "Pause" : "Play"}
-                  >
-                    {isPlaying ? "⏸" : "▶"}
-                  </Button>
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    className="text-white"
-                    onClick={() => setIsMuted(!isMuted)}
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                  >
-                    {isMuted ? "🔇" : "🔊"}
-                  </Button>
+                  <Tooltip content={isPlaying ? "Pause" : "Play"} placement="top">
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      className="text-white"
+                      onClick={() =>
+                        isPlaying
+                          ? videoRef.current?.pause()
+                          : videoRef.current?.play()
+                      }
+                      aria-label={isPlaying ? "Pause" : "Play"}
+                    >
+                      {isPlaying ? "⏸" : "▶"}
+                    </Button>
+                  </Tooltip>
+                  <Tooltip content={isMuted ? "Unmute" : "Mute"} placement="top">
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      className="text-white"
+                      onClick={() => setIsMuted(!isMuted)}
+                      aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                      {isMuted ? "🔇" : "🔊"}
+                    </Button>
+                  </Tooltip>
                 </div>
                 <div className="flex gap-2 items-center">
                   <Dropdown>
@@ -355,15 +360,17 @@ export default function VideoPlayer({
                       ))}
                     </DropdownMenu>
                   </Dropdown>
-                  <Button
-                    isIconOnly
-                    variant="light"
-                    className="text-white"
-                    onClick={toggleFullscreen}
-                    aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-                  >
-                    ⛶
-                  </Button>
+                  <Tooltip content={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"} placement="top">
+                    <Button
+                      isIconOnly
+                      variant="light"
+                      className="text-white"
+                      onClick={toggleFullscreen}
+                      aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                    >
+                      ⛶
+                    </Button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
