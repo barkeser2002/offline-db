@@ -68,7 +68,7 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
         # Optimization: Fetch 24h count once for both binge-watcher and marathon-runner
         if 'binge-watcher' not in awarded_slugs or 'marathon-runner' not in awarded_slugs:
             last_24h = timezone.now() - timedelta(hours=24)
-            count_24h = WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values('episode').distinct().count()
+            count_24h = len(set(WatchLog.objects.filter(user=user, watched_at__gte=last_24h).values_list('episode_id', flat=True)))
 
             # 1. Binge Watcher: Watched 5+ episodes in the last 24 hours.
             if 'binge-watcher' not in awarded_slugs and count_24h >= 5:
@@ -82,7 +82,7 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
         if 'weekend-warrior' not in awarded_slugs:
             today = timezone.now().date()
             if today.weekday() in [5, 6]:
-                count = WatchLog.objects.filter(user=user, watched_at__date=today).values('episode').distinct().count()
+                count = len(set(WatchLog.objects.filter(user=user, watched_at__date=today).values_list('episode_id', flat=True)))
                 if count >= 5:
                     self._award(user, 'weekend-warrior', awarded_slugs, all_badges, new_badges)
 
@@ -116,7 +116,7 @@ class WatchTimeBadgeStrategy(BadgeStrategy):
         # 15. Speedster: Watched 3 episodes in 1 hour.
         if 'speedster' not in awarded_slugs:
             last_hour = timezone.now() - timedelta(hours=1)
-            count = WatchLog.objects.filter(user=user, watched_at__gte=last_hour).values('episode').distinct().count()
+            count = len(set(WatchLog.objects.filter(user=user, watched_at__gte=last_hour).values_list('episode_id', flat=True)))
             if count >= 3:
                 self._award(user, 'speedster', awarded_slugs, all_badges, new_badges)
 
@@ -171,7 +171,7 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
                     cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
                 distinct_episodes = len(cache['episode_ids'])
             else:
-                distinct_episodes = WatchLog.objects.filter(user=user).values('episode').distinct().count()
+                distinct_episodes = len(set(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True)))
 
             # 9. Marathoner: Watched 50 episodes in total.
             if 'marathoner' not in awarded_slugs and distinct_episodes >= 50:
