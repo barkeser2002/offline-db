@@ -288,6 +288,7 @@ export default function VideoPlayer({
                       color="secondary"
                       isSelected={anime4kEnabled}
                       onValueChange={setAnime4kEnabled}
+                      aria-label="Toggle Anime4K GPU Upscaling"
                     />
                   </div>
                 )}
