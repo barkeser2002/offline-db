@@ -7,3 +7,8 @@
 **Vulnerability:** The `encryption_key` field was included in the `VideoFileSerializer`, exposing the HLS video encryption key in plain text via the API.
 **Learning:** Django Rest Framework's `ModelSerializer` will expose sensitive fields if they are explicitly listed in the `fields` array of the `Meta` class, bypassing the intended secure serving mechanisms (like `KeyServeView`).
 **Prevention:** Never include sensitive fields (passwords, encryption keys, tokens) in standard API serializers unless explicitly required and protected. Serve them securely via dedicated endpoints with appropriate authentication and authorization checks.
+
+## 2024-05-24 - [Un-rate-limited WebSocket Emotes DoS]
+**Vulnerability:** The `WatchPartyConsumer` applied rate limits to `chat` messages but omitted them for `emote` messages. This allowed authenticated users to spam emote requests, potentially causing a Denial of Service (DoS) by flooding the Redis channel layer and broadcasting massive amounts of data to all connected clients.
+**Learning:** Rate limiting logic must be applied consistently to *all* user-triggered broadcast actions within a WebSocket connection, not just text-based chat. Overlooking secondary interactions (like reactions or emotes) leaves the system vulnerable to resource exhaustion.
+**Prevention:** Group all unprivileged, broadcast-triggering WebSocket message types into a single rate-limit check block (e.g., `if msg_type in ['chat', 'emote']:`) or apply a global rate limit to the `receive` method before routing message types.

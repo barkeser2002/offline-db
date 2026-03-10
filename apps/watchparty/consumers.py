@@ -51,8 +51,8 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         if not self.user.is_authenticated:
             return
 
-        # Rate Limit Check for chat messages
-        if msg_type == 'chat':
+        # Rate Limit Check for chat and emote messages
+        if msg_type in ['chat', 'emote']:
             if not await self.check_rate_limit():
                 # Silently ignore or send error?
                 # Sending error might be better but let's just ignore to prevent spam
