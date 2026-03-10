@@ -7,3 +7,7 @@
 ## 2024-03-08 - Empty State Filtering Logic
 **Learning:** When implementing frontend filtering logic for search or list states, returning an empty array `[]` when the search query is empty can inadvertently trigger "No Results" empty states when the user clears their search query.
 **Action:** Always return the original, unfiltered dataset (or intentionally render a default placeholder state) when the search query is empty rather than an empty array to prevent unexpectedly blanking out the UI when the query is cleared.
+
+## 2025-10-24 - Disable Submit Buttons on Empty Inputs
+**Learning:** In chat or messaging interfaces like the Watch Party panel, leaving the submit/send button active when the input is empty or only contains whitespace creates a poor user experience, as users might accidentally click it and receive no feedback, or the application might attempt an invalid submission.
+**Action:** When implementing chat inputs or similar text fields, use the `isDisabled` prop on the associated submit button to explicitly disable it when the input's trimmed value is empty (e.g., `isDisabled={!message.trim()}`), providing clear visual feedback that an action cannot be taken.
