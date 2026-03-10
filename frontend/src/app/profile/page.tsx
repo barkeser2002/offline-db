@@ -79,6 +79,7 @@ export default function ProfilePage() {
                         value={bio}
                         onChange={(e) => setBio(e.target.value)}
                         classNames={{ inputWrapper: "bg-background/50" }}
+                        aria-label="Edit bio"
                       />
                       <Button
                         size="sm"
