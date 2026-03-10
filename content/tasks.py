@@ -356,6 +356,29 @@ def send_new_episode_email_task(episode_id):
         return f"Episode {episode_id} not found."
 
 
+@shared_task
+def send_websocket_notifications_task(user_ids, title, message, link):
+    """
+    Sends WebSocket notifications to a batch of users in the background.
+    """
+    from channels.layers import get_channel_layer
+    from asgiref.sync import async_to_sync
+
+    channel_layer = get_channel_layer()
+    for user_id in user_ids:
+        group_name = f"user_{user_id}"
+        async_to_sync(channel_layer.group_send)(
+            group_name,
+            {
+                'type': 'notification_message',
+                'title': title,
+                'message': message,
+                'link': link,
+            }
+        )
+    logger.info(f"Sent {len(user_ids)} WebSocket notifications")
+    return f"Sent {len(user_ids)} WebSocket notifications"
+
 # ==================== Jikan Sync Task ====================
 
 @shared_task
