@@ -32,3 +32,8 @@
 **Vulnerability:** Core API endpoints for user creation actions (`login`, `watchlog`, `review`) lacked specific rate limiting, making them susceptible to brute-force attacks and spamming (e.g., creating hundreds of watch logs or reviews to abuse the badge system).
 **Learning:** Applying rate limits globally or generically can negatively impact read operations (`GET`). To protect mutation endpoints (`POST`) without degrading read performance or user experience, custom `UserRateThrottle` subclasses should override `allow_request` to selectively throttle specific HTTP methods.
 **Prevention:** Implement endpoint-specific throttling using DRF's `DEFAULT_THROTTLE_RATES` and custom throttle classes (like `WatchLogCreateThrottle` and `ReviewCreateThrottle`) that check `if request.method != 'POST': return True` to restrict only unsafe or creation operations.
+
+## YYYY-MM-DD - [XSS in Review Descriptions]
+**Vulnerability:** The `Review` model allowed raw HTML and JavaScript to be injected in the `text` field, posing an XSS risk.
+**Learning:** All user-submitted text fields should be stripped of potential HTML and JS code.
+**Prevention:** Utilizing `bleach` in DRF serializers (`bleach.clean(value, tags=[], strip=True)`) prevents the storage of malicious strings.
