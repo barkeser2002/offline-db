@@ -56,7 +56,7 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
         # Rate Limit Check for chat and emote messages
         if msg_type in ['chat', 'emote']:
-            if not await self.check_rate_limit():
+            if not await self.check_rate_limit(msg_type):
                 # Silently ignore or send error?
                 # Sending error might be better but let's just ignore to prevent spam
                 return
@@ -170,11 +170,11 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         return list(Participant.objects.filter(room_id=uuid, is_online=True).values('user__username', 'user__id'))
 
     @sync_to_async
-    def check_rate_limit(self):
+    def check_rate_limit(self, msg_type):
         if not self.user or not self.user.is_authenticated:
             return False # Should not happen as we check auth in receive
 
-        key = f"wp_chat_limit_user_{self.user.id}"
+        key = f"wp_{msg_type}_limit_user_{self.user.id}"
 
         # Limit: 10 messages per 10 seconds (slightly more lenient than global chat)
         try:
