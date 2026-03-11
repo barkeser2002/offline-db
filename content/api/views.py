@@ -1,3 +1,4 @@
+import bleach
 from rest_framework import serializers, viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -31,6 +32,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         model = Review
         fields = ['id', 'user', 'anime', 'rating', 'text', 'created_at']
         read_only_fields = ['user', 'created_at']
+
+    def validate_text(self, value):
+        # Sanitize HTML input using bleach
+        return bleach.clean(value, tags=[], strip=True)
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
