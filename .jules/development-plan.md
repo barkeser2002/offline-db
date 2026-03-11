@@ -363,10 +363,10 @@ Bu proje bir anime izleme platformudur:
 - `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
 - `users/badge_system.py` GenreBadgeStrategy `genre_savant`: hâlâ list tabanlı `episode_ids` kullanıyor → subquery'e çevir (YAPILDI)
 - `scraper_module/` — test coverage %0, teknik borç yüksek
-- `blueprints/` klasörü boş — ne içereceği belirsiz, silinebilir veya dokümante edilmeli
-- `replace.py`, `patch_test.py`, `verify_navbar.py` vb. root klasördeki artefact dosyaları — temizle
-- `db.sqlite3` versiyon kontrolüne eklenmemeli — `.gitignore`'a ekle
-- Frontend `next.config.ts`'de `eslint.ignoreDuringBuilds: true` — bunu kaldır, lint hatalarını gider
+- [x] `blueprints/` klasörü boş — ne içereceği belirsiz, silinebilir veya dokümante edilmeli
+- [x] `replace.py`, `patch_test.py`, `verify_navbar.py` vb. root klasördeki artefact dosyaları — temizle
+- [x] `db.sqlite3` versiyon kontrolüne eklenmemeli — `.gitignore`'a ekle
+- [x] Frontend `next.config.ts`'de `eslint.ignoreDuringBuilds: true` — bunu kaldır, lint hatalarını gider
 
 ---
 
