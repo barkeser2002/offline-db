@@ -56,3 +56,7 @@
 ## 2025-03-10 - [Optimize genre-savant badge strategy]
 **Learning:** `WatchLog.objects.filter(user=user).values('episode_id')` would pull episode ids into memory which were then passed to `.filter(id__in=episode_qs)`. This resulted in excessive database fetching and memory use.
 **Action:** Substituted the two-step evaluation process into a single optimized query string that handles filtering, related joins, and aggregations purely at the database level by traversing models via double-underscores (`episode__season__anime__genres__id`).
+
+## 2026-03-05 - NotificationViewSet Performance Improvement
+**Learning:** To significantly improve performance of DRF ViewSets like `NotificationViewSet` that frequently filter and order by specific fields (e.g., `filter(user=request.user).order_by('-created_at')` and `filter(is_read=False)`), add composite database indexes to the Django model's `Meta` class (e.g., `models.Index(fields=['user', 'is_read'])` and `models.Index(fields=['user', '-created_at'])`).
+**Action:** Added composite indexes `['user', 'is_read']` and `['user', '-created_at']` to the `Notification` model's `Meta` class in `users/models.py` and created the corresponding database migrations.
