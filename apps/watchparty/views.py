@@ -21,6 +21,18 @@ class RoomViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
 
+    def perform_update(self, serializer):
+        if self.request.user != serializer.instance.host:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to edit this room.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if self.request.user != instance.host:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have permission to delete this room.")
+        instance.delete()
+
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_rooms(self, request):
         # Optimization: Added 'episode__season__anime' to select_related to avoid N+1 queries
