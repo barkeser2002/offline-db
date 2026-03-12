@@ -44,12 +44,18 @@ def notify_subscribers(sender, instance, created, **kwargs):
         subscribers = Subscription.objects.filter(anime=anime).select_related('user')
 
         notifications = []
+        try:
+            link = reverse('watch', args=[instance.id])
+        except Exception:
+            # Fallback if route is missing
+            link = f"/watch/{instance.id}/"
+
         for sub in subscribers:
             notifications.append(Notification(
                 user=sub.user,
                 title=f"New Episode: {anime.title}",
                 message=f"Episode {instance.number} of {anime.title} is now available!",
-                link=reverse('watch', args=[instance.id])
+                link=link
             ))
 
         if notifications:
@@ -60,7 +66,6 @@ def notify_subscribers(sender, instance, created, **kwargs):
             user_ids = [sub.user.id for sub in subscribers]
             title = f"New Episode: {anime.title}"
             message = f"Episode {instance.number} of {anime.title} is now available!"
-            link = reverse('watch', args=[instance.id])
             send_websocket_notifications_task.delay(user_ids, title, message, link)
 
         # Trigger Email Task (Async)
