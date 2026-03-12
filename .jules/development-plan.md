@@ -360,7 +360,7 @@ Bu proje bir anime izleme platformudur:
 
 ## ⚠️ Bilinen Sorunlar & Teknik Borç
 
-- `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
+- [x] `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
 - `users/badge_system.py` GenreBadgeStrategy `genre_savant`: hâlâ list tabanlı `episode_ids` kullanıyor → subquery'e çevir (YAPILDI)
 - `scraper_module/` — test coverage %0, teknik borç yüksek
 - [x] `blueprints/` klasörü boş — ne içereceği belirsiz, silinebilir veya dokümante edilmeli

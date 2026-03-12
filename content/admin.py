@@ -122,15 +122,14 @@ class AnimeAdmin(ModelAdmin):
 @admin.register(Season)
 class SeasonAdmin(ModelAdmin):
     list_display = ('anime', 'number', 'title')
-    list_filter = ('anime',)
+    autocomplete_fields = ('anime',)
     list_select_related = ('anime',)
-    search_fields = ('title', 'anime__title')
+    search_fields = ('title',)
 
 @admin.register(Episode)
 class EpisodeAdmin(ModelAdmin):
     list_display = ('season', 'number', 'title')
     list_select_related = ('season', 'season__anime')
-    list_filter = ('season__anime',)  # Removed 'season' from list_filter because it has too many choices and causes N+1
     autocomplete_fields = ('season',)
     search_fields = ('title',)
 
