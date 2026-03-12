@@ -22,7 +22,7 @@ class EpisodeAdminPerformanceTest(TestCase):
 
         self.client.get(url)
 
-        # 1 auth, 1 session, 1 choices for season__anime filter, 2 counts, 1 main fetch = 6
-        with self.assertNumQueries(6):
+        # 1 auth, 1 session, 2 counts, 1 main fetch = 5
+        with self.assertNumQueries(5):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
