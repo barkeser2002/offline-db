@@ -123,7 +123,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] `billing/views.py` viewset'lerini incele
 - [ ] `scraper_module/views.py` incele
 - [x] GenreBadgeStrategy genre_savant: hâlâ list tabanlı → subquery'e geç
-- [ ] Bildirim endpoint'lerinde N+1 kontrol et
+- [x] Bildirim endpoint'lerinde N+1 kontrol et
 
 ### 2.4 Celery Task Optimizasyonları
 **Hedef dosyalar**: `content/tasks.py`, `users/badge_system.py`
