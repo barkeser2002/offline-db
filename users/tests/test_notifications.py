@@ -114,3 +114,33 @@ class NotificationAPITests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'unsubscribed')
         self.assertFalse(Subscription.objects.filter(user=self.user, anime=self.anime).exists())
+
+    def test_bulk_update_status(self):
+        n1 = Notification.objects.create(user=self.user, title='N1', is_read=False)
+        n2 = Notification.objects.create(user=self.user, title='N2', is_read=False)
+        n3 = Notification.objects.create(user=self.user, title='N3', is_read=False)
+
+        # Test valid request
+        url = '/api/v1/notifications/bulk-update/'
+        data = {
+            'notification_ids': [n1.id, n2.id],
+            'is_read': True
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['updated_count'], 2)
+
+        n1.refresh_from_db()
+        n2.refresh_from_db()
+        n3.refresh_from_db()
+        self.assertTrue(n1.is_read)
+        self.assertTrue(n2.is_read)
+        self.assertFalse(n3.is_read)
+
+        # Test invalid payload
+        data_invalid = {
+            'notification_ids': 'not-a-list',
+            'is_read': True
+        }
+        response_invalid = self.client.post(url, data_invalid, format='json')
+        self.assertEqual(response_invalid.status_code, status.HTTP_400_BAD_REQUEST)
