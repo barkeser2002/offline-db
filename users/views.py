@@ -62,6 +62,39 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         notification.save()
         return Response({'status': 'marked as read'})
 
+    @action(detail=False, methods=['post'], url_path='bulk-update')
+    def bulk_update_status(self, request):
+        """
+        Bulk update is_read status for a list of notification IDs.
+        Expected payload:
+        {
+            "notification_ids": [1, 2, 3],
+            "is_read": true
+        }
+        """
+        notification_ids = request.data.get('notification_ids', [])
+        is_read = request.data.get('is_read')
+
+        if not isinstance(notification_ids, list) or is_read is None:
+            return Response(
+                {"error": "Invalid payload. 'notification_ids' (list) and 'is_read' (boolean) are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not notification_ids:
+             return Response({"status": "no notifications updated", "updated_count": 0})
+
+        # Ensure users only update their own notifications
+        updated_count = Notification.objects.filter(
+            user=request.user,
+            id__in=notification_ids
+        ).update(is_read=is_read)
+
+        return Response({
+            "status": "success",
+            "updated_count": updated_count
+        })
+
 class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserBadgeSerializer
     permission_classes = [permissions.IsAuthenticated]
