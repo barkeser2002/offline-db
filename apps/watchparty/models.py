@@ -12,6 +12,11 @@ class Room(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active']),
+        ]
+
     def __str__(self):
         return f"Room {self.uuid} - {self.episode}"
 

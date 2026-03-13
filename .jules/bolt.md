@@ -64,3 +64,7 @@
 ## 2024-03-13 - [Add composite indexes to WatchLog and Subscription models]
 **Learning:** To significantly improve performance of querying large tables like `WatchLog` and `Subscription` which are frequently filtered by combinations of `user` and `watched_at` or `user` and `anime`, composite database indexes should be added.
 **Action:** Added `['user', 'watched_at']` to `WatchLog` and `['user', 'anime']` to `Subscription` in `users/models.py` and `content/models.py` respectively, and generated migrations.
+
+## 2026-03-13 - [Add index to Room is_active]
+**Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
+**Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
