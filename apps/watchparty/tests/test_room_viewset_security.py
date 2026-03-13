@@ -31,7 +31,7 @@ class RoomViewSetSecurityTests(APITestCase):
 
         # Attacker tries to delete the host's room
         url = reverse('room-detail', kwargs={'pk': self.room.uuid})
-        response = self.client.delete(url)
+        response = self.client.delete(url, secure=True)
 
         # If it returns 204, the vulnerability exists
         if response.status_code == 204:
@@ -44,7 +44,7 @@ class RoomViewSetSecurityTests(APITestCase):
 
         # Attacker tries to update the host's room
         url = reverse('room-detail', kwargs={'pk': self.room.uuid})
-        response = self.client.patch(url, {'is_active': False})
+        response = self.client.patch(url, {'is_active': False}, secure=True)
 
         # If it returns 200 OK, the vulnerability exists
         if response.status_code == 200:
@@ -61,5 +61,5 @@ class RoomViewSetSecurityTests(APITestCase):
         # We'll update something else to keep it active, or just do delete first
 
         # Actually, let's just create another room or just delete directly
-        response = self.client.delete(url)
+        response = self.client.delete(url, secure=True)
         self.assertEqual(response.status_code, 204)
