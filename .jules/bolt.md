@@ -60,3 +60,7 @@
 ## 2026-03-05 - NotificationViewSet Performance Improvement
 **Learning:** To significantly improve performance of DRF ViewSets like `NotificationViewSet` that frequently filter and order by specific fields (e.g., `filter(user=request.user).order_by('-created_at')` and `filter(is_read=False)`), add composite database indexes to the Django model's `Meta` class (e.g., `models.Index(fields=['user', 'is_read'])` and `models.Index(fields=['user', '-created_at'])`).
 **Action:** Added composite indexes `['user', 'is_read']` and `['user', '-created_at']` to the `Notification` model's `Meta` class in `users/models.py` and created the corresponding database migrations.
+
+## 2024-03-13 - [Add composite indexes to WatchLog and Subscription models]
+**Learning:** To significantly improve performance of querying large tables like `WatchLog` and `Subscription` which are frequently filtered by combinations of `user` and `watched_at` or `user` and `anime`, composite database indexes should be added.
+**Action:** Added `['user', 'watched_at']` to `WatchLog` and `['user', 'anime']` to `Subscription` in `users/models.py` and `content/models.py` respectively, and generated migrations.
