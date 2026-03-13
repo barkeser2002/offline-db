@@ -21,6 +21,11 @@ class WatchLog(models.Model):
     duration = models.PositiveIntegerField(help_text=_("Duration watched in seconds"))
     watched_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'watched_at']),
+        ]
+
     def __str__(self):
         return f"{self.user.username} watched {self.episode} for {self.duration}s"
 

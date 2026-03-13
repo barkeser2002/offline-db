@@ -111,8 +111,8 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.2 Database Optimizasyonları
 **Hedef dosyalar**: tüm `models.py` dosyaları
-- [ ] WatchLog modeline `db_index=True` ekle (user + watched_at combined index)
-- [ ] Subscription modeline compound index (user, anime)
+- [x] WatchLog modeline `db_index=True` ekle (user + watched_at combined index)
+- [x] Subscription modeline compound index (user, anime)
 - [ ] Room modelinde `is_active` field için index
 - [ ] `django-pgbouncer` veya connection pooling kur (production için)
 - [ ] Slow query logger ekle (≥100ms sorguları logla)

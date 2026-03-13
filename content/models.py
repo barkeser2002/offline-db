@@ -228,6 +228,9 @@ class Subscription(models.Model):
 
     class Meta:
         unique_together = ('user', 'anime')
+        indexes = [
+            models.Index(fields=['user', 'anime']),
+        ]
 
     def __str__(self):
         return f"{self.user} subscribed to {self.anime}"
