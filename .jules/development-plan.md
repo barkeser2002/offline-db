@@ -177,7 +177,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] Push notification (Web Push API + Service Worker)
 - [ ] Bildirim tercihleri sayfası (hangi bildirim türleri aktif)
 - [ ] Bildirim gruplama (aynı anime'den birden fazla epizot bildirimi → tek bildirim)
-- [ ] Okundu/okunmadı bulk işlem endpoint'i
+- [x] Okundu/okunmadı bulk işlem endpoint'i
 
 ### 3.5 Sosyal Özellikler
 **Yeni dosyalar**: `users/social.py`, migration'lar
