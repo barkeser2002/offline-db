@@ -79,7 +79,7 @@ Bu proje bir anime izleme platformudur:
 **Hedef dosyalar**: `users/serializers.py`, `content/serializers.py`, `apps/watchparty/serializers.py`
 - [ ] Username XSS pattern validation (sadece alphanumeric + _- izin ver)
 - [ ] Bio alanı HTML escape / strip validasyonu
-- [ ] Review content sanitization (bleach kullan)
+- [x] Review content sanitization (bleach kullan)
 - [ ] Magnet link URL validation (sadece magnet: ve https:// izin ver)
 - [ ] File upload MIME type validation (covers/storage alanları)
 

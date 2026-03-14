@@ -19,7 +19,7 @@ class ReviewXSSProtectionTest(APITestCase):
             'rating': 8,
             'text': '<script>alert("XSS")</script>This is a <b>great</b> show!'
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='json', secure=True)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # Verify HTML tags are stripped
