@@ -20,8 +20,14 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         if not self.user or not self.user.is_authenticated:
             raise DenyConnection()
 
-        # Verify Room Exists
-        if not await self.room_exists(self.room_uuid):
+        # Parse query string for password
+        query_string = self.scope.get('query_string', b'').decode('utf-8')
+        from urllib.parse import parse_qs
+        query_params = parse_qs(query_string)
+        password = query_params.get('password', [''])[0]
+
+        # Verify Room Exists and Password
+        if not await self.verify_room_access(self.room_uuid, self.user, password):
             raise DenyConnection()
 
         # Join room group
@@ -122,8 +128,15 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
     # DB Operations
     @database_sync_to_async
-    def room_exists(self, uuid):
-        return Room.objects.filter(uuid=uuid).exists()
+    def verify_room_access(self, uuid, user, password):
+        try:
+            room = Room.objects.get(uuid=uuid)
+            if room.password and room.host != user:
+                if password != room.password:
+                    return False
+            return True
+        except Room.DoesNotExist:
+            return False
 
     @database_sync_to_async
     def is_host(self, uuid, user):
