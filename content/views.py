@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Avg
 
 from .models import Anime, Episode, Season, Subscription, VideoFile
 from .serializers import (
@@ -21,11 +21,11 @@ class SubscribeRateThrottle(UserRateThrottle):
     scope = 'subscribe'
 
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Anime.objects.all().order_by('-created_at')
+    queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'english_title', 'japanese_title']
     filterset_fields = ['status', 'type', 'genres__name']
-    ordering_fields = ['score', 'popularity', 'created_at', 'aired_from']
+    ordering_fields = ['score', 'popularity', 'created_at', 'aired_from', 'avg_rating']
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
