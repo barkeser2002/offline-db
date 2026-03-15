@@ -149,7 +149,7 @@ Bu proje bir anime izleme platformudur:
 **Hedef**: `content/views.py`, `frontend/src/app/discovery/`
 - [ ] Full-text search (Django + PostgreSQL `SearchVector` veya Elasticsearch entegrasyonu)
 - [ ] Genre + type + status multi-filter kombinasyonu
-- [ ] Rating bazlı sıralama (review ortalaması)
+- [x] Rating bazlı sıralama (review ortalaması)
 - [ ] Arama sonuçlarını highlight et (hangi alanda eşleşti)
 - [ ] Arama geçmişi (son 10 arama, localStorage)
 - [ ] Autocomplete endpoint (prefix bazlı anime önerisi)
