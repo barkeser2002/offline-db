@@ -18,6 +18,15 @@ class RoomViewSet(viewsets.ModelViewSet):
     serializer_class = RoomSerializer
     permission_classes = [IsAuthenticatedOrReadOnly, IsHostOrReadOnly]
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.password and instance.host != request.user:
+            password = request.query_params.get('password')
+            if not password or password != instance.password:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Incorrect or missing password for this room.")
+        return super().retrieve(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(host=self.request.user)
 

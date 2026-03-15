@@ -164,7 +164,7 @@ Bu proje bir anime izleme platformudur:
 
 ### 3.3 WatchParty İyileştirmeleri
 **Hedef**: `apps/watchparty/`, `frontend/src/components/watchparty/`
-- [ ] Room şifresi (private rooms): Room modeline `password` alanı ekle
+- [x] Room şifresi (private rooms): Room modeline `password` alanı ekle
 - [ ] Chat mesajı silme (host yetkisi)
 - [ ] Katılımcı limit (Room modeline `max_participants` alanı)
 - [ ] Watch history sync (herkes aynı pozisyonda)
