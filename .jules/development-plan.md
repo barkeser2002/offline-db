@@ -313,10 +313,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 6.4 API Dokümantasyonu
 **Araç**: drf-spectacular (OpenAPI 3.0)
-- [ ] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
-- [ ] Tüm ViewSet'lere `@extend_schema` decorator ekle
-- [ ] Request/Response örnekleri her endpoint için
-- [ ] Authentication akışı dokümante et (JWT flow)
+- [x] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
+- [x] Tüm ViewSet'lere `@extend_schema` decorator ekle
+- [x] Request/Response örnekleri her endpoint için
+- [x] Authentication akışı dokümante et (JWT flow)
 - [ ] Postman collection otomatik üret
 
 ### 6.5 Backup & Disaster Recovery

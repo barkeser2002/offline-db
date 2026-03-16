@@ -1,8 +1,10 @@
 from django.http import HttpResponse, Http404
 from rest_framework.views import APIView
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample, inline_serializer
+from drf_spectacular.types import OpenApiTypes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -20,6 +22,10 @@ from rest_framework.throttling import UserRateThrottle
 class SubscribeRateThrottle(UserRateThrottle):
     scope = 'subscribe'
 
+@extend_schema_view(
+    list=extend_schema(summary="List all animes"),
+    retrieve=extend_schema(summary="Retrieve anime details"),
+)
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -47,6 +53,10 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
         # Optimization: Prefetch genres for list action to avoid N+1 queries from AnimeListSerializer
         return queryset.prefetch_related('genres')
 
+    @extend_schema(
+        summary="Subscribe/Unsubscribe to an anime",
+        responses={201: OpenApiTypes.OBJECT, 200: OpenApiTypes.OBJECT}
+    )
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], throttle_classes=[SubscribeRateThrottle])
     def subscribe(self, request, pk=None):
         anime = self.get_object()
@@ -61,6 +71,10 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
             
         return Response({'status': 'subscribed'}, status=status.HTTP_201_CREATED)
 
+@extend_schema_view(
+    list=extend_schema(summary="List all episodes"),
+    retrieve=extend_schema(summary="Retrieve episode details")
+)
 class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Episode.objects.all()
     serializer_class = EpisodeSerializer
@@ -73,10 +87,26 @@ class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
             'external_sources'
         )
 
+@extend_schema_view(
+    list=extend_schema(summary="Homepage dashboard data")
+)
 class HomeViewSet(viewsets.ViewSet):
     """
     API endpoint for Homepage data
     """
+    @extend_schema(
+        summary="Homepage dashboard data",
+        responses={
+            200: inline_serializer(
+                name='HomeResponse',
+                fields={
+                    'trending': AnimeListSerializer(many=True),
+                    'latest_episodes': EpisodeSerializer(many=True),
+                    'seasonal': AnimeListSerializer(many=True),
+                }
+            )
+        }
+    )
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]
@@ -101,6 +131,10 @@ class HomeViewSet(viewsets.ViewSet):
 class KeyServeView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        summary="Serve HLS encryption key",
+        responses={200: OpenApiTypes.STR, 403: OpenApiTypes.OBJECT}
+    )
     def get(self, request, pk):
         # Lookup by ID (UUID) not encryption_key (Secret)
         # Optimization: Removed `select_related('episode__season__anime')` as we only access `quality` and `encryption_key`.
