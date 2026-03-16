@@ -12,5 +12,5 @@ class RoomSerializer(serializers.ModelSerializer):
         model = Room
         fields = ['uuid', 'episode', 'host_username', 'created_at', 'is_active', 'max_participants', 'password', 'is_private']
 
-    def get_is_private(self, obj):
+    def get_is_private(self, obj) -> bool:
         return bool(obj.password)

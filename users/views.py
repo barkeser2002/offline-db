@@ -44,6 +44,8 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     throttle_scope = 'notifications'
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Notification.objects.none()
         queryset = Notification.objects.filter(user=self.request.user).order_by('-created_at')
         is_read_param = self.request.query_params.get('is_read')
 
@@ -127,6 +129,8 @@ class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return UserBadge.objects.none()
         return UserBadge.objects.filter(user=self.request.user).select_related('badge')
 
 @extend_schema_view(
@@ -140,6 +144,8 @@ class WatchLogViewSet(mixins.CreateModelMixin, mixins.ListModelMixin, mixins.Ret
     throttle_classes = [WatchLogCreateThrottle]
     
     def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return WatchLog.objects.none()
         return WatchLog.objects.filter(user=self.request.user).order_by('-watched_at')
 
     def perform_create(self, serializer):

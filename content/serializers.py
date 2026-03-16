@@ -80,8 +80,10 @@ class AnimeListSerializer(serializers.ModelSerializer):
     
     date_aired = serializers.SerializerMethodField()
 
-    def get_date_aired(self, obj):
-        return obj.aired_from
+    def get_date_aired(self, obj) -> str | None:
+        if obj.aired_from:
+            return obj.aired_from.isoformat()
+        return None
 
 class AnimeDetailSerializer(serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
@@ -99,8 +101,11 @@ class AnimeDetailSerializer(serializers.ModelSerializer):
             'rating', 'genres', 'characters', 'seasons', 'is_subscribed'
         ]
 
-    def get_is_subscribed(self, obj):
-        user = self.context.get('request').user
+    def get_is_subscribed(self, obj) -> bool:
+        request = self.context.get('request')
+        if getattr(self, 'swagger_fake_view', False) or not request:
+            return False
+        user = request.user
         if user and user.is_authenticated:
             return Subscription.objects.filter(user=user, anime=obj).exists()
         return False

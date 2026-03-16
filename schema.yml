@@ -483,7 +483,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - v1
@@ -505,7 +506,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this notification.
         required: true
       tags:
       - v1
@@ -687,7 +689,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this User Badge.
         required: true
       tags:
       - v1
@@ -759,7 +762,8 @@ paths:
       - in: path
         name: id
         schema:
-          type: string
+          type: integer
+        description: A unique integer value identifying this watch log.
         required: true
       tags:
       - v1
@@ -1083,7 +1087,7 @@ components:
             $ref: '#/components/schemas/Season'
           readOnly: true
         is_subscribed:
-          type: string
+          type: boolean
           readOnly: true
       required:
       - characters
@@ -1123,6 +1127,7 @@ components:
           $ref: '#/components/schemas/TypeEnum'
         date_aired:
           type: string
+          nullable: true
           readOnly: true
         genres:
           type: array
@@ -1731,7 +1736,7 @@ components:
           minimum: 0
           format: int64
         is_private:
-          type: string
+          type: boolean
           readOnly: true
       required:
       - created_at
