@@ -198,7 +198,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] `apps/watchparty/consumers.py` WebSocket testleri (YAPILDI, genişlet)
 - [ ] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
 - [ ] `billing/views.py` payment flow testleri
-- [ ] `content/views.py` N+1 query assertion testleri (assertNumQueries)
+- [x] `content/views.py` N+1 query assertion testleri (assertNumQueries)
 - [ ] Celery task'ların mock testi
 - [ ] Cache invalidation testleri
 - [ ] `pytest-cov` ile coverage raporu üret (CI'da minimum %80 enforce et)
