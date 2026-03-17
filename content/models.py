@@ -4,6 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from core.validators import magnet_or_https_validator, validate_subtitle_mimetype
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -140,7 +141,7 @@ class ExternalSource(models.Model):
     
     episode = models.ForeignKey('Episode', on_delete=models.CASCADE, related_name='external_sources')
     source_type = models.CharField(max_length=50, choices=SOURCE_TYPES)
-    embed_url = models.URLField(help_text=_("Embed/iframe URL"))
+    embed_url = models.CharField(max_length=500, help_text=_("Embed/iframe URL"), validators=[magnet_or_https_validator])
     quality = models.CharField(max_length=20, blank=True)
     language = models.CharField(max_length=10, default='sub', help_text=_("sub or dub"))
     is_working = models.BooleanField(default=True)
@@ -215,7 +216,7 @@ class Subtitle(models.Model):
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='subtitles')
     fansub_group = models.ForeignKey(FansubGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='subtitles')
     lang = models.CharField(max_length=10, default='tr')
-    file = models.FileField(upload_to='subtitles/')
+    file = models.FileField(upload_to='subtitles/', validators=[validate_subtitle_mimetype])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
