@@ -31,7 +31,7 @@ def test_room_list_queries():
     client.get(url)
 
     with CaptureQueriesContext(connection) as queries:
-        response = client.get(url)
+        response = client.get(url, secure=True)
 
     assert response.status_code == 200
     print(f"\nNumber of queries for 10 rooms: {len(queries)}")
@@ -66,12 +66,12 @@ def test_room_host_authorization():
     url = reverse('room-detail', kwargs={'pk': room.uuid})
 
     # 1. Test unauthenticated access (should not be able to patch)
-    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    response = client.patch(url, {'is_active': False}, content_type='application/json', secure=True)
     assert response.status_code == 401 # Unauthorized
 
     # 2. Test authenticated but not host access (should be forbidden)
     client.force_login(other_user)
-    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    response = client.patch(url, {'is_active': False}, content_type='application/json', secure=True)
     assert response.status_code == 403 # Forbidden
 
     # Verify is_active wasn't changed
@@ -80,7 +80,7 @@ def test_room_host_authorization():
 
     # 3. Test host access (should be allowed)
     client.force_login(host_user)
-    response = client.patch(url, {'is_active': False}, content_type='application/json')
+    response = client.patch(url, {'is_active': False}, content_type='application/json', secure=True)
     assert response.status_code == 200 # OK
 
     # Verify is_active was changed
