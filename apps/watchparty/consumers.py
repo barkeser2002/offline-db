@@ -30,6 +30,10 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         if not await self.verify_room_access(self.room_uuid, self.user, password):
             raise DenyConnection()
 
+        # Verify Room Capacity
+        if not await self.check_room_capacity(self.room_uuid, self.user):
+            raise DenyConnection()
+
         # Join room group
         await self.channel_layer.group_add(
             self.room_group_name,
@@ -134,6 +138,29 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             if room.password and room.host != user:
                 if password != room.password:
                     return False
+            return True
+        except Room.DoesNotExist:
+            return False
+
+    @database_sync_to_async
+    def check_room_capacity(self, uuid, user):
+        try:
+            room = Room.objects.get(uuid=uuid)
+            # Host can always join
+            if room.host == user:
+                return True
+
+            # If max_participants is set, verify active participant count
+            if room.max_participants > 0:
+                # If user is already an active participant, they can rejoin
+                if Participant.objects.filter(room_id=uuid, user=user, is_online=True).exists():
+                    return True
+
+                # Otherwise check if there's room
+                active_participants = Participant.objects.filter(room_id=uuid, is_online=True).count()
+                if active_participants >= room.max_participants:
+                    return False
+
             return True
         except Room.DoesNotExist:
             return False
