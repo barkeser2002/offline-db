@@ -29,7 +29,13 @@ class NotificationSerializer(serializers.ModelSerializer):
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['bio']
+        fields = ['bio', 'username']
+
+    def validate_username(self, value):
+        import re
+        if not re.match(r'^[\w-]+$', value):
+            raise serializers.ValidationError("Enter a valid username. This value may contain only letters, numbers, and _/- characters.")
+        return value
 
     def validate_bio(self, value):
         if value:
