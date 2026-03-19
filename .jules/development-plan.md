@@ -196,7 +196,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] `users/badge_system.py` tüm badge'ler için unit test (her badge strategy)
 - [ ] `core/storage.py` path traversal + upload/delete/exists testleri (YAPILDI, genişlet)
 - [ ] `apps/watchparty/consumers.py` WebSocket testleri (YAPILDI, genişlet)
-- [ ] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
+- [x] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
 - [ ] `billing/views.py` payment flow testleri
 - [x] `content/views.py` N+1 query assertion testleri (assertNumQueries)
 - [ ] Celery task'ların mock testi
