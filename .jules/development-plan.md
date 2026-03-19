@@ -78,7 +78,7 @@ Bu proje bir anime izleme platformudur:
 ### 1.3 Input Validasyonu
 **Hedef dosyalar**: `users/serializers.py`, `content/serializers.py`, `apps/watchparty/serializers.py`
 - [ ] Username XSS pattern validation (sadece alphanumeric + _- izin ver)
-- [ ] Bio alanı HTML escape / strip validasyonu
+- [x] Bio alanı HTML escape / strip validasyonu
 - [x] Review content sanitization (bleach kullan)
 - [x] Magnet link URL validation (sadece magnet: ve https:// izin ver)
 - [ ] File upload MIME type validation (covers/storage alanları)

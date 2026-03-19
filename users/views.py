@@ -9,7 +9,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExam
 from drf_spectacular.types import OpenApiTypes
 from django.shortcuts import get_object_or_404
 from .models import Notification, UserBadge, WatchLog, Badge
-from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
+from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserProfileUpdateSerializer
 
 class LoginThrottle(AnonRateThrottle):
     scope = 'login'
@@ -171,6 +171,19 @@ class UserProfileAPIView(APIView):
             'email': user.email,
             'is_premium': getattr(user, 'is_premium', False),
             'date_joined': user.date_joined,
+            'bio': getattr(user, 'bio', ''),
             'badges': UserBadgeSerializer(badges, many=True).data,
             'recent_history': WatchLogSerializer(history, many=True).data
         })
+
+    @extend_schema(
+        summary="Update current user profile",
+        request=UserProfileUpdateSerializer,
+        responses={200: UserProfileUpdateSerializer}
+    )
+    def patch(self, request):
+        serializer = UserProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
