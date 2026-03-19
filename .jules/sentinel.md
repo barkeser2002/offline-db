@@ -37,3 +37,7 @@
 **Vulnerability:** The `Review` model allowed raw HTML and JavaScript to be injected in the `text` field, posing an XSS risk.
 **Learning:** All user-submitted text fields should be stripped of potential HTML and JS code.
 **Prevention:** Utilizing `bleach` in DRF serializers (`bleach.clean(value, tags=[], strip=True)`) prevents the storage of malicious strings.
+
+## 2026-03-19 - Username XSS/Injection validation
+**Vulnerability:** Usernames were not validated upon profile update, making the system vulnerable to XSS attacks, injection attacks, or malformed data issues if users set their usernames to strings containing special characters or HTML tags.
+**Prevention:** Added a `validate_username` method to `UserProfileUpdateSerializer` to ensure the username matches the `^[\w-]+$` regex (only letters, numbers, hyphens, and underscores).
