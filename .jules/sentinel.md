@@ -45,3 +45,8 @@
 ## 2026-03-XX - Missing MIME Type Validation for Image Uploads
 **Vulnerability:** URLFields and FileFields configured to accept images lacked strict MIME type and extension validation. This allowed potential malicious file uploads (e.g., polyglot files disguised as images) or fetching of unsafe files via URLs.
 **Prevention:** Created `validate_image_mimetype` in `core/validators.py` and strictly enforced it across all Image URL fields across models in `content/models.py` and `users/models.py` (e.g. `cover_image`, `banner_image`, `icon_url`). Validates both by URL path extension and `mimetypes.guess_type`.
+
+## 2026-03-20 - Dependency Vulnerabilities Fix
+**Vulnerability:** The project had several dependency vulnerabilities in `requirements.txt` and `frontend/package.json` that could lead to DoS, ReDoS, XSS, and Prototype Pollution attacks.
+**Learning:** `pip-audit` and `npm audit` should be run regularly to ensure all dependencies are up to date and secure.
+**Prevention:** Updated `django<5`, `djangorestframework-simplejwt==5.5.1` and ran `npm audit fix --force` and `pnpm install next@latest` to resolve vulnerabilities.
