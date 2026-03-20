@@ -41,3 +41,7 @@
 ## 2026-03-19 - Username XSS/Injection validation
 **Vulnerability:** Usernames were not validated upon profile update, making the system vulnerable to XSS attacks, injection attacks, or malformed data issues if users set their usernames to strings containing special characters or HTML tags.
 **Prevention:** Added a `validate_username` method to `UserProfileUpdateSerializer` to ensure the username matches the `^[\w-]+$` regex (only letters, numbers, hyphens, and underscores).
+
+## 2026-03-XX - Missing MIME Type Validation for Image Uploads
+**Vulnerability:** URLFields and FileFields configured to accept images lacked strict MIME type and extension validation. This allowed potential malicious file uploads (e.g., polyglot files disguised as images) or fetching of unsafe files via URLs.
+**Prevention:** Created `validate_image_mimetype` in `core/validators.py` and strictly enforced it across all Image URL fields across models in `content/models.py` and `users/models.py` (e.g. `cover_image`, `banner_image`, `icon_url`). Validates both by URL path extension and `mimetypes.guess_type`.
