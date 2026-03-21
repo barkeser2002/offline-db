@@ -5,7 +5,7 @@ class SecurityHeadersMiddlewareTest(TestCase):
         self.client = Client()
 
     def test_security_headers_present(self):
-        response = self.client.get('/')
+        response = self.client.get('/', secure=True)
         self.assertIn('Referrer-Policy', response)
         self.assertEqual(response['Referrer-Policy'], 'strict-origin-when-cross-origin')
         self.assertIn('Permissions-Policy', response)

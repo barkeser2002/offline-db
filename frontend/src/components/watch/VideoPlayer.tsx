@@ -324,7 +324,6 @@ export default function VideoPlayer({
                       </span>
                     </Tooltip>
                     <Switch
-                      aria-label="Toggle Anime4K GPU Upscaling"
                       size="sm"
                       color="secondary"
                       isSelected={anime4kEnabled}
