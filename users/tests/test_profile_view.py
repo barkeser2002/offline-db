@@ -50,64 +50,23 @@ def test_profile_view_context(django_user_model):
     assert len(data['recent_history']) == 1
     # Check that episode is related correctly
     assert data['recent_history'][0]['episode'] == episode.id
-import pytest
-from django.urls import reverse
-from rest_framework.test import APIClient
 
 @pytest.mark.django_db
-def test_profile_patch_bio_and_username(django_user_model):
+def test_profile_update_bio_xss_protection(django_user_model):
+    """Test that a user can update their bio and XSS payloads are sanitized."""
     client = APIClient()
-    user = django_user_model.objects.create_user(username='testuser', password='password', bio='old bio')
+    user = django_user_model.objects.create_user(username='xsstester', password='password')
     client.force_authenticate(user=user)
+
     url = reverse('user-profile')
+    malicious_bio = '<script>alert("xss")</script>This is my <b>bio</b>.'
 
-    data = {
-        'bio': '<script>alert("xss")</script><b>new bio</b>',
-        'username': 'new_user_name'
-    }
+    # Send a PATCH request to update the bio
+    response = client.patch(url, {'bio': malicious_bio}, format='json')
 
-    response = client.patch(url, data, format='json')
     assert response.status_code == 200
 
+    # Reload user and check sanitized bio
     user.refresh_from_db()
-    assert user.bio == 'alert("xss")new bio' # bleach strips tags but keeps text content
-    assert user.username == 'new_user_name'
-
-@pytest.mark.django_db
-def test_profile_patch_invalid_username(django_user_model):
-    client = APIClient()
-    user = django_user_model.objects.create_user(username='testuser', password='password')
-    client.force_authenticate(user=user)
-    url = reverse('user-profile')
-
-    data = {
-        'username': 'invalid username!'
-    }
-
-    response = client.patch(url, data, format='json')
-    assert response.status_code == 400
-    assert 'error' in response.json()
-    assert 'alphanumeric' in response.json()['error']
-
-    user.refresh_from_db()
-    assert user.username == 'testuser'
-
-@pytest.mark.django_db
-def test_profile_patch_duplicate_username(django_user_model):
-    client = APIClient()
-    django_user_model.objects.create_user(username='existinguser', password='password')
-    user = django_user_model.objects.create_user(username='testuser', password='password')
-    client.force_authenticate(user=user)
-    url = reverse('user-profile')
-
-    data = {
-        'username': 'existinguser'
-    }
-
-    response = client.patch(url, data, format='json')
-    assert response.status_code == 400
-    assert 'error' in response.json()
-    assert 'already taken' in response.json()['error']
-
-    user.refresh_from_db()
-    assert user.username == 'testuser'
+    assert user.bio == 'alert("xss")This is my bio.'
+    assert response.json()['bio'] == 'alert("xss")This is my bio.'

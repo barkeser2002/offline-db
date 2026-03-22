@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 class User(AbstractUser):
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
-    bio = models.TextField(blank=True, verbose_name=_("Bio"))
+    bio = models.TextField(blank=True, verbose_name=_("Biography"))
 
     def __str__(self):
         return self.username
