@@ -50,3 +50,23 @@ def test_profile_view_context(django_user_model):
     assert len(data['recent_history']) == 1
     # Check that episode is related correctly
     assert data['recent_history'][0]['episode'] == episode.id
+
+@pytest.mark.django_db
+def test_profile_update_bio_xss_protection(django_user_model):
+    """Test that a user can update their bio and XSS payloads are sanitized."""
+    client = APIClient()
+    user = django_user_model.objects.create_user(username='xsstester', password='password')
+    client.force_authenticate(user=user)
+
+    url = reverse('user-profile')
+    malicious_bio = '<script>alert("xss")</script>This is my <b>bio</b>.'
+
+    # Send a PATCH request to update the bio
+    response = client.patch(url, {'bio': malicious_bio}, format='json')
+
+    assert response.status_code == 200
+
+    # Reload user and check sanitized bio
+    user.refresh_from_db()
+    assert user.bio == 'alert("xss")This is my bio.'
+    assert response.json()['bio'] == 'alert("xss")This is my bio.'
