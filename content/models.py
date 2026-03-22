@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from core.validators import magnet_or_https_validator, validate_subtitle_mimetype
+from core.validators import magnet_or_https_validator, validate_subtitle_mimetype, validate_image_mimetype, validate_video_mimetype
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -38,8 +38,8 @@ class Anime(models.Model):
     japanese_title = models.CharField(max_length=255, blank=True, verbose_name=_("Japanese Title"))
     english_title = models.CharField(max_length=255, blank=True, verbose_name=_("English Title"))
     synopsis = models.TextField(blank=True)
-    cover_image = models.URLField(blank=True, null=True)
-    banner_image = models.URLField(blank=True, null=True, verbose_name=_("Banner Image"))
+    cover_image = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
+    banner_image = models.URLField(blank=True, null=True, verbose_name=_("Banner Image"), validators=[validate_image_mimetype])
     genres = models.ManyToManyField(Genre, related_name='animes', blank=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='TV')
     
@@ -99,7 +99,7 @@ class Character(models.Model):
     mal_id = models.PositiveIntegerField(unique=True, verbose_name=_("MyAnimeList Character ID"))
     name = models.CharField(max_length=255)
     name_kanji = models.CharField(max_length=255, blank=True)
-    image_url = models.URLField(blank=True, null=True)
+    image_url = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
     about = models.TextField(blank=True)
     
     class Meta:
@@ -118,7 +118,7 @@ class AnimeCharacter(models.Model):
     role = models.CharField(max_length=20, choices=Character.ROLE_CHOICES, default='Supporting')
     voice_actor_name = models.CharField(max_length=255, blank=True)
     voice_actor_language = models.CharField(max_length=50, blank=True, default='Japanese')
-    voice_actor_image = models.URLField(blank=True, null=True)
+    voice_actor_image = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
     
     class Meta:
         unique_together = ('anime', 'character')
@@ -168,7 +168,7 @@ class Episode(models.Model):
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='episodes')
     number = models.PositiveIntegerField()
     title = models.CharField(max_length=255, blank=True)
-    thumbnail = models.URLField(blank=True, null=True)
+    thumbnail = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
