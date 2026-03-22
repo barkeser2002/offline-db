@@ -20,6 +20,7 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>(
     {},
   );
+  const [magnetLink, setMagnetLink] = useState("");
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -162,6 +163,20 @@ export default function UploadPage() {
                     isRequired
                     label="Magnet Link / Torrent URL"
                     variant="bordered"
+                    value={magnetLink}
+                    onValueChange={setMagnetLink}
+                    isInvalid={
+                      magnetLink.length > 0 &&
+                      !magnetLink.startsWith("magnet:") &&
+                      !magnetLink.startsWith("https://")
+                    }
+                    errorMessage={
+                      magnetLink.length > 0 &&
+                      !magnetLink.startsWith("magnet:") &&
+                      !magnetLink.startsWith("https://")
+                        ? "URL must start with magnet: or https://"
+                        : ""
+                    }
                     classNames={{
                       inputWrapper: "bg-background/50 border-white/10",
                       label: "text-foreground"
@@ -181,7 +196,16 @@ export default function UploadPage() {
                       <SelectItem key="720">720p</SelectItem>
                       <SelectItem key="480">480p</SelectItem>
                     </Select>
-                    <Button color="primary" size="lg" className="flex-1 h-14">
+                    <Button
+                      color="primary"
+                      size="lg"
+                      className="flex-1 h-14"
+                      isDisabled={
+                        magnetLink.length === 0 ||
+                        (!magnetLink.startsWith("magnet:") &&
+                         !magnetLink.startsWith("https://"))
+                      }
+                    >
                       Start Download
                     </Button>
                   </div>

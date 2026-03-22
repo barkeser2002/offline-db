@@ -31,7 +31,7 @@ class RoomViewSetSecurityTests(APITestCase):
 
         # Attacker tries to delete the host's room
         url = reverse('room-detail', kwargs={'pk': self.room.uuid})
-        response = self.client.delete(url)
+        response = self.client.delete(url, secure=True)
 
         # If it returns 204, the vulnerability exists
         if response.status_code == 204:
@@ -44,7 +44,7 @@ class RoomViewSetSecurityTests(APITestCase):
 
         # Attacker tries to update the host's room
         url = reverse('room-detail', kwargs={'pk': self.room.uuid})
-        response = self.client.patch(url, {'is_active': False})
+        response = self.client.patch(url, {'is_active': False}, secure=True)
 
         # If it returns 200 OK, the vulnerability exists
         if response.status_code == 200:
@@ -61,5 +61,43 @@ class RoomViewSetSecurityTests(APITestCase):
         # We'll update something else to keep it active, or just do delete first
 
         # Actually, let's just create another room or just delete directly
-        response = self.client.delete(url)
+        response = self.client.delete(url, secure=True)
         self.assertEqual(response.status_code, 204)
+
+    def test_private_room_access(self):
+        # Create a private room
+        private_room = Room.objects.create(
+            host=self.host_user,
+            episode=self.episode,
+            is_active=True,
+            password='secretpassword'
+        )
+
+        url = reverse('room-detail', kwargs={'pk': private_room.uuid})
+
+        # Unauthenticated user without password
+        response = self.client.get(url, secure=True)
+        self.assertEqual(response.status_code, 403)
+
+        # Unauthenticated user with incorrect password
+        response = self.client.get(f"{url}?password=wrong", secure=True)
+        self.assertEqual(response.status_code, 403)
+
+        # Unauthenticated user with correct password
+        response = self.client.get(f"{url}?password=secretpassword", secure=True)
+        self.assertEqual(response.status_code, 200)
+
+        # Host without password
+        self.client.login(username='host', password='password')
+        response = self.client.get(url, secure=True)
+        self.assertEqual(response.status_code, 200)
+        self.client.logout()
+
+        # Attacker without password
+        self.client.login(username='attacker', password='password')
+        response = self.client.get(url, secure=True)
+        self.assertEqual(response.status_code, 403)
+
+        # Attacker with correct password
+        response = self.client.get(f"{url}?password=secretpassword", secure=True)
+        self.assertEqual(response.status_code, 200)

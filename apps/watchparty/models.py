@@ -11,6 +11,12 @@ class Room(models.Model):
     max_participants = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    password = models.CharField(max_length=128, blank=True, null=True, help_text="Optional password for private rooms")
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['is_active']),
+        ]
 
     def __str__(self):
         return f"Room {self.uuid} - {self.episode}"
