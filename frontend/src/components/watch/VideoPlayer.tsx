@@ -9,7 +9,7 @@ import {
   DropdownMenu,
   DropdownItem,
   Switch,
-  Slider,
+
   Tooltip,
   Modal,
   ModalContent,
@@ -19,7 +19,7 @@ import {
   useDisclosure,
   Input,
 } from "@nextui-org/react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { EpisodeDetail, watchPartyService } from "@/services/api";
 import { WebGLRenderer } from "../player/Anime4K/WebGLRenderer";
@@ -28,16 +28,12 @@ import { PartyPanel } from "../watchparty/PartyPanel";
 
 interface VideoPlayerProps {
   episode: EpisodeDetail;
-  animeId: string;
-  totalEpisodes?: number;
   roomUuid?: string; // WatchParty Room ID
   currentUser?: { id: number; username: string }; // Provided by parent
 }
 
 export default function VideoPlayer({
   episode,
-  animeId,
-  totalEpisodes = 12,
   roomUuid,
   currentUser,
 }: VideoPlayerProps) {
@@ -68,7 +64,8 @@ export default function VideoPlayer({
   useEffect(() => {
     // Basic mobile detection
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    setIsMobile(mobile);
+    if (mobile !== isMobile) setIsMobile(mobile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refs
@@ -140,7 +137,7 @@ export default function VideoPlayer({
     if (roomUuid) sendSync("paused", videoRef.current?.currentTime || 0);
   };
 
-  const handleSeek = (e: any) => {
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
     if (videoRef.current) {
       videoRef.current.currentTime = time;
@@ -178,8 +175,10 @@ export default function VideoPlayer({
     { id: number; char: string; left: number }[]
   >([]);
   useEffect(() => {
-    const handleEmote = (e: any) => {
-      const char = e.detail.emote;
+    const handleEmote = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const char = customEvent.detail.emote;
+
       const id = Date.now();
       setEmotes((prev) => [
         ...prev,
@@ -324,6 +323,7 @@ export default function VideoPlayer({
                       </span>
                     </Tooltip>
                     <Switch
+
                       size="sm"
                       color="secondary"
                       isSelected={anime4kEnabled}

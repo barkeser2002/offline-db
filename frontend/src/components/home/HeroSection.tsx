@@ -14,16 +14,8 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // If no slides, show nothing or skeleton. Ideally parent handles loading.
-  if (!slides || slides.length === 0) {
-    return (
-      <section className="relative h-[70vh] min-h-[500px] overflow-hidden bg-surface flex items-center justify-center">
-        <div className="text-foreground/50">Loading content...</div>
-      </section>
-    );
-  }
-
   useEffect(() => {
+    if (!slides || slides.length === 0) return;
     if (isPaused) return;
 
     const timer = setInterval(() => {
@@ -32,6 +24,15 @@ export default function HeroSection({ slides = [] }: HeroSectionProps) {
 
     return () => clearInterval(timer);
   }, [slides.length, isPaused]);
+
+  // If no slides, show nothing or skeleton. Ideally parent handles loading.
+  if (!slides || slides.length === 0) {
+    return (
+      <section className="relative h-[70vh] min-h-[500px] overflow-hidden bg-surface flex items-center justify-center">
+        <div className="text-foreground/50">Loading content...</div>
+      </section>
+    );
+  }
 
   const slide = slides[currentSlide];
 

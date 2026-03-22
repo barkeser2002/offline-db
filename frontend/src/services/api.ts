@@ -46,7 +46,7 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return api(originalRequest);
         }
-      } catch (refreshError) {
+      } catch (_refreshError) {
         // Refresh failed, logout user
         if (typeof window !== 'undefined') {
           localStorage.removeItem('accessToken');
@@ -198,6 +198,7 @@ export const watchPartyService = {
 };
 
 export const authService = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   login: async (credentials: any) => {
     const { data } = await axios.post('http://localhost:8000/api/token/', credentials);
     if (data.access) {

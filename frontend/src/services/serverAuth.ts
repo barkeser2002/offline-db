@@ -6,7 +6,9 @@ export interface User {
   email: string;
   is_premium: boolean;
   date_joined: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   badges: any[]; // Define proper type if needed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recent_history: any[]; // Define proper type if needed
 }
 
