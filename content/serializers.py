@@ -80,10 +80,8 @@ class AnimeListSerializer(serializers.ModelSerializer):
     
     date_aired = serializers.SerializerMethodField()
 
-    def get_date_aired(self, obj) -> str | None:
-        if obj.aired_from:
-            return obj.aired_from.isoformat()
-        return None
+    def get_date_aired(self, obj):
+        return obj.aired_from
 
 class AnimeDetailSerializer(serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
@@ -101,11 +99,8 @@ class AnimeDetailSerializer(serializers.ModelSerializer):
             'rating', 'genres', 'characters', 'seasons', 'is_subscribed'
         ]
 
-    def get_is_subscribed(self, obj) -> bool:
-        request = self.context.get('request')
-        if getattr(self, 'swagger_fake_view', False) or not request:
-            return False
-        user = request.user
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
         if user and user.is_authenticated:
             return Subscription.objects.filter(user=user, anime=obj).exists()
         return False
@@ -116,3 +111,12 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['id', 'anime', 'created_at']
+
+class AdminUploadSerializer(serializers.Serializer):
+    magnet_link = serializers.CharField(required=True)
+    quality = serializers.ChoiceField(choices=['480p', '720p', '1080p'])
+
+    def validate_magnet_link(self, value):
+        if not value.startswith('magnet:?xt=urn:') and not value.startswith('https://'):
+            raise serializers.ValidationError("Magnet link must start with 'magnet:?xt=urn:' or 'https://'")
+        return value

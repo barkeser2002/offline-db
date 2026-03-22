@@ -32,6 +32,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Session Cookie Security
 SESSION_COOKIE_SECURE = True
@@ -91,11 +92,13 @@ AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "csp.middleware.CSPMiddleware",
+    "aniscrap_core.middleware.security.SecurityHeadersMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -208,7 +211,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# Caching
+# Caching - Native Django cache framework configured for Redis Caching Strategy
 if os.getenv('USE_SQLITE', 'False') == 'True':
     CACHES = {
         "default": {
@@ -276,7 +279,8 @@ if not SHOPIER_SECRET and not DEBUG:
 
 # Content Security Policy (CSP)
 CSP_DEFAULT_SRC = ("'self'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_SCRIPT_SRC = ("'self'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_INCLUDE_NONCE_IN = ('script-src',)
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "fonts.googleapis.com")
 CSP_IMG_SRC = ("'self'", "data:", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "i.ytimg.com", "img.youtube.com")
 CSP_FONT_SRC = ("'self'", "fonts.gstatic.com", "cdn.jsdelivr.net")

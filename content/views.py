@@ -29,6 +29,7 @@ class SubscribeRateThrottle(UserRateThrottle):
     retrieve=extend_schema(summary="Retrieve anime details"),
 )
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
+    # AnimeViewSet list cache: 5 dakika TTL
     @method_decorator(cache_page(60 * 5, key_prefix='anime_list'))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -113,6 +114,7 @@ class HomeViewSet(viewsets.ViewSet):
             )
         }
     )
+    # HomeViewSet trending/seasonal cache: 10 dakika TTL
     @method_decorator(cache_page(60 * 10, key_prefix='home_list'))
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Button,
@@ -39,10 +40,11 @@ export default function AdminLayout({
       >
         <div className="p-6 flex items-center gap-3">
           <div className="w-8 h-8 relative flex-shrink-0">
-            <img
+            <Image
               src="/aniscrap.svg"
               alt="Logo"
-              className="w-full h-full object-contain"
+              fill
+              className="object-contain"
             />
           </div>
           {isSidebarOpen && (
