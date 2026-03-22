@@ -1,16 +1,15 @@
-from django.utils.html import strip_tags
+import bleach
 from rest_framework import serializers
 from .models import Notification, Badge, UserBadge, WatchLog, User
 
-class ProfileSerializer(serializers.ModelSerializer):
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'bio', 'is_premium', 'date_joined']
-        read_only_fields = ['id', 'username', 'email', 'is_premium', 'date_joined']
+        fields = ['bio']
 
     def validate_bio(self, value):
         if value:
-            return strip_tags(value).strip()
+            return bleach.clean(value, tags=[], strip=True)
         return value
 
 class WatchLogSerializer(serializers.ModelSerializer):
