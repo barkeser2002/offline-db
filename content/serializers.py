@@ -47,6 +47,11 @@ class ExternalSourceSerializer(serializers.ModelSerializer):
         model = ExternalSource
         fields = ['id', 'source_name', 'url', 'quality', 'type']
 
+    def validate_url(self, value):
+        if not (value.startswith('magnet:') or value.startswith('https://')):
+            raise serializers.ValidationError("URL must start with magnet: or https://")
+        return value
+
 class EpisodeSerializer(serializers.ModelSerializer):
     aired_date = serializers.DateTimeField(source='created_at', read_only=True)
     cover_image = serializers.URLField(source='thumbnail', read_only=True)
@@ -68,7 +73,34 @@ class SeasonSerializer(serializers.ModelSerializer):
         model = Season
         fields = ['id', 'number', 'name', 'episodes']
 
-class AnimeListSerializer(serializers.ModelSerializer):
+
+class FileUploadValidationMixin:
+    """Mixin for validating cover/banner URLs to prevent malicious file uploads (e.g. storage path traversal/XSS)."""
+    def validate_image_url(self, value):
+        if not value:
+            return value
+        allowed_exts = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+        # if value is a string (e.g. URLField)
+        if isinstance(value, str):
+            if not any(value.lower().split('?')[0].endswith(ext) for ext in allowed_exts):
+                 raise serializers.ValidationError("Invalid image extension. Must be an image file.")
+        # if value is an uploaded file
+        elif hasattr(value, 'name'):
+            import mimetypes
+            mime_type, _ = mimetypes.guess_type(value.name)
+            allowed_mimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+            content_type = getattr(value, 'content_type', mime_type)
+            if content_type not in allowed_mimes:
+                raise serializers.ValidationError(f"Invalid image type. Allowed: {', '.join(allowed_mimes)}")
+        return value
+
+    def validate_cover_image(self, value):
+        return self.validate_image_url(value)
+
+    def validate_banner_image(self, value):
+        return self.validate_image_url(value)
+
+class AnimeListSerializer(FileUploadValidationMixin, serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
     
     class Meta:
@@ -83,7 +115,7 @@ class AnimeListSerializer(serializers.ModelSerializer):
     def get_date_aired(self, obj):
         return obj.aired_from
 
-class AnimeDetailSerializer(serializers.ModelSerializer):
+class AnimeDetailSerializer(FileUploadValidationMixin, serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
     characters = AnimeCharacterSerializer(source='anime_characters', many=True, read_only=True)
     seasons = SeasonSerializer(many=True, read_only=True)
@@ -111,3 +143,27 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['id', 'anime', 'created_at']
+
+import mimetypes
+
+class SubtitleSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import Subtitle
+        model = Subtitle
+        fields = ['id', 'episode', 'lang', 'file', 'created_at']
+
+    def validate_file(self, value):
+        allowed_mimes = ['text/plain', 'text/vtt', 'application/x-subrip', 'application/octet-stream']
+        mime_type, _ = mimetypes.guess_type(value.name)
+
+        # Check if the file's extension suggests a valid mime type or if its actual content_type is allowed
+        content_type = getattr(value, 'content_type', mime_type)
+        if content_type and content_type not in allowed_mimes:
+            # specifically allow srt/vtt extensions as a fallback
+            if not (value.name.endswith('.srt') or value.name.endswith('.vtt')):
+                raise serializers.ValidationError(f"Invalid file type. Allowed: vtt, srt")
+
+        # Additionally validate the extension for security
+        if not (value.name.endswith('.srt') or value.name.endswith('.vtt') or value.name.endswith('.txt')):
+             raise serializers.ValidationError("File must be .srt, .vtt, or .txt")
+        return value

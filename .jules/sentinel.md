@@ -37,3 +37,12 @@
 **Vulnerability:** The `Review` model allowed raw HTML and JavaScript to be injected in the `text` field, posing an XSS risk.
 **Learning:** All user-submitted text fields should be stripped of potential HTML and JS code.
 **Prevention:** Utilizing `bleach` in DRF serializers (`bleach.clean(value, tags=[], strip=True)`) prevents the storage of malicious strings.
+
+## 2026-03-14 - Input Validation & XSS Prevention
+**Vulnerability:** Unvalidated usernames could lead to XSS or SQL injection, unvalidated `bio` fields could store malicious HTML scripts, unvalidated `magnet` URLs could point to unsafe protocols, and unvalidated file uploads (covers/banners/subtitles) could lead to remote code execution or path traversal.
+**Prevention:**
+1. `UserProfileUpdateSerializer` in `users/serializers.py` now enforces a strict alphanumeric regex (`^[a-zA-Z0-9_-]+$`) on usernames.
+2. `UserProfileUpdateSerializer` uses `bleach.clean(value, tags=[], strip=True)` to strip malicious HTML from the `bio` field.
+3. `ExternalSourceSerializer` in `content/serializers.py` restricts `embed_url` to explicitly allow only `magnet:` and `https://` schemas.
+4. `FileUploadValidationMixin` in `content/serializers.py` validates `cover_image` and `banner_image` by enforcing strict image extensions and MIME types.
+5. `SubtitleSerializer` in `content/serializers.py` explicitly validates `.vtt`, `.srt`, and `.txt` extensions, along with their associated MIME types, to prevent malicious script uploads via subtitles.
