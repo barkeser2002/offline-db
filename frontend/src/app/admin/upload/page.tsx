@@ -21,6 +21,10 @@ export default function UploadPage() {
     {},
   );
 
+  const [magnetLink, setMagnetLink] = useState("");
+
+  const isMagnetLinkInvalid = magnetLink !== "" && !magnetLink.startsWith("magnet:") && !magnetLink.startsWith("https://");
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
   };
@@ -161,7 +165,13 @@ export default function UploadPage() {
                   <Input
                     isRequired
                     label="Magnet Link / Torrent URL"
+                    labelPlacement="outside"
+                    placeholder="magnet:?xt=urn:btih:..."
                     variant="bordered"
+                    value={magnetLink}
+                    onValueChange={setMagnetLink}
+                    isInvalid={isMagnetLinkInvalid}
+                    errorMessage={isMagnetLinkInvalid ? "URL must start with 'magnet:' or 'https://'" : ""}
                     classNames={{
                       inputWrapper: "bg-background/50 border-white/10",
                       label: "text-foreground"

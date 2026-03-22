@@ -22,6 +22,7 @@ class User(AbstractUser):
     )
 
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
+    bio = models.TextField(_("bio"), blank=True, max_length=500)
 
     def __str__(self):
         return self.username
