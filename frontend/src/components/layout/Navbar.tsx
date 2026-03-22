@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Navbar as NextUINavbar,
@@ -67,10 +68,11 @@ export default function Navbar() {
         <NavbarBrand>
           <Link href="/" className="flex items-center gap-2">
             <div className="relative w-8 h-8">
-              <img
+              <Image
                 src="/aniscrap.svg"
                 alt="AniScrap Logo"
-                className="w-full h-full object-contain"
+                fill
+                className="object-contain"
               />
             </div>
             <span className="font-bold text-xl text-foreground">AniScrap</span>
