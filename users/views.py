@@ -8,6 +8,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from .models import Notification, UserBadge, WatchLog, Badge
 from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserProfileUpdateSerializer
 
@@ -127,6 +130,11 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
 class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserBadgeSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    @method_decorator(cache_page(60 * 30, key_prefix="user_badges"))
+    @method_decorator(vary_on_headers('Authorization', 'Cookie'))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):

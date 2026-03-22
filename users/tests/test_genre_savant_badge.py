@@ -3,6 +3,7 @@ from users.models import User, Badge, UserBadge, WatchLog
 from content.models import Anime, Genre, Season, Episode
 from users.services import check_badges
 from django.utils import timezone
+from django.core.cache import cache
 
 class GenreSavantBadgeTest(TestCase):
     def setUp(self):
@@ -27,6 +28,9 @@ class GenreSavantBadgeTest(TestCase):
 
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
+
+        # Clear the cache before triggering the 50th log to allow re-checking badges
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Watch 50th episode
         WatchLog.objects.create(user=self.user, episode=self.episodes[49], duration=100)
