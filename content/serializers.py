@@ -42,10 +42,16 @@ class ExternalSourceSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source='source_type', read_only=True)
     url = serializers.CharField(source='embed_url', read_only=True)
     type = serializers.CharField(source='source_type', read_only=True)
+    embed_url = serializers.URLField(write_only=True)
 
     class Meta:
         model = ExternalSource
-        fields = ['id', 'source_name', 'url', 'quality', 'type']
+        fields = ['id', 'source_name', 'url', 'embed_url', 'quality', 'type']
+
+    def validate_embed_url(self, value):
+        if not value.startswith('https://') and not value.startswith('magnet:'):
+            raise serializers.ValidationError("URL must start with 'https://' or 'magnet:'.")
+        return value
 
 class EpisodeSerializer(serializers.ModelSerializer):
     aired_date = serializers.DateTimeField(source='created_at', read_only=True)
