@@ -1,0 +1,1 @@
+- [x] Frontend `next.config.ts`'de `eslint.ignoreDuringBuilds: true` — bunu kaldır, lint hatalarını gider

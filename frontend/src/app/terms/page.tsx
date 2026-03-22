@@ -100,7 +100,7 @@ export default function TermsPage() {
                     6. Limitation of Liability
                   </h2>
                   <p>
-                    AniScrap is provided "as is" without warranties. We are not
+                    AniScrap is provided &quot;as is&quot; without warranties. We are not
                     liable for any damages arising from your use of the service.
                   </p>
                 </section>

@@ -239,7 +239,7 @@ export default function SchedulePage() {
                     variant="flat"
                     onPress={() => setSelectedDay(today)}
                   >
-                    View Today's Schedule
+                    View Today&apos;s Schedule
                   </Button>
                 )}
               </CardBody>
