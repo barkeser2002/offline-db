@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from django.core.validators import RegexValidator
+from core.validators import validate_image_mimetype
 
 class User(AbstractUser):
     username_validator = RegexValidator(
@@ -52,7 +53,7 @@ class Badge(models.Model):
     slug = models.SlugField(unique=True, help_text=_("Unique identifier for the badge logic"))
     name = models.CharField(max_length=100)
     description = models.TextField()
-    icon_url = models.URLField(blank=True, null=True)
+    icon_url = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
