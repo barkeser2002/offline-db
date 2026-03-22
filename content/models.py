@@ -4,6 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from core.validators import validate_mime_type
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -215,7 +216,7 @@ class Subtitle(models.Model):
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='subtitles')
     fansub_group = models.ForeignKey(FansubGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='subtitles')
     lang = models.CharField(max_length=10, default='tr')
-    file = models.FileField(upload_to='subtitles/')
+    file = models.FileField(upload_to='subtitles/', validators=[validate_mime_type])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

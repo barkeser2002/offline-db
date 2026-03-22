@@ -111,3 +111,12 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['id', 'anime', 'created_at']
+
+class AdminUploadSerializer(serializers.Serializer):
+    magnet_link = serializers.CharField(required=True)
+    quality = serializers.ChoiceField(choices=['480p', '720p', '1080p'])
+
+    def validate_magnet_link(self, value):
+        if not value.startswith('magnet:?xt=urn:') and not value.startswith('https://'):
+            raise serializers.ValidationError("Magnet link must start with 'magnet:?xt=urn:' or 'https://'")
+        return value

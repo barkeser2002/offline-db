@@ -80,8 +80,8 @@ Bu proje bir anime izleme platformudur:
 - [ ] Username XSS pattern validation (sadece alphanumeric + _- izin ver)
 - [ ] Bio alanı HTML escape / strip validasyonu
 - [ ] Review content sanitization (bleach kullan)
-- [ ] Magnet link URL validation (sadece magnet: ve https:// izin ver)
-- [ ] File upload MIME type validation (covers/storage alanları)
+- [x] Magnet link URL validation (sadece magnet: ve https:// izin ver)
+- [x] File upload MIME type validation (covers/storage alanları)
 
 ### 1.4 Dependency Security Audit
 **Hedef**: `requirements.txt`, `frontend/package.json`

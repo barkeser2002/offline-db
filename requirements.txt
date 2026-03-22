@@ -28,3 +28,4 @@ omegaconf==2.3.0
 django-filter>=23.2
 djangorestframework-simplejwt
 bleach>=6.3.0
+python-magic==0.4.27
