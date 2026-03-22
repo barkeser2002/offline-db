@@ -8,6 +8,32 @@ magnet_or_https_validator = RegexValidator(
     message="URL must start with magnet: or https://"
 )
 
+def validate_image_mimetype(file):
+    """
+    Validates that the uploaded file has an allowed image MIME type.
+    """
+    allowed_mimetypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif'
+    ]
+
+    mime_type, _ = mimetypes.guess_type(file.name)
+
+    if not mime_type:
+        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
+            return
+        raise ValidationError("Unsupported file type.")
+
+    if mime_type not in allowed_mimetypes:
+        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
+            return
+        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")
+
+
 def validate_subtitle_mimetype(file):
     """
     Validates that the uploaded subtitle file has an allowed MIME type.
