@@ -35,3 +35,29 @@ def validate_subtitle_mimetype(file):
         if ext in ['srt', 'vtt', 'ass']:
             return # valid by extension
         raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .srt, .vtt, .ass")
+
+def validate_image_mimetype(file):
+    """
+    Validates that the uploaded image file has an allowed MIME type.
+    """
+    allowed_mimetypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif'
+    ]
+
+    # Check mime type based on file name extension
+    mime_type, _ = mimetypes.guess_type(file.name)
+
+    if not mime_type:
+        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
+            return
+        raise ValidationError("Unsupported file type.")
+
+    if mime_type not in allowed_mimetypes:
+        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
+            return
+        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")

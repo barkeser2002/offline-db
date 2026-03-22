@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from core.validators import magnet_or_https_validator, validate_subtitle_mimetype
+from core.validators import magnet_or_https_validator, validate_subtitle_mimetype, validate_image_mimetype
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -38,8 +38,8 @@ class Anime(models.Model):
     japanese_title = models.CharField(max_length=255, blank=True, verbose_name=_("Japanese Title"))
     english_title = models.CharField(max_length=255, blank=True, verbose_name=_("English Title"))
     synopsis = models.TextField(blank=True)
-    cover_image = models.URLField(blank=True, null=True)
-    banner_image = models.URLField(blank=True, null=True, verbose_name=_("Banner Image"))
+    cover_image = models.ImageField(upload_to='covers/', validators=[validate_image_mimetype], blank=True, null=True)
+    banner_image = models.ImageField(upload_to='covers/', validators=[validate_image_mimetype], blank=True, null=True, verbose_name=_("Banner Image"))
     genres = models.ManyToManyField(Genre, related_name='animes', blank=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='TV')
     

@@ -41,3 +41,7 @@
 ## 2026-03-19 - Username XSS/Injection validation
 **Vulnerability:** Usernames were not validated upon profile update, making the system vulnerable to XSS attacks, injection attacks, or malformed data issues if users set their usernames to strings containing special characters or HTML tags.
 **Prevention:** Added a `validate_username` method to `UserProfileUpdateSerializer` to ensure the username matches the `^[\w-]+$` regex (only letters, numbers, hyphens, and underscores).
+
+## 2024-03-XX - Secure File Upload MIME Type Validation
+**Vulnerability:** Previously, `cover_image` and `banner_image` in the `Anime` model used `URLField`. If directly migrated or allowed via endpoints without server-side check, this would allow arbitrary malicious files (e.g. executable scripts) to be uploaded under the guise of an image.
+**Prevention:** Converted `cover_image` and `banner_image` to `ImageField` (which adds base Pillow validation) and created a dedicated `validate_image_mimetype` validator. This validator uses both file extension and `mimetypes.guess_type` to rigorously enforce a whitelist of image MIME types (`image/jpeg`, `image/png`, `image/webp`, `image/gif`), ensuring that only explicit image formats can be uploaded into storage.
