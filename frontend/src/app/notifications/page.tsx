@@ -143,7 +143,7 @@ export default function NotificationsPage() {
                 isSelected={showUnreadOnly}
                 onValueChange={setShowUnreadOnly}
                 color="primary"
-                aria-label="Toggle unread notifications only"
+
               />
             </div>
             <Button

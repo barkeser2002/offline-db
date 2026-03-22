@@ -46,7 +46,7 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${data.access}`;
           return api(originalRequest);
         }
-      } catch (refreshError) {
+      } catch (_refreshError) {
         // Refresh failed, logout user
         if (typeof window !== 'undefined') {
           localStorage.removeItem('accessToken');
@@ -183,9 +183,10 @@ export const contentService = {
 };
 
 export const watchPartyService = {
-  createRoom: async (episodeId: number) => {
+  createRoom: async (episodeId: number, maxParticipants: number = 0) => {
     const { data } = await api.post<Room>('/watch-parties/', {
       episode_id: episodeId,
+      max_participants: maxParticipants,
     });
     return data;
   },
@@ -197,6 +198,7 @@ export const watchPartyService = {
 };
 
 export const authService = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   login: async (credentials: any) => {
     const { data } = await axios.post('http://localhost:8000/api/token/', credentials);
     if (data.access) {

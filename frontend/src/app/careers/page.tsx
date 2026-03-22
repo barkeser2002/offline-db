@@ -156,7 +156,7 @@ export default function CareersPage() {
           <Card className="bg-surface border border-white/5">
             <CardBody className="p-8">
               <p className="text-foreground/60 mb-4">
-                Don't see a position that fits? We're always looking for
+                Don&apos;t see a position that fits? We&apos;re always looking for
                 talented people.
               </p>
               <Button color="primary" variant="bordered">

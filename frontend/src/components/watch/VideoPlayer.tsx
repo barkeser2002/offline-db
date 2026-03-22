@@ -9,10 +9,17 @@ import {
   DropdownMenu,
   DropdownItem,
   Switch,
-  Slider,
+
   Tooltip,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Input,
 } from "@nextui-org/react";
-import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { EpisodeDetail, watchPartyService } from "@/services/api";
 import { WebGLRenderer } from "../player/Anime4K/WebGLRenderer";
@@ -21,16 +28,12 @@ import { PartyPanel } from "../watchparty/PartyPanel";
 
 interface VideoPlayerProps {
   episode: EpisodeDetail;
-  animeId: string;
-  totalEpisodes?: number;
   roomUuid?: string; // WatchParty Room ID
   currentUser?: { id: number; username: string }; // Provided by parent
 }
 
 export default function VideoPlayer({
   episode,
-  animeId,
-  totalEpisodes = 12,
   roomUuid,
   currentUser,
 }: VideoPlayerProps) {
@@ -55,10 +58,14 @@ export default function VideoPlayer({
   const [anime4kEnabled, setAnime4kEnabled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  const {isOpen: isPartyModalOpen, onOpen: onPartyModalOpen, onOpenChange: onPartyModalChange} = useDisclosure();
+  const [maxParticipants, setMaxParticipants] = useState<string>("0");
+
   useEffect(() => {
     // Basic mobile detection
     const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    setIsMobile(mobile);
+    if (mobile !== isMobile) setIsMobile(mobile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refs
@@ -76,7 +83,8 @@ export default function VideoPlayer({
 
   const handleCreateParty = async () => {
     try {
-      const room = await watchPartyService.createRoom(episode.id);
+      const limit = parseInt(maxParticipants, 10) || 0;
+      const room = await watchPartyService.createRoom(episode.id, limit);
       router.push(`/watch/room/${room.uuid}`);
     } catch (error) {
       console.error("Failed to create room", error);
@@ -129,7 +137,7 @@ export default function VideoPlayer({
     if (roomUuid) sendSync("paused", videoRef.current?.currentTime || 0);
   };
 
-  const handleSeek = (e: any) => {
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const time = parseFloat(e.target.value);
     if (videoRef.current) {
       videoRef.current.currentTime = time;
@@ -167,8 +175,10 @@ export default function VideoPlayer({
     { id: number; char: string; left: number }[]
   >([]);
   useEffect(() => {
-    const handleEmote = (e: any) => {
-      const char = e.detail.emote;
+    const handleEmote = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const char = customEvent.detail.emote;
+
       const id = Date.now();
       setEmotes((prev) => [
         ...prev,
@@ -263,15 +273,45 @@ export default function VideoPlayer({
               <div className="flex gap-2 items-center">
                 {/* Watch Party Button */}
                 {!roomUuid && (
-                  <Button
-                    size="sm"
-                    color="primary"
-                    variant="shadow"
-                    onPress={handleCreateParty}
-                    startContent={<span>👥</span>}
-                  >
-                    Watch Party
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="shadow"
+                      onPress={onPartyModalOpen}
+                      startContent={<span>👥</span>}
+                    >
+                      Watch Party
+                    </Button>
+                    <Modal isOpen={isPartyModalOpen} onOpenChange={onPartyModalChange}>
+                      <ModalContent>
+                        {(onClose) => (
+                          <>
+                            <ModalHeader className="flex flex-col gap-1">Create Watch Party</ModalHeader>
+                            <ModalBody>
+                              <Input
+                                type="number"
+                                label="Max Participants"
+                                placeholder="0 for unlimited"
+                                value={maxParticipants}
+                                onValueChange={setMaxParticipants}
+                                description="Set to 0 if you don't want a limit."
+                                min="0"
+                              />
+                            </ModalBody>
+                            <ModalFooter>
+                              <Button color="danger" variant="light" onPress={onClose}>
+                                Cancel
+                              </Button>
+                              <Button color="primary" onPress={() => { handleCreateParty(); onClose(); }}>
+                                Create Room
+                              </Button>
+                            </ModalFooter>
+                          </>
+                        )}
+                      </ModalContent>
+                    </Modal>
+                  </>
                 )}
 
                 {/* Anime4K Toggle (Desktop Only) */}
@@ -283,12 +323,11 @@ export default function VideoPlayer({
                       </span>
                     </Tooltip>
                     <Switch
-                      aria-label="Toggle Anime4K GPU Upscaling"
+
                       size="sm"
                       color="secondary"
                       isSelected={anime4kEnabled}
                       onValueChange={setAnime4kEnabled}
-                      aria-label="Toggle Anime4K GPU Upscaling"
                     />
                   </div>
                 )}

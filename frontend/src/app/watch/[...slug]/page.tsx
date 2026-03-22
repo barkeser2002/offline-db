@@ -43,8 +43,7 @@ export default async function WatchPage({
   return (
     <VideoPlayer
       episode={episodeDetail}
-      animeId={animeId}
-      totalEpisodes={(animeDetail as any).total_episodes || 12}
+
       roomUuid={room}
       currentUser={currentUser || undefined}
     />
