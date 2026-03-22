@@ -10,7 +10,7 @@ magnet_or_https_validator = RegexValidator(
 
 def validate_image_mimetype(file):
     """
-    Validates that the uploaded image file has an allowed MIME type.
+    Validates that the uploaded file has an allowed image MIME type.
     """
     allowed_mimetypes = [
         'image/jpeg',
@@ -31,34 +31,7 @@ def validate_image_mimetype(file):
         ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
         if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
             return
-        raise ValidationError(f"Unsupported image type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")
-
-
-def validate_video_mimetype(file):
-    """
-    Validates that the uploaded video file has an allowed MIME type.
-    """
-    allowed_mimetypes = [
-        'video/mp4',
-        'video/x-matroska',
-        'video/webm',
-        'application/x-mpegURL',
-        'application/vnd.apple.mpegurl'
-    ]
-
-    mime_type, _ = mimetypes.guess_type(file.name)
-
-    if not mime_type:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['mp4', 'mkv', 'webm', 'm3u8']:
-            return
-        raise ValidationError("Unsupported file type.")
-
-    if mime_type not in allowed_mimetypes:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['mp4', 'mkv', 'webm', 'm3u8']:
-            return
-        raise ValidationError(f"Unsupported video type: {mime_type}. Allowed extensions are .mp4, .mkv, .webm, .m3u8")
+        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")
 
 
 def validate_subtitle_mimetype(file):
@@ -88,42 +61,3 @@ def validate_subtitle_mimetype(file):
         if ext in ['srt', 'vtt', 'ass']:
             return # valid by extension
         raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .srt, .vtt, .ass")
-
-def validate_image_mimetype(value):
-    """
-    Validates that the provided value (URL string or File object) points to an image
-    with an allowed MIME type based on the file extension.
-    """
-    if not value:
-        return
-
-    import urllib.parse
-
-    # Handle FileField/ImageField objects which have a .name attribute
-    # or URL string objects
-    name = getattr(value, 'name', str(value))
-
-    # Extract path from URL to strip query parameters if it's a URL
-    path = urllib.parse.urlparse(name).path
-
-    allowed_mimetypes = [
-        'image/jpeg',
-        'image/png',
-        'image/gif',
-        'image/webp',
-        'image/svg+xml'
-    ]
-
-    mime_type, _ = mimetypes.guess_type(path)
-
-    if not mime_type:
-        ext = path.split('.')[-1].lower() if '.' in path else ''
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
-            return
-        raise ValidationError("Unsupported image format.")
-
-    if mime_type not in allowed_mimetypes:
-        ext = path.split('.')[-1].lower() if '.' in path else ''
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
-            return
-        raise ValidationError(f"Unsupported image format: {mime_type}. Allowed formats are JPEG, PNG, GIF, WebP, SVG.")
