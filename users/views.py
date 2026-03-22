@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status, viewsets, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from django.core.cache import cache
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle, AnonRateThrottle
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -127,6 +128,17 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
 class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserBadgeSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    # Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
+    def list(self, request, *args, **kwargs):
+        query_string = request.META.get('QUERY_STRING', '')
+        cache_key = f'user_badges_{request.user.id}_{query_string}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
+        response = super().list(request, *args, **kwargs)
+        cache.set(cache_key, response.data, 60 * 30)
+        return response
 
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
