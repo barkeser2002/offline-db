@@ -92,7 +92,7 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
-- [ ] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
+- [x] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
 - [x] Referrer-Policy: strict-origin-when-cross-origin
 - [x] Permissions-Policy header (camera, microphone deny)
 - [x] HSTS header (Strict-Transport-Security) - sadece prod
@@ -103,10 +103,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.1 Redis Caching Stratejisi
 **Hedef dosyalar**: `content/views.py`, `users/views.py`, `aniscrap_core/settings.py`
-- [x] `django-cacheops` veya native Django cache framework kur
-- [x] AnimeViewSet list cache: 5 dakika TTL
-- [x] HomeViewSet trending/seasonal cache: 10 dakika TTL
-- [x] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
+- [ ] `django-cacheops` veya native Django cache framework kur
+- [ ] AnimeViewSet list cache: 5 dakika TTL
+- [ ] HomeViewSet trending/seasonal cache: 10 dakika TTL
+- [ ] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
 - [ ] Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal → cache clear)
 
 ### 2.2 Database Optimizasyonları
