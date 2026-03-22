@@ -81,7 +81,7 @@ Bu proje bir anime izleme platformudur:
 - [x] Bio alanı HTML escape / strip validasyonu
 - [x] Review content sanitization (bleach kullan)
 - [x] Magnet link URL validation (sadece magnet: ve https:// izin ver)
-- [ ] File upload MIME type validation (covers/storage alanları)
+- [x] File upload MIME type validation (covers/storage alanları)
 
 ### 1.4 Dependency Security Audit
 **Hedef**: `requirements.txt`, `frontend/package.json`
@@ -92,10 +92,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
-- [ ] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
-- [ ] Referrer-Policy: strict-origin-when-cross-origin
-- [ ] Permissions-Policy header (camera, microphone deny)
-- [ ] HSTS header (Strict-Transport-Security) - sadece prod
+- [x] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
+- [x] Referrer-Policy: strict-origin-when-cross-origin
+- [x] Permissions-Policy header (camera, microphone deny)
+- [x] HSTS header (Strict-Transport-Security) - sadece prod
 
 ---
 

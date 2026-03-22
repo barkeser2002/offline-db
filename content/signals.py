@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.urls import reverse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import Episode, Subscription, Genre, Season
+from .models import Anime, Episode, Subscription, Genre, Season
 from .tasks import send_new_episode_email_task, send_websocket_notifications_task
 
 @receiver(post_save, sender=Genre)
@@ -32,6 +32,16 @@ def clear_home_cache(sender, instance, **kwargs):
     """
     cache.delete('home_latest_episodes')
     cache.delete(f'anime_{instance.season.anime.id}_seasons')
+    # Invalidate cache pages
+    cache.clear()
+
+@receiver(post_save, sender=Anime)
+@receiver(post_delete, sender=Anime)
+def clear_anime_cache(sender, instance, **kwargs):
+    """
+    Clear cache when an Anime is saved (created/updated) or deleted.
+    """
+    cache.clear()
 
 @receiver(post_save, sender=Episode)
 def notify_subscribers(sender, instance, created, **kwargs):

@@ -88,3 +88,42 @@ def validate_subtitle_mimetype(file):
         if ext in ['srt', 'vtt', 'ass']:
             return # valid by extension
         raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .srt, .vtt, .ass")
+
+def validate_image_mimetype(value):
+    """
+    Validates that the provided value (URL string or File object) points to an image
+    with an allowed MIME type based on the file extension.
+    """
+    if not value:
+        return
+
+    import urllib.parse
+
+    # Handle FileField/ImageField objects which have a .name attribute
+    # or URL string objects
+    name = getattr(value, 'name', str(value))
+
+    # Extract path from URL to strip query parameters if it's a URL
+    path = urllib.parse.urlparse(name).path
+
+    allowed_mimetypes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml'
+    ]
+
+    mime_type, _ = mimetypes.guess_type(path)
+
+    if not mime_type:
+        ext = path.split('.')[-1].lower() if '.' in path else ''
+        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+            return
+        raise ValidationError("Unsupported image format.")
+
+    if mime_type not in allowed_mimetypes:
+        ext = path.split('.')[-1].lower() if '.' in path else ''
+        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+            return
+        raise ValidationError(f"Unsupported image format: {mime_type}. Allowed formats are JPEG, PNG, GIF, WebP, SVG.")
