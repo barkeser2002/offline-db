@@ -42,21 +42,10 @@ class ExternalSourceSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source='source_type', read_only=True)
     url = serializers.CharField(source='embed_url', read_only=True)
     type = serializers.CharField(source='source_type', read_only=True)
-    embed_url = serializers.URLField(write_only=True)
 
     class Meta:
         model = ExternalSource
-        fields = ['id', 'source_name', 'url', 'embed_url', 'quality', 'type']
-
-    def validate_embed_url(self, value):
-        if not value.startswith('https://') and not value.startswith('magnet:'):
-            raise serializers.ValidationError("URL must start with 'https://' or 'magnet:'.")
-        return value
-
-    def validate_url(self, value):
-        if not (value.startswith('magnet:') or value.startswith('https://')):
-            raise serializers.ValidationError("URL must start with magnet: or https://")
-        return value
+        fields = ['id', 'source_name', 'url', 'quality', 'type']
 
 class EpisodeSerializer(serializers.ModelSerializer):
     aired_date = serializers.DateTimeField(source='created_at', read_only=True)
@@ -79,34 +68,7 @@ class SeasonSerializer(serializers.ModelSerializer):
         model = Season
         fields = ['id', 'number', 'name', 'episodes']
 
-
-class FileUploadValidationMixin:
-    """Mixin for validating cover/banner URLs to prevent malicious file uploads (e.g. storage path traversal/XSS)."""
-    def validate_image_url(self, value):
-        if not value:
-            return value
-        allowed_exts = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
-        # if value is a string (e.g. URLField)
-        if isinstance(value, str):
-            if not any(value.lower().split('?')[0].endswith(ext) for ext in allowed_exts):
-                 raise serializers.ValidationError("Invalid image extension. Must be an image file.")
-        # if value is an uploaded file
-        elif hasattr(value, 'name'):
-            import mimetypes
-            mime_type, _ = mimetypes.guess_type(value.name)
-            allowed_mimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-            content_type = getattr(value, 'content_type', mime_type)
-            if content_type not in allowed_mimes:
-                raise serializers.ValidationError(f"Invalid image type. Allowed: {', '.join(allowed_mimes)}")
-        return value
-
-    def validate_cover_image(self, value):
-        return self.validate_image_url(value)
-
-    def validate_banner_image(self, value):
-        return self.validate_image_url(value)
-
-class AnimeListSerializer(FileUploadValidationMixin, serializers.ModelSerializer):
+class AnimeListSerializer(serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
     
     class Meta:
@@ -118,12 +80,10 @@ class AnimeListSerializer(FileUploadValidationMixin, serializers.ModelSerializer
     
     date_aired = serializers.SerializerMethodField()
 
-    def get_date_aired(self, obj) -> str | None:
-        if obj.aired_from:
-            return obj.aired_from.isoformat()
-        return None
+    def get_date_aired(self, obj):
+        return obj.aired_from
 
-class AnimeDetailSerializer(FileUploadValidationMixin, serializers.ModelSerializer):
+class AnimeDetailSerializer(serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
     characters = AnimeCharacterSerializer(source='anime_characters', many=True, read_only=True)
     seasons = SeasonSerializer(many=True, read_only=True)
@@ -139,11 +99,8 @@ class AnimeDetailSerializer(FileUploadValidationMixin, serializers.ModelSerializ
             'rating', 'genres', 'characters', 'seasons', 'is_subscribed'
         ]
 
-    def get_is_subscribed(self, obj) -> bool:
-        request = self.context.get('request')
-        if getattr(self, 'swagger_fake_view', False) or not request:
-            return False
-        user = request.user
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
         if user and user.is_authenticated:
             return Subscription.objects.filter(user=user, anime=obj).exists()
         return False
@@ -155,26 +112,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = ['id', 'anime', 'created_at']
 
-import mimetypes
+class AdminUploadSerializer(serializers.Serializer):
+    magnet_link = serializers.CharField(required=True)
+    quality = serializers.ChoiceField(choices=['480p', '720p', '1080p'])
 
-class SubtitleSerializer(serializers.ModelSerializer):
-    class Meta:
-        from .models import Subtitle
-        model = Subtitle
-        fields = ['id', 'episode', 'lang', 'file', 'created_at']
-
-    def validate_file(self, value):
-        allowed_mimes = ['text/plain', 'text/vtt', 'application/x-subrip', 'application/octet-stream']
-        mime_type, _ = mimetypes.guess_type(value.name)
-
-        # Check if the file's extension suggests a valid mime type or if its actual content_type is allowed
-        content_type = getattr(value, 'content_type', mime_type)
-        if content_type and content_type not in allowed_mimes:
-            # specifically allow srt/vtt extensions as a fallback
-            if not (value.name.endswith('.srt') or value.name.endswith('.vtt')):
-                raise serializers.ValidationError(f"Invalid file type. Allowed: vtt, srt")
-
-        # Additionally validate the extension for security
-        if not (value.name.endswith('.srt') or value.name.endswith('.vtt') or value.name.endswith('.txt')):
-             raise serializers.ValidationError("File must be .srt, .vtt, or .txt")
+    def validate_magnet_link(self, value):
+        if not value.startswith('magnet:?xt=urn:') and not value.startswith('https://'):
+            raise serializers.ValidationError("Magnet link must start with 'magnet:?xt=urn:' or 'https://'")
         return value

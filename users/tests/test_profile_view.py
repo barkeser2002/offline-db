@@ -12,7 +12,7 @@ def test_profile_view_access(django_user_model):
     user = django_user_model.objects.create_user(username='testuser', password='password')
     client.force_authenticate(user=user)
     url = reverse('user-profile')
-    response = client.get(url)
+    response = client.get(url, secure=True)
     assert response.status_code == 200
 
 @pytest.mark.django_db
@@ -20,7 +20,7 @@ def test_profile_view_redirect_anonymous():
     """Test that anonymous users are redirected to login."""
     client = APIClient()
     url = reverse('user-profile')
-    response = client.get(url)
+    response = client.get(url, secure=True)
     assert response.status_code == 401
 
 @pytest.mark.django_db
@@ -41,7 +41,7 @@ def test_profile_view_context(django_user_model):
     WatchLog.objects.create(user=user, episode=episode, duration=100)
 
     url = reverse('user-profile')
-    response = client.get(url)
+    response = client.get(url, secure=True)
 
     assert response.status_code == 200
     # Check that Test Badge is present (other badges might be awarded automatically via signals)

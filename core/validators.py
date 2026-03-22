@@ -1,89 +1,19 @@
-import mimetypes
-from django.core.validators import RegexValidator
+import magic
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
-# Regex validator for Magnet and HTTPS URLs
-magnet_or_https_validator = RegexValidator(
-    regex=r'^(https://|magnet:\?)',
-    message="URL must start with magnet: or https://"
-)
-
-def validate_image_mimetype(file):
-    """
-    Validates that the uploaded file has an allowed image MIME type.
-    """
-    allowed_mimetypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-        'image/gif'
+def validate_mime_type(file):
+    valid_mime_types = [
+        'video/mp4', 'video/x-matroska', 'video/webm', 'video/x-msvideo',
+        'application/x-subrip', 'text/plain', 'text/vtt', 'text/srt',
+        'image/jpeg', 'image/png', 'image/webp'
     ]
 
-    mime_type, _ = mimetypes.guess_type(file.name)
+    file_mime_type = magic.from_buffer(file.read(2048), mime=True)
+    file.seek(0)
 
-    if not mime_type:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
-            return
-        raise ValidationError("Unsupported file type.")
-
-    if mime_type not in allowed_mimetypes:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
-            return
-        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")
-
-
-def validate_subtitle_mimetype(file):
-    """
-    Validates that the uploaded subtitle file has an allowed MIME type.
-    """
-    allowed_mimetypes = [
-        'text/plain',
-        'text/vtt',
-        'application/x-subrip',
-        'application/octet-stream' # sometimes .srt is identified as octet-stream
-    ]
-
-    # Check mime type based on file name extension as a fallback/primary method
-    mime_type, _ = mimetypes.guess_type(file.name)
-
-    if not mime_type:
-        # If mimetypes module can't guess, we might want to check the extension manually
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['srt', 'vtt', 'ass']:
-            return # valid by extension
-        raise ValidationError("Unsupported file type.")
-
-    if mime_type not in allowed_mimetypes:
-        # double check extension since some systems have weird MIME setups
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['srt', 'vtt', 'ass']:
-            return # valid by extension
-        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .srt, .vtt, .ass")
-
-def validate_image_mimetype(file):
-    """
-    Validates that the uploaded image file has an allowed MIME type.
-    """
-    allowed_mimetypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-        'image/gif'
-    ]
-
-    # Check mime type based on file name extension
-    mime_type, _ = mimetypes.guess_type(file.name)
-
-    if not mime_type:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
-            return
-        raise ValidationError("Unsupported file type.")
-
-    if mime_type not in allowed_mimetypes:
-        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
-        if ext in ['jpg', 'jpeg', 'png', 'webp', 'gif']:
-            return
-        raise ValidationError(f"Unsupported file type: {mime_type}. Allowed extensions are .jpg, .jpeg, .png, .webp, .gif")
+    if file_mime_type not in valid_mime_types:
+        raise ValidationError(
+            _('Unsupported file type: %(mime_type)s'),
+            params={'mime_type': file_mime_type},
+        )
