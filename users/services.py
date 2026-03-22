@@ -47,6 +47,10 @@ def check_badges(user):
     Optimized to minimize DB queries.
     Refactored to use Strategy Pattern.
     """
+    cache_key = f'user_{user.id}_badges_checked'
+    if cache.get(cache_key):
+        return
+
     # Bulk fetch badges and awarded status
     all_badges = cache.get('all_badges_dict')
     if all_badges is None:
@@ -64,12 +68,18 @@ def check_badges(user):
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
         _send_badge_notifications(user, new_badges)
 
+    cache.set(cache_key, True, 30 * 60)
+
 def check_chat_badges(user):
     """
     Checks badges related to chat activity.
     Optimized to minimize DB queries.
     Refactored to use Strategy Pattern.
     """
+    cache_key = f'user_{user.id}_chat_badges_checked'
+    if cache.get(cache_key):
+        return
+
     all_badges = cache.get('all_badges_dict')
     if all_badges is None:
         all_badges = {b.slug: b for b in Badge.objects.all()}
@@ -85,3 +95,5 @@ def check_chat_badges(user):
     if new_badges:
         UserBadge.objects.bulk_create(new_badges, ignore_conflicts=True)
         _send_badge_notifications(user, new_badges)
+
+    cache.set(cache_key, True, 30 * 60)
