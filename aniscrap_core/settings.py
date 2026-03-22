@@ -211,7 +211,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# Caching
+# Caching - Native Django cache framework configured for Redis Caching Strategy
 if os.getenv('USE_SQLITE', 'False') == 'True':
     CACHES = {
         "default": {
