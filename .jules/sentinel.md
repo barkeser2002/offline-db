@@ -38,11 +38,20 @@
 **Learning:** All user-submitted text fields should be stripped of potential HTML and JS code.
 **Prevention:** Utilizing `bleach` in DRF serializers (`bleach.clean(value, tags=[], strip=True)`) prevents the storage of malicious strings.
 
-## 2026-03-14 - Input Validation & XSS Prevention
-**Vulnerability:** Unvalidated usernames could lead to XSS or SQL injection, unvalidated `bio` fields could store malicious HTML scripts, unvalidated `magnet` URLs could point to unsafe protocols, and unvalidated file uploads (covers/banners/subtitles) could lead to remote code execution or path traversal.
-**Prevention:**
-1. `UserProfileUpdateSerializer` in `users/serializers.py` now enforces a strict alphanumeric regex (`^[a-zA-Z0-9_-]+$`) on usernames.
-2. `UserProfileUpdateSerializer` uses `bleach.clean(value, tags=[], strip=True)` to strip malicious HTML from the `bio` field.
-3. `ExternalSourceSerializer` in `content/serializers.py` restricts `embed_url` to explicitly allow only `magnet:` and `https://` schemas.
-4. `FileUploadValidationMixin` in `content/serializers.py` validates `cover_image` and `banner_image` by enforcing strict image extensions and MIME types.
-5. `SubtitleSerializer` in `content/serializers.py` explicitly validates `.vtt`, `.srt`, and `.txt` extensions, along with their associated MIME types, to prevent malicious script uploads via subtitles.
+## 2026-03-19 - Username XSS/Injection validation
+**Vulnerability:** Usernames were not validated upon profile update, making the system vulnerable to XSS attacks, injection attacks, or malformed data issues if users set their usernames to strings containing special characters or HTML tags.
+**Prevention:** Added a `validate_username` method to `UserProfileUpdateSerializer` to ensure the username matches the `^[\w-]+$` regex (only letters, numbers, hyphens, and underscores).
+
+## 2026-03-XX - Missing MIME Type Validation for Image Uploads
+**Vulnerability:** URLFields and FileFields configured to accept images lacked strict MIME type and extension validation. This allowed potential malicious file uploads (e.g., polyglot files disguised as images) or fetching of unsafe files via URLs.
+**Prevention:** Created `validate_image_mimetype` in `core/validators.py` and strictly enforced it across all Image URL fields across models in `content/models.py` and `users/models.py` (e.g. `cover_image`, `banner_image`, `icon_url`). Validates both by URL path extension and `mimetypes.guess_type`.
+
+## 2026-03-20 - Dependency Vulnerabilities Fix
+**Vulnerability:** The project had several dependency vulnerabilities in `requirements.txt` and `frontend/package.json` that could lead to DoS, ReDoS, XSS, and Prototype Pollution attacks.
+**Learning:** `pip-audit` and `npm audit` should be run regularly to ensure all dependencies are up to date and secure.
+**Prevention:** Updated `django<5`, `djangorestframework-simplejwt==5.5.1` and ran `npm audit fix --force` and `pnpm install next@latest` to resolve vulnerabilities.
+
+## 2026-03-20 - Missing Security Headers
+**Vulnerability:** The application was missing several crucial HTTP security headers, including `Referrer-Policy`, `Permissions-Policy`, and a nonce-based `Content-Security-Policy`. This left the application vulnerable to cross-site scripting (XSS) via inline scripts, unintended referrer information leakage, and unauthorized access to device features like cameras and microphones.
+**Learning:** Adding robust security headers provides defense-in-depth against various client-side attacks.
+**Prevention:** Implemented a custom `SecurityHeadersMiddleware` to enforce `Referrer-Policy: strict-origin-when-cross-origin` and `Permissions-Policy: camera=(), microphone=()`. Updated `CSP_SCRIPT_SRC` and `CSP_INCLUDE_NONCE_IN` to require a nonce for inline scripts, mitigating XSS risks. Verified `SECURE_HSTS_SECONDS` is enabled in production.

@@ -92,10 +92,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
-- [ ] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
-- [ ] Referrer-Policy: strict-origin-when-cross-origin
-- [ ] Permissions-Policy header (camera, microphone deny)
-- [ ] HSTS header (Strict-Transport-Security) - sadece prod
+- [x] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
+- [x] Referrer-Policy: strict-origin-when-cross-origin
+- [x] Permissions-Policy header (camera, microphone deny)
+- [x] HSTS header (Strict-Transport-Security) - sadece prod
 
 ---
 
@@ -149,7 +149,7 @@ Bu proje bir anime izleme platformudur:
 **Hedef**: `content/views.py`, `frontend/src/app/discovery/`
 - [ ] Full-text search (Django + PostgreSQL `SearchVector` veya Elasticsearch entegrasyonu)
 - [ ] Genre + type + status multi-filter kombinasyonu
-- [ ] Rating bazlı sıralama (review ortalaması)
+- [x] Rating bazlı sıralama (review ortalaması)
 - [ ] Arama sonuçlarını highlight et (hangi alanda eşleşti)
 - [ ] Arama geçmişi (son 10 arama, localStorage)
 - [ ] Autocomplete endpoint (prefix bazlı anime önerisi)
@@ -164,9 +164,9 @@ Bu proje bir anime izleme platformudur:
 
 ### 3.3 WatchParty İyileştirmeleri
 **Hedef**: `apps/watchparty/`, `frontend/src/components/watchparty/`
-- [ ] Room şifresi (private rooms): Room modeline `password` alanı ekle
+- [x] Room şifresi (private rooms): Room modeline `password` alanı ekle
 - [ ] Chat mesajı silme (host yetkisi)
-- [ ] Katılımcı limit (Room modeline `max_participants` alanı)
+- [x] Katılımcı limit (Room modeline `max_participants` alanı)
 - [ ] Watch history sync (herkes aynı pozisyonda)
 - [ ] Emoji reaction burst animasyonu (frontend)
 - [ ] Party modu: host pause/play kontrolü audience'a yayınla
@@ -177,7 +177,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] Push notification (Web Push API + Service Worker)
 - [ ] Bildirim tercihleri sayfası (hangi bildirim türleri aktif)
 - [ ] Bildirim gruplama (aynı anime'den birden fazla epizot bildirimi → tek bildirim)
-- [ ] Okundu/okunmadı bulk işlem endpoint'i
+- [x] Okundu/okunmadı bulk işlem endpoint'i
 
 ### 3.5 Sosyal Özellikler
 **Yeni dosyalar**: `users/social.py`, migration'lar
@@ -196,9 +196,9 @@ Bu proje bir anime izleme platformudur:
 - [ ] `users/badge_system.py` tüm badge'ler için unit test (her badge strategy)
 - [ ] `core/storage.py` path traversal + upload/delete/exists testleri (YAPILDI, genişlet)
 - [ ] `apps/watchparty/consumers.py` WebSocket testleri (YAPILDI, genişlet)
-- [ ] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
+- [x] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
 - [ ] `billing/views.py` payment flow testleri
-- [ ] `content/views.py` N+1 query assertion testleri (assertNumQueries)
+- [x] `content/views.py` N+1 query assertion testleri (assertNumQueries)
 - [ ] Celery task'ların mock testi
 - [ ] Cache invalidation testleri
 - [ ] `pytest-cov` ile coverage raporu üret (CI'da minimum %80 enforce et)
@@ -313,10 +313,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 6.4 API Dokümantasyonu
 **Araç**: drf-spectacular (OpenAPI 3.0)
-- [ ] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
-- [ ] Tüm ViewSet'lere `@extend_schema` decorator ekle
-- [ ] Request/Response örnekleri her endpoint için
-- [ ] Authentication akışı dokümante et (JWT flow)
+- [x] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
+- [x] Tüm ViewSet'lere `@extend_schema` decorator ekle
+- [x] Request/Response örnekleri her endpoint için
+- [x] Authentication akışı dokümante et (JWT flow)
 - [ ] Postman collection otomatik üret
 
 ### 6.5 Backup & Disaster Recovery
