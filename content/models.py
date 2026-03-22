@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from core.validators import magnet_or_https_validator, validate_subtitle_mimetype, validate_image_mimetype
+from core.validators import magnet_or_https_validator, validate_subtitle_mimetype, validate_image_mimetype, validate_video_mimetype
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
