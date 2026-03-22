@@ -1,3 +1,5 @@
+"use client";
+
 import { contentService } from "@/services/api";
 import {
   Button,

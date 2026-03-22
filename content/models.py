@@ -211,11 +211,16 @@ class VideoFile(models.Model):
     def __str__(self):
         return f"{self.episode} - {self.quality}"
 
+from django.core.validators import FileExtensionValidator
+
 class Subtitle(models.Model):
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='subtitles')
     fansub_group = models.ForeignKey(FansubGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='subtitles')
     lang = models.CharField(max_length=10, default='tr')
-    file = models.FileField(upload_to='subtitles/')
+    file = models.FileField(
+        upload_to='subtitles/',
+        validators=[FileExtensionValidator(allowed_extensions=['srt', 'vtt', 'ass'])]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

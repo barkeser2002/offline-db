@@ -1,5 +1,16 @@
+import bleach
 from rest_framework import serializers
-from .models import Notification, Badge, UserBadge, WatchLog
+from .models import Notification, Badge, UserBadge, WatchLog, User
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['bio']
+
+    def validate_bio(self, value):
+        if value:
+            return bleach.clean(value, tags=[], strip=True)
+        return value
 
 class WatchLogSerializer(serializers.ModelSerializer):
     class Meta:

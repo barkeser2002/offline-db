@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 from .models import Notification, UserBadge, WatchLog, Badge
-from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
+from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserProfileUpdateSerializer
 
 class LoginThrottle(AnonRateThrottle):
     scope = 'login'
@@ -130,8 +130,20 @@ class UserProfileAPIView(APIView):
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'bio': getattr(user, 'bio', ''),
             'is_premium': getattr(user, 'is_premium', False),
             'date_joined': user.date_joined,
             'badges': UserBadgeSerializer(badges, many=True).data,
             'recent_history': WatchLogSerializer(history, many=True).data
         })
+
+    def patch(self, request):
+        user = request.user
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        return self.patch(request)

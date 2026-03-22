@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 from content.views import AnimeViewSet, EpisodeViewSet, HomeViewSet
 from apps.watchparty.views import RoomViewSet
@@ -38,5 +39,10 @@ urlpatterns = [
     
     # Billing API (Assuming it follows API structure)
     # path('api/billing/', include('billing.urls')),
+
+    # Swagger Documentation
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
