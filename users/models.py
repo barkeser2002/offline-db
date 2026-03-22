@@ -1,10 +1,8 @@
-from core.validators import validate_image_mimetype
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
 from django.core.validators import RegexValidator
-from core.validators import validate_image_mimetype
 
 class User(AbstractUser):
     username_validator = RegexValidator(
@@ -24,7 +22,7 @@ class User(AbstractUser):
     )
 
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
-    bio = models.TextField(blank=True, max_length=500, verbose_name=_("Biography"))
+    bio = models.TextField(blank=True, verbose_name=_("Bio"))
 
     def __str__(self):
         return self.username
@@ -54,7 +52,7 @@ class Badge(models.Model):
     slug = models.SlugField(unique=True, help_text=_("Unique identifier for the badge logic"))
     name = models.CharField(max_length=100)
     description = models.TextField()
-    icon_url = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
+    icon_url = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
