@@ -56,3 +56,15 @@
 ## 2025-03-10 - [Optimize genre-savant badge strategy]
 **Learning:** `WatchLog.objects.filter(user=user).values('episode_id')` would pull episode ids into memory which were then passed to `.filter(id__in=episode_qs)`. This resulted in excessive database fetching and memory use.
 **Action:** Substituted the two-step evaluation process into a single optimized query string that handles filtering, related joins, and aggregations purely at the database level by traversing models via double-underscores (`episode__season__anime__genres__id`).
+
+## 2026-03-05 - NotificationViewSet Performance Improvement
+**Learning:** To significantly improve performance of DRF ViewSets like `NotificationViewSet` that frequently filter and order by specific fields (e.g., `filter(user=request.user).order_by('-created_at')` and `filter(is_read=False)`), add composite database indexes to the Django model's `Meta` class (e.g., `models.Index(fields=['user', 'is_read'])` and `models.Index(fields=['user', '-created_at'])`).
+**Action:** Added composite indexes `['user', 'is_read']` and `['user', '-created_at']` to the `Notification` model's `Meta` class in `users/models.py` and created the corresponding database migrations.
+
+## 2024-03-13 - [Add composite indexes to WatchLog and Subscription models]
+**Learning:** To significantly improve performance of querying large tables like `WatchLog` and `Subscription` which are frequently filtered by combinations of `user` and `watched_at` or `user` and `anime`, composite database indexes should be added.
+**Action:** Added `['user', 'watched_at']` to `WatchLog` and `['user', 'anime']` to `Subscription` in `users/models.py` and `content/models.py` respectively, and generated migrations.
+
+## 2026-03-13 - [Add index to Room is_active]
+**Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
+**Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.

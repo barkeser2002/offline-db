@@ -1,0 +1,1952 @@
+openapi: 3.0.3
+info:
+  title: AniScrap API
+  version: 1.0.0
+  description: AniScrap platform API documentation
+paths:
+  /api/content/reviews/:
+    get:
+      operationId: content_reviews_list
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - content
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewList'
+          description: ''
+    post:
+      operationId: content_reviews_create
+      tags:
+      - content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+  /api/content/reviews/{id}/:
+    get:
+      operationId: content_reviews_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - content
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    put:
+      operationId: content_reviews_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    patch:
+      operationId: content_reviews_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - content
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    delete:
+      operationId: content_reviews_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - content
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/key/{id}/:
+    get:
+      operationId: key_retrieve
+      summary: Serve HLS encryption key
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - key
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/token/:
+    post:
+      operationId: token_create
+      description: |-
+        Takes a set of user credentials and returns an access and refresh JSON web
+        token pair to prove the authentication of those credentials.
+      summary: Obtain JWT token pair
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/anime/:
+    get:
+      operationId: v1_anime_list
+      summary: List all animes
+      parameters:
+      - in: query
+        name: genres__name
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - Currently Airing
+          - Finished Airing
+          - Not yet aired
+        description: |-
+          * `Currently Airing` - Currently Airing
+          * `Finished Airing` - Finished Airing
+          * `Not yet aired` - Not yet aired
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - Movie
+          - ONA
+          - OVA
+          - Special
+          - TV
+        description: |-
+          * `TV` - TV Series
+          * `Movie` - Movie
+          * `OVA` - OVA
+          * `ONA` - ONA
+          * `Special` - Special
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAnimeListList'
+          description: ''
+  /api/v1/anime/{id}/:
+    get:
+      operationId: v1_anime_retrieve
+      summary: Retrieve anime details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Anime.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnimeDetail'
+          description: ''
+  /api/v1/anime/{id}/subscribe/:
+    post:
+      operationId: v1_anime_subscribe_create
+      summary: Subscribe/Unsubscribe to an anime
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Anime.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnimeListRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnimeListRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnimeListRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/episodes/:
+    get:
+      operationId: v1_episodes_list
+      summary: List all episodes
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEpisodeList'
+          description: ''
+  /api/v1/episodes/{id}/:
+    get:
+      operationId: v1_episodes_retrieve
+      summary: Retrieve episode details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this episode.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Episode'
+          description: ''
+  /api/v1/home/:
+    get:
+      operationId: v1_home_list
+      description: API endpoint for Homepage data
+      summary: Homepage dashboard data
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HomeResponse'
+          description: ''
+  /api/v1/notifications/:
+    get:
+      operationId: v1_notifications_list
+      summary: List user notifications
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+  /api/v1/notifications/{id}/:
+    get:
+      operationId: v1_notifications_retrieve
+      summary: Retrieve a notification
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/{id}/mark_read/:
+    post:
+      operationId: v1_notifications_mark_read_create
+      summary: Mark a notification as read
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/notifications/bulk-update/:
+    post:
+      operationId: v1_notifications_bulk_update_create
+      description: |-
+        Bulk update is_read status for a list of notification IDs.
+        Expected payload:
+        {
+            "notification_ids": [1, 2, 3],
+            "is_read": true
+        }
+      summary: Bulk update notification read status
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+            examples:
+              BulkUpdateExample:
+                value:
+                  notification_ids:
+                  - 1
+                  - 2
+                  - 3
+                  is_read: true
+                summary: Bulk update example
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+              examples:
+                BulkUpdateExample:
+                  value:
+                    notification_ids:
+                    - 1
+                    - 2
+                    - 3
+                    is_read: true
+                  summary: Bulk update example
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/notifications/mark_all_read/:
+    post:
+      operationId: v1_notifications_mark_all_read_create
+      summary: Mark all notifications as read
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/notifications/unread_count/:
+    get:
+      operationId: v1_notifications_unread_count_retrieve
+      summary: Get unread notifications count
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/profile/:
+    get:
+      operationId: v1_profile_retrieve
+      summary: Get current user profile
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+  /api/v1/user-badges/:
+    get:
+      operationId: v1_user_badges_list
+      summary: List user badges
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserBadgeList'
+          description: ''
+  /api/v1/user-badges/{id}/:
+    get:
+      operationId: v1_user_badges_retrieve
+      summary: Retrieve user badge details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this User Badge.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBadge'
+          description: ''
+  /api/v1/watch-history/:
+    get:
+      operationId: v1_watch_history_list
+      summary: List user watch history
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedWatchLogList'
+          description: ''
+    post:
+      operationId: v1_watch_history_create
+      summary: Create a new watch history entry
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchLogRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WatchLogRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WatchLogRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchLog'
+          description: ''
+  /api/v1/watch-history/{id}/:
+    get:
+      operationId: v1_watch_history_retrieve
+      summary: Retrieve a watch history entry
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this watch log.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchLog'
+          description: ''
+  /api/v1/watch-parties/:
+    get:
+      operationId: v1_watch_parties_list
+      summary: List active watch party rooms
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRoomList'
+          description: ''
+    post:
+      operationId: v1_watch_parties_create
+      summary: Create a new watch party room
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: ''
+  /api/v1/watch-parties/{uuid}/:
+    get:
+      operationId: v1_watch_parties_retrieve
+      summary: Retrieve watch party room details
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this room.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: ''
+    put:
+      operationId: v1_watch_parties_update
+      summary: Update watch party room
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this room.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoomRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: ''
+    patch:
+      operationId: v1_watch_parties_partial_update
+      summary: Partially update watch party room
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this room.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRoomRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRoomRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRoomRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: ''
+    delete:
+      operationId: v1_watch_parties_destroy
+      summary: Delete watch party room
+      parameters:
+      - in: path
+        name: uuid
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this room.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/watch-parties/my_rooms/:
+    get:
+      operationId: v1_watch_parties_my_rooms_retrieve
+      summary: List rooms hosted by the current user
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+          description: ''
+components:
+  schemas:
+    AnimeCharacter:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        character:
+          allOf:
+          - $ref: '#/components/schemas/Character'
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        voice_actor_name:
+          type: string
+          maxLength: 255
+        voice_actor_language:
+          type: string
+          maxLength: 50
+      required:
+      - character
+      - id
+    AnimeDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        mal_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: MyAnimeList ID
+        title:
+          type: string
+          maxLength: 255
+        japanese_title:
+          type: string
+          maxLength: 255
+        english_title:
+          type: string
+          maxLength: 255
+        synopsis:
+          type: string
+        cover_image:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        banner_image:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        score:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+          title: MAL Score
+        rank:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: MAL Rank
+        popularity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        members:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: MAL Members
+        studio:
+          type: string
+          maxLength: 255
+        source:
+          type: string
+          description: Manga, Light Novel, Original, etc.
+          maxLength: 100
+        status:
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        aired_from:
+          type: string
+          format: date
+          nullable: true
+        aired_to:
+          type: string
+          format: date
+          nullable: true
+        total_episodes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+        duration:
+          type: string
+          description: e.g., '24 min per ep'
+          maxLength: 50
+        rating:
+          type: string
+          description: e.g., 'PG-13', 'R'
+          maxLength: 50
+        genres:
+          type: array
+          items:
+            $ref: '#/components/schemas/Genre'
+          readOnly: true
+        characters:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnimeCharacter'
+          readOnly: true
+        seasons:
+          type: array
+          items:
+            $ref: '#/components/schemas/Season'
+          readOnly: true
+        is_subscribed:
+          type: boolean
+          readOnly: true
+      required:
+      - characters
+      - genres
+      - id
+      - is_subscribed
+      - seasons
+      - title
+    AnimeList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        mal_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: MyAnimeList ID
+        title:
+          type: string
+          maxLength: 255
+        cover_image:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        score:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+          title: MAL Score
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        date_aired:
+          type: string
+          nullable: true
+          readOnly: true
+        genres:
+          type: array
+          items:
+            $ref: '#/components/schemas/Genre'
+          readOnly: true
+        status:
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        rating:
+          type: string
+          description: e.g., 'PG-13', 'R'
+          maxLength: 50
+      required:
+      - date_aired
+      - genres
+      - id
+      - title
+    AnimeListRequest:
+      type: object
+      properties:
+        mal_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          nullable: true
+          title: MyAnimeList ID
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        cover_image:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        score:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,2})?$
+          nullable: true
+          title: MAL Score
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        status:
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        rating:
+          type: string
+          description: e.g., 'PG-13', 'R'
+          maxLength: 50
+      required:
+      - title
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          description: Unique identifier for the badge logic
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        icon_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+      required:
+      - description
+      - id
+      - name
+      - slug
+    BlankEnum:
+      enum:
+      - ''
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        mal_id:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          title: MyAnimeList Character ID
+        name:
+          type: string
+          maxLength: 255
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        about:
+          type: string
+      required:
+      - id
+      - mal_id
+      - name
+    Episode:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        cover_image:
+          type: string
+          format: uri
+          readOnly: true
+        aired_date:
+          type: string
+          format: date-time
+          readOnly: true
+        video_files:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoFile'
+          readOnly: true
+        external_sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExternalSource'
+          readOnly: true
+      required:
+      - aired_date
+      - cover_image
+      - external_sources
+      - id
+      - number
+      - video_files
+    EpisodeRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 255
+        number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+      required:
+      - number
+    ExternalSource:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        source_name:
+          type: string
+          readOnly: true
+        url:
+          type: string
+          readOnly: true
+        quality:
+          type: string
+          maxLength: 20
+        type:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - source_name
+      - type
+      - url
+    ExternalSourceRequest:
+      type: object
+      properties:
+        quality:
+          type: string
+          maxLength: 20
+    FansubGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        website:
+          type: string
+          format: uri
+          maxLength: 200
+      required:
+      - id
+      - name
+    FansubGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        website:
+          type: string
+          format: uri
+          maxLength: 200
+      required:
+      - name
+    Genre:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    GenreRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+      - slug
+    HomeResponse:
+      type: object
+      properties:
+        trending:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnimeList'
+        latest_episodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Episode'
+        seasonal:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnimeList'
+      required:
+      - latest_episodes
+      - seasonal
+      - trending
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        link:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - link
+      - message
+      - title
+    NotificationRequest:
+      type: object
+      properties:
+        is_read:
+          type: boolean
+    PaginatedAnimeListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnimeList'
+    PaginatedEpisodeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Episode'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+    PaginatedRoomList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Room'
+    PaginatedUserBadgeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBadge'
+    PaginatedWatchLogList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchLog'
+    PatchedReviewRequest:
+      type: object
+      properties:
+        anime:
+          type: integer
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 9223372036854775807
+        text:
+          type: string
+          minLength: 1
+    PatchedRoomRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        max_participants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        password:
+          type: string
+          writeOnly: true
+          nullable: true
+    QualityEnum:
+      enum:
+      - 480p
+      - 720p
+      - 1080p
+      type: string
+      description: |-
+        * `480p` - 480p
+        * `720p` - 720p
+        * `1080p` - 1080p
+    RatingEnum:
+      enum:
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 8
+      - 9
+      - 10
+      type: integer
+      description: |-
+        * `1` - 1
+        * `2` - 2
+        * `3` - 3
+        * `4` - 4
+        * `5` - 5
+        * `6` - 6
+        * `7` - 7
+        * `8` - 8
+        * `9` - 9
+        * `10` - 10
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: string
+          readOnly: true
+        anime:
+          type: integer
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 9223372036854775807
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - anime
+      - created_at
+      - id
+      - rating
+      - text
+      - user
+    ReviewRequest:
+      type: object
+      properties:
+        anime:
+          type: integer
+        rating:
+          allOf:
+          - $ref: '#/components/schemas/RatingEnum'
+          minimum: 0
+          maximum: 9223372036854775807
+        text:
+          type: string
+          minLength: 1
+      required:
+      - anime
+      - rating
+      - text
+    RoleEnum:
+      enum:
+      - Main
+      - Supporting
+      type: string
+      description: |-
+        * `Main` - Main
+        * `Supporting` - Supporting
+    Room:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        episode:
+          allOf:
+          - $ref: '#/components/schemas/Episode'
+          readOnly: true
+        host_username:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+        max_participants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        is_private:
+          type: boolean
+          readOnly: true
+      required:
+      - created_at
+      - episode
+      - host_username
+      - is_private
+      - uuid
+    RoomRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        max_participants:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        password:
+          type: string
+          writeOnly: true
+          nullable: true
+    Season:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        name:
+          type: string
+          readOnly: true
+        episodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Episode'
+          readOnly: true
+      required:
+      - episodes
+      - id
+      - name
+      - number
+    StatusEnum:
+      enum:
+      - Currently Airing
+      - Finished Airing
+      - Not yet aired
+      type: string
+      description: |-
+        * `Currently Airing` - Currently Airing
+        * `Finished Airing` - Finished Airing
+        * `Not yet aired` - Not yet aired
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TypeEnum:
+      enum:
+      - TV
+      - Movie
+      - OVA
+      - ONA
+      - Special
+      type: string
+      description: |-
+        * `TV` - TV Series
+        * `Movie` - Movie
+        * `OVA` - OVA
+        * `ONA` - ONA
+        * `Special` - Special
+    UserBadge:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        badge:
+          allOf:
+          - $ref: '#/components/schemas/Badge'
+          readOnly: true
+        awarded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - awarded_at
+      - badge
+      - id
+    VideoFile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        file_url:
+          type: string
+          readOnly: true
+        quality:
+          $ref: '#/components/schemas/QualityEnum'
+        is_hardcoded:
+          type: boolean
+          description: Disables Subtitle uploads if True
+        fansub_group:
+          allOf:
+          - $ref: '#/components/schemas/FansubGroup'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - fansub_group
+      - file_url
+      - id
+      - quality
+    VideoFileRequest:
+      type: object
+      properties:
+        quality:
+          $ref: '#/components/schemas/QualityEnum'
+        is_hardcoded:
+          type: boolean
+          description: Disables Subtitle uploads if True
+      required:
+      - quality
+    WatchLog:
+      type: object
+      properties:
+        episode:
+          type: integer
+        duration:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Duration watched in seconds
+        watched_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - duration
+      - episode
+      - watched_at
+    WatchLogRequest:
+      type: object
+      properties:
+        episode:
+          type: integer
+        duration:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+          description: Duration watched in seconds
+      required:
+      - duration
+      - episode
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

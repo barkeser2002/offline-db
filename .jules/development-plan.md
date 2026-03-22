@@ -77,11 +77,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.3 Input Validasyonu
 **Hedef dosyalar**: `users/serializers.py`, `content/serializers.py`, `apps/watchparty/serializers.py`
-- [ ] Username XSS pattern validation (sadece alphanumeric + _- izin ver)
-- [ ] Bio alanı HTML escape / strip validasyonu
-- [ ] Review content sanitization (bleach kullan)
-- [ ] Magnet link URL validation (sadece magnet: ve https:// izin ver)
-- [ ] File upload MIME type validation (covers/storage alanları)
+- [x] Username XSS pattern validation (sadece alphanumeric + _- izin ver)
+- [x] Bio alanı HTML escape / strip validasyonu
+- [x] Review content sanitization (bleach kullan)
+- [x] Magnet link URL validation (sadece magnet: ve https:// izin ver)
+- [x] File upload MIME type validation (covers/storage alanları)
 
 ### 1.4 Dependency Security Audit
 **Hedef**: `requirements.txt`, `frontend/package.json`
@@ -92,10 +92,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
-- [ ] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
-- [ ] Referrer-Policy: strict-origin-when-cross-origin
-- [ ] Permissions-Policy header (camera, microphone deny)
-- [ ] HSTS header (Strict-Transport-Security) - sadece prod
+- [x] Content-Security-Policy header ekle (nonce tabanlı inline script koruması)
+- [x] Referrer-Policy: strict-origin-when-cross-origin
+- [x] Permissions-Policy header (camera, microphone deny)
+- [x] HSTS header (Strict-Transport-Security) - sadece prod
 
 ---
 
@@ -103,17 +103,17 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.1 Redis Caching Stratejisi
 **Hedef dosyalar**: `content/views.py`, `users/views.py`, `aniscrap_core/settings.py`
-- [ ] `django-cacheops` veya native Django cache framework kur
-- [ ] AnimeViewSet list cache: 5 dakika TTL
-- [ ] HomeViewSet trending/seasonal cache: 10 dakika TTL
-- [ ] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
-- [ ] Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal → cache clear)
+- [x] `django-cacheops` veya native Django cache framework kur
+- [x] AnimeViewSet list cache: 5 dakika TTL
+- [x] HomeViewSet trending/seasonal cache: 10 dakika TTL
+- [x] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
+- [x] Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal → cache clear)
 
 ### 2.2 Database Optimizasyonları
 **Hedef dosyalar**: tüm `models.py` dosyaları
-- [ ] WatchLog modeline `db_index=True` ekle (user + watched_at combined index)
-- [ ] Subscription modeline compound index (user, anime)
-- [ ] Room modelinde `is_active` field için index
+- [x] WatchLog modeline `db_index=True` ekle (user + watched_at combined index)
+- [x] Subscription modeline compound index (user, anime)
+- [x] Room modelinde `is_active` field için index
 - [ ] `django-pgbouncer` veya connection pooling kur (production için)
 - [ ] Slow query logger ekle (≥100ms sorguları logla)
 
@@ -123,7 +123,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] `billing/views.py` viewset'lerini incele
 - [ ] `scraper_module/views.py` incele
 - [x] GenreBadgeStrategy genre_savant: hâlâ list tabanlı → subquery'e geç
-- [ ] Bildirim endpoint'lerinde N+1 kontrol et
+- [x] Bildirim endpoint'lerinde N+1 kontrol et
 
 ### 2.4 Celery Task Optimizasyonları
 **Hedef dosyalar**: `content/tasks.py`, `users/badge_system.py`
@@ -149,7 +149,7 @@ Bu proje bir anime izleme platformudur:
 **Hedef**: `content/views.py`, `frontend/src/app/discovery/`
 - [ ] Full-text search (Django + PostgreSQL `SearchVector` veya Elasticsearch entegrasyonu)
 - [ ] Genre + type + status multi-filter kombinasyonu
-- [ ] Rating bazlı sıralama (review ortalaması)
+- [x] Rating bazlı sıralama (review ortalaması)
 - [ ] Arama sonuçlarını highlight et (hangi alanda eşleşti)
 - [ ] Arama geçmişi (son 10 arama, localStorage)
 - [ ] Autocomplete endpoint (prefix bazlı anime önerisi)
@@ -164,9 +164,9 @@ Bu proje bir anime izleme platformudur:
 
 ### 3.3 WatchParty İyileştirmeleri
 **Hedef**: `apps/watchparty/`, `frontend/src/components/watchparty/`
-- [ ] Room şifresi (private rooms): Room modeline `password` alanı ekle
+- [x] Room şifresi (private rooms): Room modeline `password` alanı ekle
 - [ ] Chat mesajı silme (host yetkisi)
-- [ ] Katılımcı limit (Room modeline `max_participants` alanı)
+- [x] Katılımcı limit (Room modeline `max_participants` alanı)
 - [ ] Watch history sync (herkes aynı pozisyonda)
 - [ ] Emoji reaction burst animasyonu (frontend)
 - [ ] Party modu: host pause/play kontrolü audience'a yayınla
@@ -177,7 +177,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] Push notification (Web Push API + Service Worker)
 - [ ] Bildirim tercihleri sayfası (hangi bildirim türleri aktif)
 - [ ] Bildirim gruplama (aynı anime'den birden fazla epizot bildirimi → tek bildirim)
-- [ ] Okundu/okunmadı bulk işlem endpoint'i
+- [x] Okundu/okunmadı bulk işlem endpoint'i
 
 ### 3.5 Sosyal Özellikler
 **Yeni dosyalar**: `users/social.py`, migration'lar
@@ -196,9 +196,9 @@ Bu proje bir anime izleme platformudur:
 - [ ] `users/badge_system.py` tüm badge'ler için unit test (her badge strategy)
 - [ ] `core/storage.py` path traversal + upload/delete/exists testleri (YAPILDI, genişlet)
 - [ ] `apps/watchparty/consumers.py` WebSocket testleri (YAPILDI, genişlet)
-- [ ] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
+- [x] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
 - [ ] `billing/views.py` payment flow testleri
-- [ ] `content/views.py` N+1 query assertion testleri (assertNumQueries)
+- [x] `content/views.py` N+1 query assertion testleri (assertNumQueries)
 - [ ] Celery task'ların mock testi
 - [ ] Cache invalidation testleri
 - [ ] `pytest-cov` ile coverage raporu üret (CI'da minimum %80 enforce et)
@@ -313,10 +313,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 6.4 API Dokümantasyonu
 **Araç**: drf-spectacular (OpenAPI 3.0)
-- [ ] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
-- [ ] Tüm ViewSet'lere `@extend_schema` decorator ekle
-- [ ] Request/Response örnekleri her endpoint için
-- [ ] Authentication akışı dokümante et (JWT flow)
+- [x] `drf-spectacular` kur + Swagger UI ekle (`/api/docs/`)
+- [x] Tüm ViewSet'lere `@extend_schema` decorator ekle
+- [x] Request/Response örnekleri her endpoint için
+- [x] Authentication akışı dokümante et (JWT flow)
 - [ ] Postman collection otomatik üret
 
 ### 6.5 Backup & Disaster Recovery
@@ -360,7 +360,7 @@ Bu proje bir anime izleme platformudur:
 
 ## ⚠️ Bilinen Sorunlar & Teknik Borç
 
-- `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
+- [x] `content/admin.py` EpisodeAdmin: `search_fields` ile admin N+1 riski — `search_fields` çakıştığında DB full-scan yapıyor
 - `users/badge_system.py` GenreBadgeStrategy `genre_savant`: hâlâ list tabanlı `episode_ids` kullanıyor → subquery'e çevir (YAPILDI)
 - `scraper_module/` — test coverage %0, teknik borç yüksek
 - [x] `blueprints/` klasörü boş — ne içereceği belirsiz, silinebilir veya dokümante edilmeli
