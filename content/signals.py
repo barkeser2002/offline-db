@@ -1,11 +1,14 @@
+import logging
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.core.cache import cache
 from django.urls import reverse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from .models import Episode, Subscription, Genre, Season
+from .models import Anime, Episode, Subscription, Genre, Season
 from .tasks import send_new_episode_email_task, send_websocket_notifications_task
+
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Genre)
 @receiver(post_delete, sender=Genre)
@@ -32,6 +35,18 @@ def clear_home_cache(sender, instance, **kwargs):
     """
     cache.delete('home_latest_episodes')
     cache.delete(f'anime_{instance.season.anime.id}_seasons')
+    # Invalidate cache pages
+    cache.clear()
+
+@receiver(post_save, sender=Anime)
+@receiver(post_delete, sender=Anime)
+def clear_anime_cache(sender, instance, **kwargs):
+    """
+    Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal -> cache clear)
+    Clear cache when an Anime is saved (created/updated) or deleted.
+    """
+    logger.info(f"AnimeAdmin save signal -> cache clear triggered for Anime {instance.id}")
+    cache.clear()
 
 @receiver(post_save, sender=Episode)
 def notify_subscribers(sender, instance, created, **kwargs):
