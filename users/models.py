@@ -4,29 +4,25 @@ from django.utils.translation import gettext_lazy as _
 
 from django.core.validators import RegexValidator
 
-class UsernameValidator(RegexValidator):
-    regex = r'^[a-zA-Z0-9_-]+$'
-    message = _(
-        "Enter a valid username. This value may contain only letters, "
-        "numbers, and _/- characters."
-    )
-    flags = 0
-
 class User(AbstractUser):
+    username_validator = RegexValidator(
+        regex=r'^[\w-]+$',
+        message=_("Enter a valid username. This value may contain only letters, numbers, and _/- characters."),
+        code='invalid_username'
+    )
     username = models.CharField(
         _("username"),
         max_length=150,
         unique=True,
-        help_text=_(
-            "Required. 150 characters or fewer. Letters, digits and _/- only."
-        ),
-        validators=[UsernameValidator()],
+        help_text=_("Required. 150 characters or fewer. Letters, digits, and _/- only."),
+        validators=[username_validator],
         error_messages={
             "unique": _("A user with that username already exists."),
         },
     )
+
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
-    bio = models.TextField(blank=True, max_length=500, verbose_name=_("Biography"))
+    bio = models.TextField(_("bio"), blank=True, max_length=500)
 
     def __str__(self):
         return self.username
