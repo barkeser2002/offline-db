@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
 from .models import Notification, UserBadge, WatchLog, Badge
-from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserSerializer
+from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer
 
 class LoginThrottle(AnonRateThrottle):
     scope = 'login'
@@ -62,6 +62,39 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         notification.save()
         return Response({'status': 'marked as read'})
 
+    @action(detail=False, methods=['post'], url_path='bulk-update')
+    def bulk_update_status(self, request):
+        """
+        Bulk update is_read status for a list of notification IDs.
+        Expected payload:
+        {
+            "notification_ids": [1, 2, 3],
+            "is_read": true
+        }
+        """
+        notification_ids = request.data.get('notification_ids', [])
+        is_read = request.data.get('is_read')
+
+        if not isinstance(notification_ids, list) or is_read is None:
+            return Response(
+                {"error": "Invalid payload. 'notification_ids' (list) and 'is_read' (boolean) are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not notification_ids:
+             return Response({"status": "no notifications updated", "updated_count": 0})
+
+        # Ensure users only update their own notifications
+        updated_count = Notification.objects.filter(
+            user=request.user,
+            id__in=notification_ids
+        ).update(is_read=is_read)
+
+        return Response({
+            "status": "success",
+            "updated_count": updated_count
+        })
+
 class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserBadgeSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -97,17 +130,42 @@ class UserProfileAPIView(APIView):
             'id': user.id,
             'username': user.username,
             'email': user.email,
-            'bio': getattr(user, 'bio', ''),
             'is_premium': getattr(user, 'is_premium', False),
+            'bio': getattr(user, 'bio', ''),
             'date_joined': user.date_joined,
             'badges': UserBadgeSerializer(badges, many=True).data,
             'recent_history': WatchLogSerializer(history, many=True).data
         })
 
     def patch(self, request):
+        import bleach
+        import re
+        from django.db import IntegrityError
+
         user = request.user
-        serializer = UserSerializer(user, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data
+
+        if 'bio' in data:
+            bio_text = data['bio']
+            # Sanitize HTML input using bleach
+            user.bio = bleach.clean(bio_text, tags=[], strip=True)
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if 'username' in data and data['username'] != user.username:
+            username = data['username']
+            # Only allow alphanumeric + _-
+            if not re.match(r'^[a-zA-Z0-9_-]+$', username):
+                return Response(
+                    {"error": "Username can only contain alphanumeric characters, underscores, and hyphens."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if User.objects.filter(username=username).exists():
+                return Response(
+                    {"error": "Username is already taken."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.username = username
+
+        user.save()
+        return Response({'status': 'success'})

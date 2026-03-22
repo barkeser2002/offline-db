@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 
 class User(AbstractUser):
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
-    bio = models.TextField(blank=True, max_length=500, verbose_name=_("Bio"))
+    bio = models.TextField(blank=True, verbose_name=_("Bio"))
 
     def __str__(self):
         return self.username
@@ -58,6 +58,10 @@ class Notification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+            models.Index(fields=['user', '-created_at']),
+        ]
 
     def __str__(self):
         return f"Notification for {self.user.username}: {self.title}"
