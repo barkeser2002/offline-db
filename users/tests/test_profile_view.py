@@ -50,3 +50,45 @@ def test_profile_view_context(django_user_model):
     assert len(data['recent_history']) == 1
     # Check that episode is related correctly
     assert data['recent_history'][0]['episode'] == episode.id
+    assert 'bio' in data
+
+@pytest.mark.django_db
+def test_profile_update_bio(django_user_model):
+    """Test that users can update their bio."""
+    client = APIClient()
+    user = django_user_model.objects.create_user(username='testuser_bio', password='password')
+    client.force_authenticate(user=user)
+
+    url = reverse('user-profile')
+
+    # Update bio using PATCH
+    data = {'bio': 'This is my new bio.'}
+    response = client.patch(url, data, format='json')
+    assert response.status_code == 200
+    assert response.json()['bio'] == 'This is my new bio.'
+
+    # Verify bio was saved in the database
+    user.refresh_from_db()
+    assert user.bio == 'This is my new bio.'
+
+@pytest.mark.django_db
+def test_profile_update_bio_sanitization(django_user_model):
+    """Test that HTML tags in bio are stripped."""
+    client = APIClient()
+    user = django_user_model.objects.create_user(username='testuser_bio_san', password='password')
+    client.force_authenticate(user=user)
+
+    url = reverse('user-profile')
+
+    # Attempt to inject XSS in bio
+    malicious_bio = '<script>alert("xss")</script><b>Hello</b>'
+    data = {'bio': malicious_bio}
+    response = client.patch(url, data, format='json')
+
+    assert response.status_code == 200
+    # bleach.clean with strip=True should remove the tags entirely
+    assert response.json()['bio'] == 'alert("xss")Hello'
+
+    # Verify sanitized bio was saved
+    user.refresh_from_db()
+    assert user.bio == 'alert("xss")Hello'

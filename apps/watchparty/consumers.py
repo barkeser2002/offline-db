@@ -20,8 +20,18 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
         if not self.user or not self.user.is_authenticated:
             raise DenyConnection()
 
-        # Verify Room Exists
-        if not await self.room_exists(self.room_uuid):
+        # Parse query string for password
+        query_string = self.scope.get('query_string', b'').decode('utf-8')
+        from urllib.parse import parse_qs
+        query_params = parse_qs(query_string)
+        password = query_params.get('password', [''])[0]
+
+        # Verify Room Exists and Password
+        if not await self.verify_room_access(self.room_uuid, self.user, password):
+            raise DenyConnection()
+
+        # Verify Room Capacity
+        if not await self.check_room_capacity(self.room_uuid, self.user):
             raise DenyConnection()
 
         # Join room group
@@ -122,8 +132,38 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
     # DB Operations
     @database_sync_to_async
-    def room_exists(self, uuid):
-        return Room.objects.filter(uuid=uuid).exists()
+    def verify_room_access(self, uuid, user, password):
+        try:
+            room = Room.objects.get(uuid=uuid)
+            if room.password and room.host != user:
+                if password != room.password:
+                    return False
+            return True
+        except Room.DoesNotExist:
+            return False
+
+    @database_sync_to_async
+    def check_room_capacity(self, uuid, user):
+        try:
+            room = Room.objects.get(uuid=uuid)
+            # Host can always join
+            if room.host == user:
+                return True
+
+            # If max_participants is set, verify active participant count
+            if room.max_participants > 0:
+                # If user is already an active participant, they can rejoin
+                if Participant.objects.filter(room_id=uuid, user=user, is_online=True).exists():
+                    return True
+
+                # Otherwise check if there's room
+                active_participants = Participant.objects.filter(room_id=uuid, is_online=True).count()
+                if active_participants >= room.max_participants:
+                    return False
+
+            return True
+        except Room.DoesNotExist:
+            return False
 
     @database_sync_to_async
     def is_host(self, uuid, user):
