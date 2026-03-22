@@ -10,6 +10,8 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch, Avg
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 from .models import Anime, Episode, Season, Subscription, VideoFile
 from .serializers import (
@@ -28,6 +30,11 @@ class SubscribeRateThrottle(UserRateThrottle):
 )
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
+
+    @method_decorator(cache_page(60 * 5))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'english_title', 'japanese_title']
     filterset_fields = ['status', 'type', 'genres__name']
@@ -107,6 +114,7 @@ class HomeViewSet(viewsets.ViewSet):
             )
         }
     )
+    @method_decorator(cache_page(60 * 10))
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]
