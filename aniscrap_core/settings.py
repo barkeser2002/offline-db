@@ -32,6 +32,7 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
 # Session Cookie Security
 SESSION_COOKIE_SECURE = True
@@ -64,6 +65,7 @@ INSTALLED_APPS = [
     "django_filters",
     "corsheaders",
     "django_celery_results",
+    "drf_spectacular",
 
     "unfold",  # Added Unfold Theme
     "django.contrib.admin",
@@ -90,11 +92,13 @@ AUTH_USER_MODEL = "users.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.middleware.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "csp.middleware.CSPMiddleware",
+    "aniscrap_core.middleware.security.SecurityHeadersMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -207,7 +211,7 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 
-# Caching
+# Caching - Native Django cache framework configured for Redis Caching Strategy
 if os.getenv('USE_SQLITE', 'False') == 'True':
     CACHES = {
         "default": {
@@ -275,7 +279,8 @@ if not SHOPIER_SECRET and not DEBUG:
 
 # Content Security Policy (CSP)
 CSP_DEFAULT_SRC = ("'self'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
-CSP_SCRIPT_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_SCRIPT_SRC = ("'self'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io")
+CSP_INCLUDE_NONCE_IN = ('script-src',)
 CSP_STYLE_SRC = ("'self'", "'unsafe-inline'", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "fonts.googleapis.com")
 CSP_IMG_SRC = ("'self'", "data:", "cdn.jsdelivr.net", "cdn.tailwindcss.com", "cdn.plyr.io", "i.ytimg.com", "img.youtube.com")
 CSP_FONT_SRC = ("'self'", "fonts.gstatic.com", "cdn.jsdelivr.net")
@@ -308,6 +313,7 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
@@ -330,6 +336,15 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
+}
+
+# Spectacular Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AniScrap API',
+    'DESCRIPTION': 'AniScrap platform API documentation',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
 }
 
 # CORS Configuration

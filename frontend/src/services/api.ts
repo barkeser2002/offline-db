@@ -183,9 +183,10 @@ export const contentService = {
 };
 
 export const watchPartyService = {
-  createRoom: async (episodeId: number) => {
+  createRoom: async (episodeId: number, maxParticipants: number = 0) => {
     const { data } = await api.post<Room>('/watch-parties/', {
       episode_id: episodeId,
+      max_participants: maxParticipants,
     });
     return data;
   },
