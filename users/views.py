@@ -131,7 +131,41 @@ class UserProfileAPIView(APIView):
             'username': user.username,
             'email': user.email,
             'is_premium': getattr(user, 'is_premium', False),
+            'bio': getattr(user, 'bio', ''),
             'date_joined': user.date_joined,
             'badges': UserBadgeSerializer(badges, many=True).data,
             'recent_history': WatchLogSerializer(history, many=True).data
         })
+
+    def patch(self, request):
+        import bleach
+        import re
+        from django.db import IntegrityError
+
+        user = request.user
+        data = request.data
+
+        if 'bio' in data:
+            bio_text = data['bio']
+            # Sanitize HTML input using bleach
+            user.bio = bleach.clean(bio_text, tags=[], strip=True)
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if 'username' in data and data['username'] != user.username:
+            username = data['username']
+            # Only allow alphanumeric + _-
+            if not re.match(r'^[a-zA-Z0-9_-]+$', username):
+                return Response(
+                    {"error": "Username can only contain alphanumeric characters, underscores, and hyphens."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            if User.objects.filter(username=username).exists():
+                return Response(
+                    {"error": "Username is already taken."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.username = username
+
+        user.save()
+        return Response({'status': 'success'})
