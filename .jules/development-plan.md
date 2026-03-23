@@ -85,10 +85,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.4 Dependency Security Audit
 **Hedef**: `requirements.txt`, `frontend/package.json`
-- [ ] `pip-audit` çalıştır, tüm bilinen CVE'leri gider
-- [ ] `npm audit` → tüm HIGH ve CRITICAL'ları fix et
-- [ ] Channels >= 4.x, Django >= 5.x güncel versiyona geç
-- [ ] `djangorestframework-simplejwt` en son versiyona güncelle
+- [x] `pip-audit` çalıştır, tüm bilinen CVE'leri gider
+- [x] `npm audit` → tüm HIGH ve CRITICAL'ları fix et
+- [x] Channels >= 4.x, Django >= 5.x güncel versiyona geç
+- [x] `djangorestframework-simplejwt` en son versiyona güncelle
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
