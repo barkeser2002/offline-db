@@ -2,8 +2,8 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import {
-  Card,
-  CardBody,
+
+
   Button,
   Input,
   ScrollShadow,
@@ -13,8 +13,8 @@ import {
 } from "@nextui-org/react";
 
 interface PartyPanelProps {
-  chatMessages: any[];
-  participants: any[];
+  chatMessages: { user: string; text: string; time: string; type?: string; is_system?: boolean; message?: string; username?: string }[];
+  participants: { id: number; username: string }[];
   onSendMessage: (msg: string) => void;
   onSendEmote: (emote: string) => void;
   isConnected: boolean;

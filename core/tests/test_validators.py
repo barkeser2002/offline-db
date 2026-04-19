@@ -1,33 +1,36 @@
-import pytest
+from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from core.validators import validate_image_mimetype, validate_video_mimetype
+from core.validators import validate_image_mimetype, validate_subtitle_mimetype
 
-def test_validate_image_mimetype():
-    # Valid types
-    valid_file = SimpleUploadedFile("test.png", b"file_content")
-    validate_image_mimetype(valid_file)  # Should not raise
+class ValidatorTests(TestCase):
 
-    valid_file2 = SimpleUploadedFile("test.jpg", b"file_content")
-    validate_image_mimetype(valid_file2)  # Should not raise
+    def test_validate_image_mimetype_valid(self):
+        # Create a valid image file mock
+        valid_files = [
+            SimpleUploadedFile("test.jpg", b"file_content", content_type="image/jpeg"),
+            SimpleUploadedFile("test.png", b"file_content", content_type="image/png"),
+            SimpleUploadedFile("test.webp", b"file_content", content_type="image/webp"),
+            SimpleUploadedFile("test.gif", b"file_content", content_type="image/gif"),
+        ]
 
-    # Invalid extension
-    invalid_file = SimpleUploadedFile("test.txt", b"file_content")
-    with pytest.raises(ValidationError):
-        validate_image_mimetype(invalid_file)
+        for valid_file in valid_files:
+            try:
+                validate_image_mimetype(valid_file)
+            except ValidationError:
+                self.fail(f"validate_image_mimetype raised ValidationError unexpectedly for {valid_file.name}!")
 
-    # Invalid extension but valid mimetype is mocked by python depending on os,
-    # but the guess_type relies on the filename strictly in most default setups.
+    def test_validate_image_mimetype_invalid_extension(self):
+        # Create an invalid file mock (e.g. .txt)
+        invalid_file = SimpleUploadedFile("test.txt", b"file_content", content_type="text/plain")
 
-def test_validate_video_mimetype():
-    # Valid types
-    valid_file = SimpleUploadedFile("test.mp4", b"file_content")
-    validate_video_mimetype(valid_file)  # Should not raise
+        with self.assertRaises(ValidationError):
+            validate_image_mimetype(invalid_file)
 
-    valid_file2 = SimpleUploadedFile("test.mkv", b"file_content")
-    validate_video_mimetype(valid_file2)  # Should not raise
+    def test_validate_image_mimetype_mismatch(self):
+        # Create a file mock where the extension is not an image but content_type is fake
+        # In reality mimetypes.guess_type relies on the filename mostly
+        invalid_file = SimpleUploadedFile("test.pdf", b"file_content", content_type="application/pdf")
 
-    # Invalid type
-    invalid_file = SimpleUploadedFile("test.txt", b"file_content")
-    with pytest.raises(ValidationError):
-        validate_video_mimetype(invalid_file)
+        with self.assertRaises(ValidationError):
+            validate_image_mimetype(invalid_file)

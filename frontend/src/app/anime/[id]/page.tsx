@@ -12,6 +12,7 @@ import {
 } from "@nextui-org/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 export default async function AnimeDetail({
   params,
@@ -126,11 +127,12 @@ export default async function AnimeDetail({
                             className="bg-surface border border-white/5 hover:border-primary/50"
                           >
                             <CardBody className="flex flex-row gap-4 p-3">
-                              <div className="w-24 aspect-video bg-black/50 rounded flex-shrink-0 overflow-hidden">
+                              <div className="w-24 aspect-video bg-black/50 rounded flex-shrink-0 overflow-hidden relative">
                                 {ep.cover_image ? (
-                                  <img
+                                  <Image
                                     src={ep.cover_image}
-                                    className="w-full h-full object-cover"
+                                    className="object-cover"
+                                    fill
                                     alt={`Episode ${ep.number} thumbnail`}
                                   />
                                 ) : (

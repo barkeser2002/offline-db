@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import (
+    Subtitle,
     Anime, Episode, VideoFile, Season, Character, AnimeCharacter,
     Genre, ExternalSource, Subscription, FansubGroup
 )
@@ -40,12 +41,17 @@ class VideoFileSerializer(serializers.ModelSerializer):
 
 class ExternalSourceSerializer(serializers.ModelSerializer):
     source_name = serializers.CharField(source='source_type', read_only=True)
-    url = serializers.CharField(source='embed_url', read_only=True)
+    url = serializers.CharField(source='embed_url')
     type = serializers.CharField(source='source_type', read_only=True)
 
     class Meta:
         model = ExternalSource
         fields = ['id', 'source_name', 'url', 'quality', 'type']
+
+    def validate_url(self, value):
+        if value and not (value.startswith('magnet:') or value.startswith('https://')):
+            raise serializers.ValidationError("URL must start with 'https://' or 'magnet:'")
+        return value
 
 class EpisodeSerializer(serializers.ModelSerializer):
     aired_date = serializers.DateTimeField(source='created_at', read_only=True)
@@ -80,10 +86,8 @@ class AnimeListSerializer(serializers.ModelSerializer):
     
     date_aired = serializers.SerializerMethodField()
 
-    def get_date_aired(self, obj) -> str | None:
-        if obj.aired_from:
-            return obj.aired_from.isoformat()
-        return None
+    def get_date_aired(self, obj):
+        return obj.aired_from
 
 class AnimeDetailSerializer(serializers.ModelSerializer):
     genres = GenreSerializer(many=True, read_only=True)
@@ -101,14 +105,22 @@ class AnimeDetailSerializer(serializers.ModelSerializer):
             'rating', 'genres', 'characters', 'seasons', 'is_subscribed'
         ]
 
-    def get_is_subscribed(self, obj) -> bool:
-        request = self.context.get('request')
-        if getattr(self, 'swagger_fake_view', False) or not request:
-            return False
-        user = request.user
+    def get_is_subscribed(self, obj):
+        user = self.context.get('request').user
         if user and user.is_authenticated:
             return Subscription.objects.filter(user=user, anime=obj).exists()
         return False
+
+    def validate_cover_image(self, value):
+        # Allow URL or file upload. If file, validate mime.
+        if hasattr(value, 'file'):
+            validate_mime_type(value.file, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+        return value
+
+    def validate_banner_image(self, value):
+        if hasattr(value, 'file'):
+            validate_mime_type(value.file, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+        return value
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     anime = AnimeListSerializer(read_only=True)
@@ -116,3 +128,50 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Subscription
         fields = ['id', 'anime', 'created_at']
+
+
+import magic
+from rest_framework import serializers
+
+def validate_mime_type(file, allowed_mimes):
+    if hasattr(file, 'temporary_file_path'):
+        mime = magic.from_file(file.temporary_file_path(), mime=True)
+    else:
+        # File might be InMemoryUploadedFile, read chunk
+        mime = magic.from_buffer(file.read(2048), mime=True)
+        file.seek(0)
+
+    if mime not in allowed_mimes:
+        raise serializers.ValidationError(f"Unsupported file type: {mime}")
+
+class ImageUploadSerializer(serializers.Serializer):
+    cover_image = serializers.ImageField(required=False)
+    banner_image = serializers.ImageField(required=False)
+
+    def validate_cover_image(self, value):
+        if value:
+            validate_mime_type(value, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+        return value
+
+    def validate_banner_image(self, value):
+        if value:
+            validate_mime_type(value, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+        return value
+
+from django.core.validators import FileExtensionValidator
+
+class SubtitleSerializer(serializers.ModelSerializer):
+    file = serializers.FileField()
+
+    class Meta:
+        model = Subtitle
+        fields = ['id', 'episode', 'fansub_group', 'lang', 'file', 'created_at']
+
+    def validate_file(self, value):
+        if value:
+            # Also check extension since some text files can have the same MIME type
+            ext = value.name.split('.')[-1].lower()
+            if ext not in ['vtt', 'srt', 'ass']:
+                raise serializers.ValidationError("File extension must be vtt, srt, or ass")
+            validate_mime_type(value, ['text/vtt', 'text/plain', 'application/x-subrip'])
+        return value

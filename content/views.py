@@ -29,12 +29,12 @@ class SubscribeRateThrottle(UserRateThrottle):
     retrieve=extend_schema(summary="Retrieve anime details"),
 )
 class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
-
-    @method_decorator(cache_page(60 * 5))
+    # AnimeViewSet list cache: 5 dakika TTL
+    @method_decorator(cache_page(60 * 5, key_prefix='anime_list'))
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'english_title', 'japanese_title']
     filterset_fields = ['status', 'type', 'genres__name']
@@ -114,7 +114,8 @@ class HomeViewSet(viewsets.ViewSet):
             )
         }
     )
-    @method_decorator(cache_page(60 * 10))
+    # HomeViewSet trending/seasonal cache: 10 dakika TTL
+    @method_decorator(cache_page(60 * 10, key_prefix='home_list'))
     def list(self, request):
         # Optimization: Add prefetch_related('genres') to avoid N+1 queries
         trending = Anime.objects.prefetch_related('genres').order_by('-popularity')[:10]

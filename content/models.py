@@ -4,7 +4,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from core.validators import magnet_or_https_validator, validate_subtitle_mimetype, validate_image_mimetype, validate_video_mimetype
+from core.validators import validate_mime_type
 
 class Genre(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -38,8 +38,8 @@ class Anime(models.Model):
     japanese_title = models.CharField(max_length=255, blank=True, verbose_name=_("Japanese Title"))
     english_title = models.CharField(max_length=255, blank=True, verbose_name=_("English Title"))
     synopsis = models.TextField(blank=True)
-    cover_image = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
-    banner_image = models.URLField(blank=True, null=True, verbose_name=_("Banner Image"), validators=[validate_image_mimetype])
+    cover_image = models.URLField(blank=True, null=True)
+    banner_image = models.URLField(blank=True, null=True, verbose_name=_("Banner Image"))
     genres = models.ManyToManyField(Genre, related_name='animes', blank=True)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='TV')
     
@@ -99,7 +99,7 @@ class Character(models.Model):
     mal_id = models.PositiveIntegerField(unique=True, verbose_name=_("MyAnimeList Character ID"))
     name = models.CharField(max_length=255)
     name_kanji = models.CharField(max_length=255, blank=True)
-    image_url = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
+    image_url = models.URLField(blank=True, null=True)
     about = models.TextField(blank=True)
     
     class Meta:
@@ -118,7 +118,7 @@ class AnimeCharacter(models.Model):
     role = models.CharField(max_length=20, choices=Character.ROLE_CHOICES, default='Supporting')
     voice_actor_name = models.CharField(max_length=255, blank=True)
     voice_actor_language = models.CharField(max_length=50, blank=True, default='Japanese')
-    voice_actor_image = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
+    voice_actor_image = models.URLField(blank=True, null=True)
     
     class Meta:
         unique_together = ('anime', 'character')
@@ -141,7 +141,7 @@ class ExternalSource(models.Model):
     
     episode = models.ForeignKey('Episode', on_delete=models.CASCADE, related_name='external_sources')
     source_type = models.CharField(max_length=50, choices=SOURCE_TYPES)
-    embed_url = models.CharField(max_length=500, help_text=_("Embed/iframe URL"), validators=[magnet_or_https_validator])
+    embed_url = models.URLField(help_text=_("Embed/iframe URL"))
     quality = models.CharField(max_length=20, blank=True)
     language = models.CharField(max_length=10, default='sub', help_text=_("sub or dub"))
     is_working = models.BooleanField(default=True)
@@ -168,7 +168,7 @@ class Episode(models.Model):
     season = models.ForeignKey(Season, on_delete=models.CASCADE, related_name='episodes')
     number = models.PositiveIntegerField()
     title = models.CharField(max_length=255, blank=True)
-    thumbnail = models.URLField(blank=True, null=True, validators=[validate_image_mimetype])
+    thumbnail = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -216,7 +216,7 @@ class Subtitle(models.Model):
     episode = models.ForeignKey(Episode, on_delete=models.CASCADE, related_name='subtitles')
     fansub_group = models.ForeignKey(FansubGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='subtitles')
     lang = models.CharField(max_length=10, default='tr')
-    file = models.FileField(upload_to='subtitles/', validators=[validate_subtitle_mimetype])
+    file = models.FileField(upload_to='subtitles/', validators=[validate_mime_type])
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

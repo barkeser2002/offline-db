@@ -41,7 +41,7 @@ export default function NotFound() {
           Page Not Found
         </h1>
         <p className="text-foreground/60 mb-8 max-w-md mx-auto">
-          Looks like this page got isekai'd to another dimension. Let's get you
+          Looks like this page got isekai&apos;d to another dimension. Let&apos;s get you
           back to familiar territory.
         </p>
 

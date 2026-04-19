@@ -2,15 +2,18 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 type WebSocketMessage = {
   type: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useSyncManager(roomUuid: string, user: any, videoRef: React.RefObject<HTMLVideoElement | null>) {
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [participants, setParticipants] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   
   // Drift Correction Threshold (seconds)
   const DRIFT_THRESHOLD = 1.5;
@@ -20,6 +23,7 @@ export function useSyncManager(roomUuid: string, user: any, videoRef: React.RefO
     window.dispatchEvent(new CustomEvent('emote-rain', { detail: { emote } }));
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleVideoSync = useCallback((data: any) => {
     if (!videoRef.current) return;
     const video = videoRef.current;

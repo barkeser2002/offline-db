@@ -85,10 +85,10 @@ Bu proje bir anime izleme platformudur:
 
 ### 1.4 Dependency Security Audit
 **Hedef**: `requirements.txt`, `frontend/package.json`
-- [ ] `pip-audit` çalıştır, tüm bilinen CVE'leri gider
-- [ ] `npm audit` → tüm HIGH ve CRITICAL'ları fix et
-- [ ] Channels >= 4.x, Django >= 5.x güncel versiyona geç
-- [ ] `djangorestframework-simplejwt` en son versiyona güncelle
+- [x] `pip-audit` çalıştır, tüm bilinen CVE'leri gider
+- [x] `npm audit` → tüm HIGH ve CRITICAL'ları fix et
+- [x] Channels >= 4.x, Django >= 5.x güncel versiyona geç
+- [x] `djangorestframework-simplejwt` en son versiyona güncelle
 
 ### 1.5 Security Headers (Middleware)
 **Hedef dosyalar**: `aniscrap_core/settings.py`
@@ -103,11 +103,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.1 Redis Caching Stratejisi
 **Hedef dosyalar**: `content/views.py`, `users/views.py`, `aniscrap_core/settings.py`
-- [ ] `django-cacheops` veya native Django cache framework kur
-- [ ] AnimeViewSet list cache: 5 dakika TTL
-- [ ] HomeViewSet trending/seasonal cache: 10 dakika TTL
-- [ ] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
-- [ ] Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal → cache clear)
+- [x] `django-cacheops` veya native Django cache framework kur
+- [x] AnimeViewSet list cache: 5 dakika TTL
+- [x] HomeViewSet trending/seasonal cache: 10 dakika TTL
+- [x] Badge hesaplama sonuçları cache (user.id bazlı): 30 dakika TTL
+- [x] Cache invalidation strategy: signal tabanlı (AnimeAdmin'de save signal → cache clear)
 
 ### 2.2 Database Optimizasyonları
 **Hedef dosyalar**: tüm `models.py` dosyaları
