@@ -1,9 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import WatchLog
-from core.models import ChatMessage
 from content.models import Subscription, Review, VideoFile
-from apps.watchparty.models import Room
+from apps.watchparty.models import Room, Message
 from .services import check_badges, check_chat_badges
 
 @receiver(post_save, sender=VideoFile)
@@ -26,10 +25,10 @@ def check_badges_on_watch(sender, instance, created, **kwargs):
     if created:
         check_badges(instance.user)
 
-@receiver(post_save, sender=ChatMessage)
+@receiver(post_save, sender=Message)
 def check_badges_on_chat(sender, instance, created, **kwargs):
-    if created and instance.user:
-        check_chat_badges(instance.user)
+    if created and instance.sender:
+        check_chat_badges(instance.sender)
 
 @receiver(post_save, sender=Room)
 def check_badges_on_watch_party(sender, instance, created, **kwargs):

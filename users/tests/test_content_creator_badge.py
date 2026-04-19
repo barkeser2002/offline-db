@@ -18,6 +18,9 @@ class ContentCreatorBadgeTest(TestCase):
         self.episode = Episode.objects.create(season=self.season, number=1, title="Ep 1")
 
     def test_content_creator_badge(self):
+        from django.core.cache import cache
+        cache.clear()
+
         # Upload 4 videos
         for i in range(4):
             VideoFile.objects.create(
@@ -27,6 +30,7 @@ class ContentCreatorBadgeTest(TestCase):
                 hls_path=f'path/to/video_{i}.m3u8',
                 encryption_key=f'key_{i}'
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Verify no badge yet
         # check_badges is called via signal, so we can verify directly
@@ -40,6 +44,7 @@ class ContentCreatorBadgeTest(TestCase):
             hls_path='path/to/video_5.m3u8',
             encryption_key='key_5'
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Verify badge awarded
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
