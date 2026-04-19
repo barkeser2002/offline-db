@@ -69,6 +69,6 @@
 **Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
 **Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
 
-## 2024-10-29 - Episode Import N+1 Optimization
-**Learning:** Calling `Episode.objects.get_or_create()` in a loop during bulk imports from an external API (like Jikan) creates an N+1 query problem, significantly slowing down the process for series with many episodes.
-**Action:** Refactored `import_jikan_view` in `content/admin.py` to fetch existing episode numbers for the season in one query and use `bulk_create` to insert only missing episodes in a single database hit.
+## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
+**Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
+**Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
