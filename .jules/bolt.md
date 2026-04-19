@@ -68,3 +68,7 @@
 ## 2026-03-13 - [Add index to Room is_active]
 **Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
 **Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
+
+## 2024-10-29 - Episode Import N+1 Optimization
+**Learning:** Calling `Episode.objects.get_or_create()` in a loop during bulk imports from an external API (like Jikan) creates an N+1 query problem, significantly slowing down the process for series with many episodes.
+**Action:** Refactored `import_jikan_view` in `content/admin.py` to fetch existing episode numbers for the season in one query and use `bulk_create` to insert only missing episodes in a single database hit.
