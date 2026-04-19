@@ -94,16 +94,31 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
             # Sanitize message to prevent XSS
             if message:
                 sanitized_message = escape(message)
-                await self.save_message(self.room_uuid, self.user, sanitized_message)
+                msg_obj = await self.save_message(self.room_uuid, self.user, sanitized_message)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'chat_message',
                         'message': sanitized_message,
                         'username': self.user.username,
-                        'is_system': False
+                        'is_system': False,
+                        'id': msg_obj.id,
                     }
                 )
+        elif msg_type == 'delete_message':
+            # Only the host can delete messages
+            if await self.is_host(self.room_uuid, self.user):
+                message_id = data.get('message_id')
+                if message_id:
+                    deleted = await self.delete_message(message_id)
+                    if deleted:
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'message_deleted',
+                                'message_id': message_id
+                            }
+                        )
         elif msg_type == 'emote':
             # Emote Rain
             await self.channel_layer.group_send(
@@ -120,6 +135,12 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps(event))
+
+    async def message_deleted(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'message_deleted',
+            'message_id': event['message_id']
+        }))
 
     async def emote_rain(self, event):
         await self.send(text_data=json.dumps(event))
@@ -182,7 +203,16 @@ class WatchPartyConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_message(self, uuid, user, content):
-        Message.objects.create(room_id=uuid, sender=user, content=content)
+        return Message.objects.create(room_id=uuid, sender=user, content=content)
+
+    @database_sync_to_async
+    def delete_message(self, message_id):
+        try:
+            msg = Message.objects.get(id=message_id)
+            msg.delete()
+            return True
+        except Message.DoesNotExist:
+            return False
 
     async def broadcast_system_message(self, message):
         await self.channel_layer.group_send(

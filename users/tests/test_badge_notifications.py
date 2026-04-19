@@ -28,6 +28,9 @@ class BadgeNotificationTests(TestCase):
         self.user.save()
 
         # Run check_badges
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         # 1. Verify DB Notification
@@ -59,6 +62,9 @@ class BadgeNotificationTests(TestCase):
         self.user.save()
 
         # Run check_badges
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         # Should be no new notifications
