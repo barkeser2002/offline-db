@@ -27,7 +27,7 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_size_query_param = 'page_size'
     max_page_size = 100
 
-class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     serializer_class = NotificationSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
@@ -72,11 +72,6 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixi
             "is_read": true
         }
         """
-        if 'notification_ids' not in request.data or not isinstance(request.data['notification_ids'], list):
-            return Response({'error': 'notification_ids list is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if 'is_read' not in request.data:
-             return Response({'error': 'is_read boolean is required'}, status=status.HTTP_400_BAD_REQUEST)
-
         notification_ids = request.data.get('notification_ids', [])
         is_read = request.data.get('is_read')
 

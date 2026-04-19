@@ -72,48 +72,27 @@ def calculate_revenue():
                     encoder_units[enc_id] = encoder_units.get(enc_id, 0) + unit_share
                     total_encoder_units += unit_share
 
-    # 3. Consolidate and Distribute Pools
-    user_shares = {} # {user_id: Decimal(share)}
-
-    # Calculate Fansub Shares
+    # 3. Distribute Fansub Pool
     if total_fansub_units > 0:
+        # Batch fetch groups to avoid N+1 queries in distribution loop
         groups = FansubGroup.objects.filter(id__in=fansub_units.keys()).select_related('owner')
         group_map = {g.id: g for g in groups}
-        for fg_id, units in fansub_units.items():
-            group = group_map.get(fg_id)
-            if group and group.owner_id:
-                share = (Decimal(units) / Decimal(total_fansub_units)) * fansub_pool
-                user_shares[group.owner_id] = user_shares.get(group.owner_id, Decimal(0)) + share
 
-    # Calculate Encoder Shares
+        for fg_id, units in fansub_units.items():
+            share = (Decimal(units) / Decimal(total_fansub_units)) * fansub_pool
+            group = group_map.get(fg_id)
+            if group and group.owner:
+                wallet, _ = Wallet.objects.get_or_create(user=group.owner)
+                wallet.balance = Decimal(wallet.balance) + share
+                wallet.save()
+
+    # 4. Distribute Encoder Pool
     if total_encoder_units > 0:
         for enc_id, units in encoder_units.items():
             share = (Decimal(units) / Decimal(total_encoder_units)) * encoder_pool
-            user_shares[enc_id] = user_shares.get(enc_id, Decimal(0)) + share
-
-    # 4. Bulk Update Wallets
-    if user_shares:
-        # Get existing wallets
-        wallets = Wallet.objects.filter(user_id__in=user_shares.keys())
-        wallet_map = {w.user_id: w for w in wallets}
-
-        # Create missing wallets
-        missing_user_ids = set(user_shares.keys()) - set(wallet_map.keys())
-        if missing_user_ids:
-            new_wallets = [Wallet(user_id=uid) for uid in missing_user_ids]
-            Wallet.objects.bulk_create(new_wallets, ignore_conflicts=True)
-            # Re-fetch wallets to get the full list with new ones
-            wallets = Wallet.objects.filter(user_id__in=user_shares.keys())
-            wallet_map = {w.user_id: w for w in wallets}
-
-        # Update balances in memory
-        for user_id, share in user_shares.items():
-            wallet = wallet_map.get(user_id)
-            if wallet:
-                wallet.balance = Decimal(wallet.balance) + share
-
-        # Bulk update
-        Wallet.objects.bulk_update(wallets, ['balance'])
+            wallet, _ = Wallet.objects.get_or_create(user_id=enc_id)
+            wallet.balance = Decimal(wallet.balance) + share
+            wallet.save()
 
     # 5. Mark payments as distributed
     payments.update(is_distributed=True)

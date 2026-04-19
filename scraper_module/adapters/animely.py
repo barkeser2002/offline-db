@@ -215,76 +215,31 @@ def search_anime(query: str) -> List[AnimelyAnime]:
 
     # 1. Tam eşleşme
     for anime in animes:
-        name = anime.get("NAME", "")
-        name_lower = name.lower() if name else ""
-        other_names_raw = anime.get("OTHER_NAMES", [])
+        name = anime.get("NAME", "").lower()
+        other_names = [n.lower() for n in anime.get("OTHER_NAMES", [])]
 
-        if name_lower == query_lower:
+        if name == query_lower or query_lower in other_names:
             results.append(anime)
-            continue
-
-        if other_names_raw:
-            match = False
-            for n in other_names_raw:
-                if isinstance(n, str) and n.lower() == query_lower:
-                    match = True
-                    break
-            if match:
-                results.append(anime)
 
     # 2. Kısmi eşleşme
     if not results:
         for anime in animes:
-            name = anime.get("NAME", "")
-            name_lower = name.lower() if name else ""
+            name = anime.get("NAME", "").lower()
+            other_names = [n.lower() for n in anime.get("OTHER_NAMES", [])]
 
-            if query_lower in name_lower:
+            if query_lower in name or any(query_lower in n for n in other_names):
                 results.append(anime)
-                continue
-
-            other_names_raw = anime.get("OTHER_NAMES", [])
-            if other_names_raw:
-                match = False
-                for n in other_names_raw:
-                    if isinstance(n, str) and query_lower in n.lower():
-                        match = True
-                        break
-                if match:
-                    results.append(anime)
 
     # 3. Kelime bazlı eşleşme
     if not results:
         words = query_lower.split()
         for anime in animes:
-            name = anime.get("NAME", "")
-            name_lower = name.lower() if name else ""
+            all_names = [anime.get("NAME", "").lower()] + [
+                n.lower() for n in anime.get("OTHER_NAMES", [])
+            ]
 
-            all_match = True
-            for word in words:
-                if word not in name_lower:
-                    all_match = False
-                    break
-
-            if all_match:
+            if any(all(word in name for word in words) for name in all_names):
                 results.append(anime)
-                continue
-
-            other_names_raw = anime.get("OTHER_NAMES", [])
-            if other_names_raw:
-                match = False
-                for n in other_names_raw:
-                    if isinstance(n, str):
-                        n_lower = n.lower()
-                        all_match = True
-                        for word in words:
-                            if word not in n_lower:
-                                all_match = False
-                                break
-                        if all_match:
-                            match = True
-                            break
-                if match:
-                    results.append(anime)
 
     # AnimelyAnime objelerine dönüştür
     return [
