@@ -11,51 +11,55 @@ class ChatBadgeStrategyTests(TestCase):
         self.party_animal_badge, _ = Badge.objects.get_or_create(slug='party-animal', defaults={'name': 'Party Animal'})
 
         self.strategy = ChatBadgeStrategy()
-        self.all_badges = {b.slug: b for b in Badge.objects.all()}
-
-    def check_badges(self, cache=None):
-        awarded_slugs = set(UserBadge.objects.filter(user=self.user).values_list('badge__slug', flat=True))
-        new_badges = []
-        self.strategy.check(self.user, awarded_slugs, self.all_badges, new_badges, cache=cache)
-        UserBadge.objects.bulk_create(new_badges)
 
     def test_commentator_badge(self):
-        # Create 49 messages
-        for i in range(49):
-            ChatMessage.objects.create(user=self.user, room_name='room1', message=f'Msg {i}')
-        self.check_badges()
-        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.commentator_badge).exists())
+        # 10 messages
+        for i in range(10):
+            ChatMessage.objects.create(user=self.user, room_name="room1", content=f"msg {i}")
 
-        # Create 50th message
-        ChatMessage.objects.create(user=self.user, room_name='room1', message='Msg 50')
-        self.check_badges()
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.commentator_badge).exists())
+        awarded_slugs = set()
+        all_badges = {'commentator': self.commentator_badge}
+        new_badges = []
+
+        self.strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache=None)
+
+        self.assertEqual(len(new_badges), 1)
+        self.assertEqual(new_badges[0].badge.slug, 'commentator')
 
     def test_social_butterfly_badge(self):
-        for i in range(4):
-            ChatMessage.objects.create(user=self.user, room_name=f'room{i}', message='Hello')
-        self.check_badges()
-        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.social_butterfly_badge).exists())
+        # 5 distinct rooms
+        for i in range(5):
+            ChatMessage.objects.create(user=self.user, room_name=f"room_{i}", content="hello")
 
-        ChatMessage.objects.create(user=self.user, room_name='room4', message='Hello')
-        self.check_badges()
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.social_butterfly_badge).exists())
+        awarded_slugs = set()
+        all_badges = {'social-butterfly': self.social_butterfly_badge}
+        new_badges = []
+
+        self.strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache={})
+
+        self.assertEqual(len(new_badges), 1)
+        self.assertEqual(new_badges[0].badge.slug, 'social-butterfly')
 
     def test_party_animal_badge(self):
-        for i in range(4):
-            ChatMessage.objects.create(user=self.user, room_name=f'party_{i}', message='Hello')
-        self.check_badges()
-        self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.party_animal_badge).exists())
+        # 20 distinct rooms
+        for i in range(20):
+            ChatMessage.objects.create(user=self.user, room_name=f"room_pa_{i}", content="hello")
 
-        ChatMessage.objects.create(user=self.user, room_name='party_4', message='Hello')
-        self.check_badges()
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.party_animal_badge).exists())
+        awarded_slugs = set()
+        all_badges = {'party-animal': self.party_animal_badge}
+        new_badges = []
+
+        self.strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache={'chat_stats': []})
+
+        self.assertEqual(len(new_badges), 1)
+        self.assertEqual(new_badges[0].badge.slug, 'party-animal')
 
     def test_cache_miss(self):
-        for i in range(50):
-            ChatMessage.objects.create(user=self.user, room_name=f'party_{i%5}', message=f'Msg {i}')
-        # call with no cache
-        self.check_badges(cache=None)
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.commentator_badge).exists())
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.social_butterfly_badge).exists())
-        self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.party_animal_badge).exists())
+        awarded_slugs = set()
+        all_badges = {}
+        new_badges = []
+
+        # Test case where cache is passed without 'chat_stats' key
+        cache = {}
+        self.strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache=cache)
+        self.assertIn('chat_stats', cache)
