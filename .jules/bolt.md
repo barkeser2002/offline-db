@@ -76,3 +76,9 @@
 ## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
 **Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
 **Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
+## 2026-04-19 - [Admin Jikan Sync Async Optimization]
+**Learning:** When integrating asynchronous service functions (like external API clients) into synchronous Django contexts (e.g., admin views), using manual  loops blocking the main thread for pagination severely bottlenecks performance.
+**Action:** Replaced the blocking paginated loop with  to execute the optimized asynchronous Jikan API client wrapper (). This correctly bridges the async code, delegates efficient pagination logic, and removes arbitrary thread sleeps.
+## 2025-05-18 - [Admin Jikan Sync Async Optimization]
+**Learning:** When integrating asynchronous service functions (like external API clients) into synchronous Django contexts (e.g., admin views), using manual `time.sleep()` loops blocking the main thread for pagination severely bottlenecks performance.
+**Action:** Replaced the blocking paginated loop with `asgiref.sync.async_to_sync` to execute the optimized asynchronous Jikan API client wrapper (`jikan.get_anime_episodes`). This correctly bridges the async code, delegates efficient pagination logic, and removes arbitrary thread sleeps.
