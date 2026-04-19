@@ -13,11 +13,13 @@ import {
 } from "@nextui-org/react";
 
 interface PartyPanelProps {
-  chatMessages: { user: string; text: string; time: string; type?: string; is_system?: boolean; message?: string; username?: string }[];
+  chatMessages: { user: string; text: string; time: string; type?: string; is_system?: boolean; message?: string; username?: string; id?: number }[];
   participants: { id: number; username: string }[];
   onSendMessage: (msg: string) => void;
   onSendEmote: (emote: string) => void;
   isConnected: boolean;
+  onDeleteMessage?: (msgId: number) => void;
+  isHost?: boolean;
 }
 
 export const PartyPanel: React.FC<PartyPanelProps> = ({
@@ -26,6 +28,8 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
   onSendMessage,
   onSendEmote,
   isConnected,
+  onDeleteMessage,
+  isHost,
 }) => {
   const [message, setMessage] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -63,14 +67,23 @@ export const PartyPanel: React.FC<PartyPanelProps> = ({
                     {msg.message}
                   </span>
                 ) : (
-                  <>
+                  <div className="flex flex-col group relative">
                     <span className="text-tiny text-primary font-bold">
                       {msg.username}
                     </span>
-                    <div className="bg-default-100 p-2 rounded-lg text-small">
+                    <div className="bg-default-100 p-2 rounded-lg text-small relative">
                       {msg.message}
+                      {isHost && msg.id && onDeleteMessage && (
+                        <button
+                          onClick={() => onDeleteMessage(msg.id as number)}
+                          className="absolute -right-2 -top-2 hidden group-hover:flex bg-danger text-white rounded-full w-5 h-5 items-center justify-center text-xs"
+                          aria-label="Delete message"
+                        >
+                          &times;
+                        </button>
+                      )}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
