@@ -49,10 +49,6 @@
 ## 2025-03-09 - WatchTimeBadgeStrategy count optimization
 **Learning:** `WatchTimeBadgeStrategy` checks for `binge-watcher`, `marathon-runner`, `weekend-warrior`, and `speedster` badges were issuing `.distinct().count()` aggregation queries with JOINs on `WatchLog`. Since `.distinct().count()` skips memory and always hits the database, these queries were adding unnecessary database load.
 **Action:** Replaced these heavy database queries with `len(set(WatchLog.objects.filter(...).values_list('episode_id', flat=True)))`. This pattern avoids the expensive database-level `.distinct().count()` aggregation by executing a simpler select and evaluating uniqueness and size in Python memory, reducing database load per evaluation cycle.
-
-## 2026-03-20 - Optimized Encoder/Fansub Wallet Distribution
-**Learning:** The revenue distribution logic in `billing/tasks.py` performed individual `get_or_create` and `save` operations for `Wallet` objects inside loops for encoders and fansub group owners. This created an N+1 query bottleneck that scaled with the number of unique payment recipients.
-**Action:** Refactored the task to consolidate all earnings by `user_id` in memory. Implemented bulk database operations using `Wallet.objects.bulk_create` (with `ignore_conflicts=True`) for missing wallets and `Wallet.objects.bulk_update` for updating all balances in a single transaction. This reduces database overhead from O(N) to O(1) queries.
 ## 2026-03-05 - Bolt: Convert genre_savant episode_ids to subquery
 **Learning:** Fetching a large dataset of IDs into a Python list (`list(values_list("episode_id", flat=True))`) to perform in-memory aggregations or subquery lookups creates massive SQL queries and high memory overhead, especially for complex relationships like genre counts.
 **Action:** Replaced the in-memory list with an un-evaluated Django QuerySet subquery (`episode_qs = WatchLog.objects.filter(user=user).values("episode_id")`), and utilized `.annotate(count=Count("id", distinct=True))` to evaluate genre distributions purely at the database level without transferring records.
@@ -72,11 +68,3 @@
 ## 2026-03-13 - [Add index to Room is_active]
 **Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
 **Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
-
-## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
-**Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
-**Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
-
-## 2026-04-19 - Badge System check_badges N+1 Optimization
-**Learning:** In `users/services.py`, `check_badges()` iterated over `GENERAL_BADGE_STRATEGIES` and `CHAT_BADGE_STRATEGIES`, triggering multiple database queries (like fetching `episode_ids` and `anime_ids`) inside the loop from each strategy's `check()` method.
-**Action:** Pre-populated the `strategy_cache` dictionary with common bulk datasets before executing the strategy loop, eliminating the N+1 query issue and centralizing database queries outside the evaluation logic.
