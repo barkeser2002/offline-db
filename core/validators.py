@@ -17,3 +17,7 @@ def validate_mime_type(file):
             _('Unsupported file type: %(mime_type)s'),
             params={'mime_type': file_mime_type},
         )
+
+# Aliases for backward compatibility in migrations
+validate_image_mimetype = validate_mime_type
+validate_subtitle_mimetype = validate_mime_type

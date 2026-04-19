@@ -45,3 +45,44 @@ class LocalStorageSecurityTest(TestCase):
         self.assertTrue(os.path.exists(expected_full_path))
 
         os.remove(temp_file_path)
+
+    def test_delete_path_traversal(self):
+        malicious_path = "../malicious_file.txt"
+        result = self.storage.delete(malicious_path)
+        self.assertFalse(result)
+
+    def test_exists_path_traversal(self):
+        malicious_path = "../malicious_file.txt"
+        result = self.storage.exists(malicious_path)
+        self.assertFalse(result)
+
+    def test_delete_file(self):
+        safe_path = "videos/delete_me.txt"
+        full_path = os.path.join(self.storage.base_path, safe_path)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, 'w') as f:
+            f.write("test content")
+
+        self.assertTrue(self.storage.exists(safe_path))
+
+        result = self.storage.delete(safe_path)
+        self.assertTrue(result)
+        self.assertFalse(self.storage.exists(safe_path))
+        self.assertFalse(os.path.exists(full_path))
+
+    def test_delete_non_existent_file(self):
+        safe_path = "videos/does_not_exist.txt"
+        result = self.storage.delete(safe_path)
+        self.assertFalse(result)
+
+    def test_exists_file(self):
+        safe_path = "videos/exists_file.txt"
+        full_path = os.path.join(self.storage.base_path, safe_path)
+
+        self.assertFalse(self.storage.exists(safe_path))
+
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, 'w') as f:
+            f.write("test content")
+
+        self.assertTrue(self.storage.exists(safe_path))
