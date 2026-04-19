@@ -90,14 +90,7 @@ class AnimeAdmin(ModelAdmin):
                     defaults={'title': 'Season 1'}
                 )
 
-                existing_numbers = set(
-                    Episode.objects.filter(season=season).values_list('number', flat=True)
-                )
-
-                episodes_to_create = []
-                created_numbers = set()
                 count = 0
-
                 for ep in all_episodes:
                     url = ep.get('url', '')
                     match = re.search(r'episode/(\d+)', url)
@@ -106,21 +99,16 @@ class AnimeAdmin(ModelAdmin):
                     else:
                         continue
 
-                    if number not in existing_numbers and number not in created_numbers:
-                        ep_title = ep.get('title', f'Episode {number}')
-                        episodes_to_create.append(
-                            Episode(
-                                season=season,
-                                number=number,
-                                title=ep_title
-                            )
-                        )
-                        created_numbers.add(number)
+                    ep_title = ep.get('title', f'Episode {number}')
 
+                    Episode.objects.get_or_create(
+                        season=season,
+                        number=number,
+                        defaults={
+                            'title': ep_title
+                        }
+                    )
                     count += 1
-
-                if episodes_to_create:
-                    Episode.objects.bulk_create(episodes_to_create)
 
                 messages.success(request, f"Successfully imported '{title}' with {count} episodes.")
                 return redirect('admin:content_anime_changelist')

@@ -194,7 +194,7 @@ Bu proje bir anime izleme platformudur:
 ### 4.1 Backend Test Coverage ≥80%
 **Hedef**: `*/tests/` klasörleri
 - [ ] `users/badge_system.py` tüm badge'ler için unit test (her badge strategy)
-- [x] `core/storage.py` path traversal + upload/delete/exists testleri (YAPILDI, genişlet)
+- [ ] `core/storage.py` path traversal + upload/delete/exists testleri (YAPILDI, genişlet)
 - [ ] `apps/watchparty/consumers.py` WebSocket testleri (YAPILDI, genişlet)
 - [x] `users/views.py` IDOR + auth testleri (YAPILDI, genişlet)
 - [ ] `billing/views.py` payment flow testleri

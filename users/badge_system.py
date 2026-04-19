@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime
 from django.utils import timezone
-from django.db.models import Count, F, Q
+from django.db.models import Count, Q
 from core.models import ChatMessage
 from content.models import Subscription, Review, VideoFile, Anime, Genre, Episode
 from apps.watchparty.models import Room
@@ -279,16 +279,18 @@ class CompletionBadgeStrategy(BadgeStrategy):
 
         # 26. Otaku: Completed 5 different anime series.
         if 'otaku' not in awarded_slugs:
-            # Optimize: Count completed anime series directly in the DB with a single efficient query
-            completed = Anime.objects.filter(
-                id__in=WatchLog.objects.filter(user=user).values('episode__season__anime_id')
-            ).annotate(
-                total_count=Count('seasons__episodes', distinct=True),
-                watched_count=Count('seasons__episodes', filter=Q(seasons__episodes__watch_logs__user=user), distinct=True)
-            ).filter(
-                watched_count__gte=F('total_count'),
-                total_count__gt=0
-            ).count()
+            anime_qs = WatchLog.objects.filter(user=user).values('episode__season__anime_id')
+
+            total_episodes_qs = Episode.objects.filter(season__anime_id__in=anime_qs).values('season__anime_id').annotate(total=Count('id'))
+            total_map = {i['season__anime_id']: i['total'] for i in total_episodes_qs}
+
+            user_watched_qs = WatchLog.objects.filter(user=user, episode__season__anime_id__in=anime_qs).values('episode__season__anime_id').annotate(watched=Count('episode', distinct=True))
+            watched_map = {i['episode__season__anime_id']: i['watched'] for i in user_watched_qs}
+
+            completed = 0
+            for aid, watched_count in watched_map.items():
+                if total_map.get(aid, 0) > 0 and watched_count >= total_map.get(aid, 0):
+                    completed += 1
 
             if completed >= 5:
                 self._award(user, 'otaku', awarded_slugs, all_badges, new_badges)
