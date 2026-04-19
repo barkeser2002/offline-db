@@ -208,3 +208,51 @@ class BadgeSystemRemainingTests(TestCase):
         # We can just test it by calling it? We can't access inner function.
         # Let's see if there's any other place calling get_anime_ids.
         pass
+    def test_review_badge_strategy_all_branches(self):
+        strategy = ReviewBadgeStrategy()
+        from content.models import Review
+        for i in range(10):
+            anime = Anime.objects.create(title=f"Anime{i}")
+            Review.objects.create(user=self.user, anime=anime, rating=10, text="review")
+        new_badges = []
+        strategy.check(self.user, set(), self.all_badges, new_badges, cache=None)
+
+    def test_account_badge_strategy_all_branches(self):
+        strategy = AccountBadgeStrategy()
+        from content.models import Subscription
+
+        # 1. Early Adopter
+        # instead of modifying the user, we can just create a new one with id < 1000
+        # however SQLite might not let us set ID directly if auto-incrementing, but we can try
+        u = User.objects.create_user(username='early_user', id=50)
+
+        # 3. Veteran
+        import datetime
+        from django.utils import timezone
+        now = timezone.now()
+        u.date_joined = now - datetime.timedelta(days=400)
+
+        # 2. Supporter
+        u.is_premium = True
+        u.save()
+
+        # 4. Collector
+        for i in range(10):
+            anime = Anime.objects.create(title=f"Anime_sub{i}")
+            Subscription.objects.create(user=u, anime=anime)
+
+        new_badges = []
+        strategy.check(u, set(), self.all_badges, new_badges, cache=None)
+
+    def test_community_badge_strategy_all_branches(self):
+        strategy = CommunityBadgeStrategy()
+        anime = Anime.objects.create(title="Anime")
+        season = Season.objects.create(anime=anime, number=1)
+        episode = Episode.objects.create(season=season, number=1)
+
+        for i in range(5):
+            Room.objects.create(host=self.user, episode=episode, max_participants=10)
+            VideoFile.objects.create(uploader=self.user, episode=episode, quality='1080p')
+
+        new_badges = []
+        strategy.check(self.user, set(), self.all_badges, new_badges, cache=None)
