@@ -58,6 +58,23 @@ def check_badges(user):
         cache.set('all_badges_dict', all_badges, 3600)
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
     strategy_cache = {}
+    # Pre-fetch common data to avoid DB queries during strategy checks
+    today = timezone.now().date()
+    last_24h = timezone.now() - timedelta(days=1)
+    last_hour = timezone.now() - timedelta(hours=1)
+    start_date_30 = today - timedelta(days=29)
+    start_datetime_30 = timezone.make_aware(datetime.combine(start_date_30, datetime.min.time()))
+    strategy_cache['review_stats'] = Review.objects.filter(user=user).aggregate(total=Count('id'), perfect=Count('id', filter=Q(rating=10)))
+    strategy_cache['subscription_count'] = Subscription.objects.filter(user=user).count()
+    strategy_cache['video_count'] = VideoFile.objects.filter(uploader=user).count()
+    strategy_cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+    strategy_cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+    strategy_cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+    strategy_cache['watched_dates_30'] = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
+    strategy_cache['hosted_rooms'] = list(Room.objects.filter(host=user).values('max_participants'))
+    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
+    strategy_cache['chat_stats'] = list(stats)
+    strategy_cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
     new_badges = []
 
     for strategy in GENERAL_BADGE_STRATEGIES:
@@ -86,6 +103,23 @@ def check_chat_badges(user):
         cache.set('all_badges_dict', all_badges, 3600)
     awarded_slugs = set(UserBadge.objects.filter(user=user).values_list('badge__slug', flat=True))
     strategy_cache = {}
+    # Pre-fetch common data to avoid DB queries during strategy checks
+    today = timezone.now().date()
+    last_24h = timezone.now() - timedelta(days=1)
+    last_hour = timezone.now() - timedelta(hours=1)
+    start_date_30 = today - timedelta(days=29)
+    start_datetime_30 = timezone.make_aware(datetime.combine(start_date_30, datetime.min.time()))
+    strategy_cache['review_stats'] = Review.objects.filter(user=user).aggregate(total=Count('id'), perfect=Count('id', filter=Q(rating=10)))
+    strategy_cache['subscription_count'] = Subscription.objects.filter(user=user).count()
+    strategy_cache['video_count'] = VideoFile.objects.filter(uploader=user).count()
+    strategy_cache['episode_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode_id', flat=True).distinct())
+    strategy_cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+    strategy_cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
+    strategy_cache['watched_dates_30'] = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
+    strategy_cache['hosted_rooms'] = list(Room.objects.filter(host=user).values('max_participants'))
+    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
+    strategy_cache['chat_stats'] = list(stats)
+    strategy_cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
     new_badges = []
 
     for strategy in CHAT_BADGE_STRATEGIES:

@@ -76,3 +76,7 @@
 ## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
 **Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
 **Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
+
+## 2026-04-19 - Badge System check_badges N+1 Optimization
+**Learning:** In `users/services.py`, `check_badges()` iterated over `GENERAL_BADGE_STRATEGIES` and `CHAT_BADGE_STRATEGIES`, triggering multiple database queries (like fetching `episode_ids` and `anime_ids`) inside the loop from each strategy's `check()` method.
+**Action:** Pre-populated the `strategy_cache` dictionary with common bulk datasets before executing the strategy loop, eliminating the N+1 query issue and centralizing database queries outside the evaluation logic.

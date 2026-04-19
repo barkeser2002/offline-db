@@ -36,10 +36,18 @@ class ReviewBadgeStrategy(BadgeStrategy):
         if not needed:
             return
 
-        stats = Review.objects.filter(user=user).aggregate(
-            total=Count('id'),
-            perfect=Count('id', filter=Q(rating=10))
-        )
+        if cache is not None:
+            if 'review_stats' not in cache:
+                cache['review_stats'] = Review.objects.filter(user=user).aggregate(
+                    total=Count('id'),
+                    perfect=Count('id', filter=Q(rating=10))
+                )
+            stats = cache['review_stats']
+        else:
+            stats = Review.objects.filter(user=user).aggregate(
+                total=Count('id'),
+                perfect=Count('id', filter=Q(rating=10))
+            )
         total_reviews = stats['total'] or 0
         perfect_reviews = stats['perfect'] or 0
 
@@ -162,7 +170,13 @@ class AccountBadgeStrategy(BadgeStrategy):
 
         # 7. Collector: Subscribed to 10 different anime.
         if 'collector' not in awarded_slugs:
-            if Subscription.objects.filter(user=user).count() >= 10:
+            if cache is not None:
+                if 'subscription_count' not in cache:
+                    cache['subscription_count'] = Subscription.objects.filter(user=user).count()
+                sub_count = cache['subscription_count']
+            else:
+                sub_count = Subscription.objects.filter(user=user).count()
+            if sub_count >= 10:
                 self._award(user, 'collector', awarded_slugs, all_badges, new_badges)
 
 class ConsumptionBadgeStrategy(BadgeStrategy):
@@ -217,9 +231,12 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
         if any(b not in awarded_slugs for b in type_badges):
             anime_qs = WatchLog.objects.filter(user=user).values('episode__season__anime_id')
 
-            type_counts_qs = Anime.objects.filter(
-                id__in=anime_qs
-            ).values('type').annotate(count=Count('id', distinct=True))
+            if cache is not None:
+                if 'type_counts' not in cache:
+                    cache['type_counts'] = list(Anime.objects.filter(id__in=anime_qs).values('type').annotate(count=Count('id', distinct=True)))
+                type_counts_qs = cache['type_counts']
+            else:
+                type_counts_qs = Anime.objects.filter(id__in=anime_qs).values('type').annotate(count=Count('id', distinct=True))
 
             type_counts = {item['type']: item['count'] for item in type_counts_qs}
 
@@ -401,7 +418,13 @@ class CommunityBadgeStrategy(BadgeStrategy):
 
         # 18. Content Creator: Uploaded 5 videos.
         if 'content-creator' not in awarded_slugs:
-            if VideoFile.objects.filter(uploader=user).count() >= 5:
+            if cache is not None:
+                if 'video_count' not in cache:
+                    cache['video_count'] = VideoFile.objects.filter(uploader=user).count()
+                video_count = cache['video_count']
+            else:
+                video_count = VideoFile.objects.filter(uploader=user).count()
+            if video_count >= 5:
                 self._award(user, 'content-creator', awarded_slugs, all_badges, new_badges)
 
 class ChatBadgeStrategy(BadgeStrategy):

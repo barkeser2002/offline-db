@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             name="file",
             field=models.FileField(
                 upload_to="subtitles/",
-                validators=[core.validators.validate_subtitle_mimetype],
+                validators=[core.validators.validate_mime_type],
             ),
         ),
     ]
