@@ -21,15 +21,20 @@ class PerformanceTest(TestCase):
         self.anime = Anime.objects.create(title='Test Anime')
         self.season = Season.objects.create(anime=self.anime, number=1)
         self.episodes = []
-        for i in range(10): # Create 10 episodes
+
+        # Create multiple uploaders and fansub groups to test N+1
+        self.uploaders = [User.objects.create_user(username=f'uploader_{i}', password='password') for i in range(5)]
+        self.fansub_groups = [FansubGroup.objects.create(name=f'Fansub {i}', owner=User.objects.create_user(username=f'owner_{i}', password='password')) for i in range(5)]
+
+        for i in range(20): # Create 20 episodes
             episode = Episode.objects.create(season=self.season, number=i+1)
             self.episodes.append(episode)
 
-            # Create VideoFile for each episode
+            # Create VideoFile for each episode, alternating uploaders and groups
             VideoFile.objects.create(
                 episode=episode,
-                fansub_group=self.fansub_group,
-                uploader=self.uploader,
+                fansub_group=self.fansub_groups[i % 5],
+                uploader=self.uploaders[i % 5],
                 quality='1080p',
                 hls_path='/path/to/hls',
                 encryption_key='key',
