@@ -68,3 +68,7 @@
 ## 2026-03-13 - [Add index to Room is_active]
 **Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
 **Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
+
+## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
+**Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
+**Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
