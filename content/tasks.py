@@ -18,9 +18,9 @@ def _check_ffmpeg_available() -> bool:
     try:
         # Windows uses 'where', Unix uses 'which'
         cmd = 'where' if os.name == 'nt' else 'which'
-        result = subprocess.run([cmd, 'ffmpeg'], capture_output=True)
+        result = subprocess.run([cmd, 'ffmpeg'], capture_output=True, check=False)
         return result.returncode == 0
-    except:
+    except (subprocess.SubprocessError, OSError, ValueError):
         return False
 
 
@@ -31,9 +31,9 @@ def _get_video_duration(video_path: str) -> float:
             'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1', video_path
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         return float(result.stdout.strip())
-    except:
+    except (subprocess.SubprocessError, OSError, ValueError):
         return 0.0
 
 
@@ -45,10 +45,10 @@ def _get_video_resolution(video_path: str) -> tuple:
             '-show_entries', 'stream=width,height',
             '-of', 'csv=p=0', video_path
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
         parts = result.stdout.strip().split(',')
         return int(parts[0]), int(parts[1])
-    except:
+    except (subprocess.SubprocessError, OSError, ValueError, IndexError):
         return 1920, 1080  # Default
 
 
