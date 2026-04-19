@@ -12,8 +12,10 @@ from content.views import AnimeViewSet, EpisodeViewSet, HomeViewSet
 from apps.watchparty.views import RoomViewSet
 from users.views import NotificationViewSet, UserBadgeViewSet, WatchLogViewSet, UserProfileAPIView, CustomTokenObtainPairView
 
+from rest_framework.routers import SimpleRouter
+
 # Setup DRF Router
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'anime', AnimeViewSet)
 router.register(r'episodes', EpisodeViewSet)
 router.register(r'notifications', NotificationViewSet, basename='notification')

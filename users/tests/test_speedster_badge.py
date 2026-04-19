@@ -33,6 +33,13 @@ class SpeedsterBadgeTest(TestCase):
         w3.watched_at = now - timedelta(minutes=10)
         w3.save()
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -46,6 +53,9 @@ class SpeedsterBadgeTest(TestCase):
         w2.watched_at = now - timedelta(minutes=10)
         w2.save()
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -66,6 +76,9 @@ class SpeedsterBadgeTest(TestCase):
         w3.save()
 
         # Only 2 in last hour
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -78,5 +91,8 @@ class SpeedsterBadgeTest(TestCase):
             w.watched_at = now - timedelta(minutes=10*i)
             w.save()
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

@@ -1,0 +1,10 @@
+--- .jules/sentinel.md
++++ .jules/sentinel.md
+@@ -44,3 +44,8 @@
+ **Vulnerability:** Uploading malicious file types (like HTML/JS disguised as images or executables disguised as subtitles) could lead to Stored XSS or RCE. Simple extension validation (e.g., `file.name.endswith()`) is insufficient.
+-**Prevention:** Created `validate_image_mimetype` in `core/validators.py` and strictly enforced it across all Image URL fields across models in `content/models.py` and `users/models.py` (e.g. `cover_image`, `banner_image`, `icon_url`). Validates both by URL path extension and `mimetypes.guess_type`.
++**Prevention:** Created `validate_image_mimetype` and `validate_subtitle_mimetype` in `core/validators.py` to validate exact MIME types via `python-magic` (`magic.from_buffer`), overriding previous weaker `mimetypes.guess_type` checks. Applied to `URLField`s, `ImageField`s, and `FileField`s.
++
++## 2026-03-24 - Profile Bio XSS & Validation
++**Vulnerability:** User-provided bio field in `User` model could contain unescaped HTML, leading to Stored XSS when rendered in profile view or other places.
++**Prevention:** Added explicit `bleach.clean(value, tags=[], strip=True)` logic in `UserProfileUpdateSerializer` to actively strip all HTML tags from the input on PATCH, preserving just the plain text.
