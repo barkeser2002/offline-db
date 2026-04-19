@@ -32,6 +32,10 @@ class NewBadgeTests(TestCase):
         WatchLog.objects.create(user=self.user, episode=episodes[11], duration=100)
 
         # Should have badge now
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.marathon_badge).exists())
 
     @patch('users.badge_system.WatchLog.objects.filter')

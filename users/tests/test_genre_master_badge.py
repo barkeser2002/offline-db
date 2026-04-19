@@ -20,8 +20,15 @@ class GenreMasterBadgeTest(TestCase):
             episode = Episode.objects.create(season=season, number=1)
             WatchLog.objects.create(user=self.user, episode=episode, duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
     def test_no_badge_if_less_than_10(self):
@@ -33,6 +40,9 @@ class GenreMasterBadgeTest(TestCase):
             episode = Episode.objects.create(season=season, number=1)
             WatchLog.objects.create(user=self.user, episode=episode, duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
@@ -53,6 +63,9 @@ class GenreMasterBadgeTest(TestCase):
             episode = Episode.objects.create(season=season, number=1)
             WatchLog.objects.create(user=self.user, episode=episode, duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
@@ -67,6 +80,9 @@ class GenreMasterBadgeTest(TestCase):
             episode = Episode.objects.create(season=season, number=i+1)
             WatchLog.objects.create(user=self.user, episode=episode, duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

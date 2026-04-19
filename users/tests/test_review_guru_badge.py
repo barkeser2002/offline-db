@@ -20,8 +20,15 @@ class TestReviewGuruBadge(TestCase):
             anime = Anime.objects.create(title=f'Anime {i}', type='TV')
             Review.objects.create(user=self.user, anime=anime, rating=5, text='Good')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
     def test_review_guru_badge_not_awarded(self):
@@ -30,6 +37,9 @@ class TestReviewGuruBadge(TestCase):
             anime = Anime.objects.create(title=f'Anime {i}', type='TV')
             Review.objects.create(user=self.user, anime=anime, rating=5, text='Good')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

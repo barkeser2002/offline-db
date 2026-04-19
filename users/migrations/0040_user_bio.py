@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -13,6 +12,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="user",
             name="bio",
-            field=models.TextField(blank=True, verbose_name="Bio"),
+            field=models.TextField(blank=True, max_length=500, verbose_name="bio"),
         ),
     ]
