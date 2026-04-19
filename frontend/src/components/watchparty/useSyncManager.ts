@@ -57,6 +57,9 @@ export function useSyncManager(roomUuid: string, user: any, videoRef: React.RefO
       case 'chat_message':
         setChatMessages(prev => [...prev, data]);
         break;
+      case 'message_deleted':
+        setChatMessages(prev => prev.filter(msg => msg.id !== data.message_id));
+        break;
       case 'participants_update':
         setParticipants(data.participants);
         break;
@@ -125,6 +128,15 @@ export function useSyncManager(roomUuid: string, user: any, videoRef: React.RefO
     }
   };
 
+  const deleteMessage = (messageId: number) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'delete_message',
+        message_id: messageId
+      }));
+    }
+  };
+
   return {
     isConnected,
     participants,
@@ -132,5 +144,6 @@ export function useSyncManager(roomUuid: string, user: any, videoRef: React.RefO
     sendSync,
     sendMessage,
     sendEmote,
+    deleteMessage,
   };
 }
