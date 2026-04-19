@@ -6,6 +6,7 @@ import logging
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mass_mail
+from django.urls import reverse
 from .models import VideoFile, Episode, Subscription
 
 logger = logging.getLogger(__name__)
@@ -99,7 +100,7 @@ def encode_episode(self, episode_id, source_path, quality='1080p', upload_to_sto
 
         # Key Info File for FFmpeg
         # Security Fix: Use VideoFile ID (UUID) in URL, not the key itself.
-        key_uri = f"/api/key/{video.id}/"
+        key_uri = f"{settings.SITE_URL.rstrip('/')}{reverse('video-key', kwargs={'pk': video.id})}"
         key_info_path = os.path.join(output_dir, 'key_info.txt')
         with open(key_info_path, 'w') as f:
             f.write(f"{key_uri}\n")
