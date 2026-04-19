@@ -432,17 +432,23 @@ class CommunityBadgeStrategy(BadgeStrategy):
 class ChatBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         if 'commentator' not in awarded_slugs or 'social-butterfly' not in awarded_slugs or 'party-animal' not in awarded_slugs:
+            from apps.watchparty.models import Message
             if cache is not None:
                 if 'chat_stats' not in cache:
-                    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
-                    cache['chat_stats'] = list(stats)
-                    cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
-                room_names = [s['room_name'] for s in cache['chat_stats']]
+                    watchparty_room_ids = set(Message.objects.filter(sender=user).values_list('room_id', flat=True).distinct())
+                    legacy_room_names = set(ChatMessage.objects.filter(user=user).values_list('room_name', flat=True).distinct())
+                    cache['chat_stats'] = {
+                        'watchparty_room_ids': watchparty_room_ids,
+                        'legacy_room_names': legacy_room_names,
+                    }
+                    cache['total_msgs'] = Message.objects.filter(sender=user).count() + ChatMessage.objects.filter(user=user).count()
+                room_count = len(cache['chat_stats']['watchparty_room_ids']) + len(cache['chat_stats']['legacy_room_names'])
                 total_msgs = cache['total_msgs']
             else:
-                stats = list(ChatMessage.objects.filter(user=user).values('room_name').distinct())
-                room_names = [s['room_name'] for s in stats]
-                total_msgs = ChatMessage.objects.filter(user=user).count()
+                watchparty_room_ids = set(Message.objects.filter(sender=user).values_list('room_id', flat=True).distinct())
+                legacy_room_names = set(ChatMessage.objects.filter(user=user).values_list('room_name', flat=True).distinct())
+                room_count = len(watchparty_room_ids) + len(legacy_room_names)
+                total_msgs = Message.objects.filter(sender=user).count() + ChatMessage.objects.filter(user=user).count()
 
             # 5. Commentator: Posted 50 chat messages.
             if 'commentator' not in awarded_slugs:
@@ -451,13 +457,12 @@ class ChatBadgeStrategy(BadgeStrategy):
 
             # 6. Social Butterfly: Participated in 5 different chat rooms.
             if 'social-butterfly' not in awarded_slugs:
-                if len(room_names) >= 5:
+                if room_count >= 5:
                     self._award(user, 'social-butterfly', awarded_slugs, all_badges, new_badges)
 
             # 17. Party Animal: Participated in 5 different Watch Parties.
             if 'party-animal' not in awarded_slugs:
-                party_rooms = sum(1 for r in room_names if r.startswith('party_'))
-                if party_rooms >= 5:
+                if room_count >= 5:
                     self._award(user, 'party-animal', awarded_slugs, all_badges, new_badges)
 
 
