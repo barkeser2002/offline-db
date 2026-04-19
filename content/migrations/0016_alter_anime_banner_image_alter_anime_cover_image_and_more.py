@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 null=True,
-                validators=[core.validators.validate_image_mimetype],
+                validators=[core.validators.validate_mime_type],
                 verbose_name="Banner Image",
             ),
         ),
@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 null=True,
-                validators=[core.validators.validate_image_mimetype],
+                validators=[core.validators.validate_mime_type],
             ),
         ),
         migrations.AlterField(
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 null=True,
-                validators=[core.validators.validate_image_mimetype],
+                validators=[core.validators.validate_mime_type],
             ),
         ),
         migrations.AlterField(
@@ -45,7 +45,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 null=True,
-                validators=[core.validators.validate_image_mimetype],
+                validators=[core.validators.validate_mime_type],
             ),
         ),
         migrations.AlterField(
@@ -54,7 +54,7 @@ class Migration(migrations.Migration):
             field=models.URLField(
                 blank=True,
                 null=True,
-                validators=[core.validators.validate_image_mimetype],
+                validators=[core.validators.validate_mime_type],
             ),
         ),
     ]

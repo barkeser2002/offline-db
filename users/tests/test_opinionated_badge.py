@@ -1,3 +1,5 @@
+from users.services import check_badges
+from django.core.cache import cache
 from django.test import TestCase
 from users.models import User, Badge, UserBadge
 from content.models import Review, Anime
@@ -39,4 +41,8 @@ class OpinionatedBadgeTest(TestCase):
         )
 
         # Check badge awarded
+        cache.delete(f"user_{self.user.id}_badges_checked")
+        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        check_badges(self.user)
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

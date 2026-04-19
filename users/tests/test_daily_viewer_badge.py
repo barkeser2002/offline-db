@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
@@ -31,6 +32,7 @@ class DailyViewerBadgeTest(TestCase):
             WatchLog.objects.filter(pk=log.pk).update(watched_at=date)
 
         # Trigger check
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
 
         # Verify
@@ -52,6 +54,7 @@ class DailyViewerBadgeTest(TestCase):
             )
             WatchLog.objects.filter(pk=log.pk).update(watched_at=date)
 
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
 
         self.assertFalse(
@@ -73,6 +76,7 @@ class DailyViewerBadgeTest(TestCase):
             )
             WatchLog.objects.filter(pk=log.pk).update(watched_at=date)
 
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
 
         self.assertFalse(

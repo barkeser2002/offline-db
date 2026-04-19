@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from users.models import User, Badge, UserBadge, WatchLog
@@ -34,6 +35,7 @@ class LoyalFanBadgeTest(TestCase):
             WatchLog.objects.create(user=self.user, episode=self.episodes[i], watched_at=timezone.now(), duration=100)
 
         # Check: Badge NOT awarded yet
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -41,6 +43,7 @@ class LoyalFanBadgeTest(TestCase):
         WatchLog.objects.create(user=self.user, episode=self.episodes[9], watched_at=timezone.now(), duration=100)
 
         # Check: Badge AWARDED
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -58,5 +61,6 @@ class LoyalFanBadgeTest(TestCase):
         WatchLog.objects.create(user=self.user, episode=ep_anime2, watched_at=timezone.now(), duration=100)
 
         # Total 10 episodes watched, but not of the SAME anime
+        cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

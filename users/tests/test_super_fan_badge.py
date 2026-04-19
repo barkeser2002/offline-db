@@ -1,3 +1,4 @@
+from django.core.cache import cache
 import pytest
 from users.models import User, Badge, UserBadge, WatchLog
 from content.models import Anime, Season, Episode
@@ -33,6 +34,7 @@ class TestSuperFanBadge:
         for ep in episodes:
             WatchLog.objects.create(user=user, episode=ep, duration=100)
 
+        cache.delete(f'user_{user.id}_badges_checked')
         check_badges(user)
 
         assert UserBadge.objects.filter(user=user, badge=super_fan_badge).exists()
@@ -43,6 +45,7 @@ class TestSuperFanBadge:
         WatchLog.objects.create(user=user, episode=episodes[0], duration=100)
         WatchLog.objects.create(user=user, episode=episodes[1], duration=100)
 
+        cache.delete(f'user_{user.id}_badges_checked')
         check_badges(user)
 
         assert not UserBadge.objects.filter(user=user, badge=super_fan_badge).exists()
@@ -54,6 +57,7 @@ class TestSuperFanBadge:
         WatchLog.objects.create(user=user, episode=episodes[0], duration=100)
         WatchLog.objects.create(user=user, episode=episodes[1], duration=100)
 
+        cache.delete(f'user_{user.id}_badges_checked')
         check_badges(user)
 
         assert not UserBadge.objects.filter(user=user, badge=super_fan_badge).exists()
