@@ -36,8 +36,7 @@ class NewBadgeTests(TestCase):
 
         # Should have badge now
         pass
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
-        check_badges(self.user)
+
         check_badges(self.user)
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
@@ -102,6 +101,5 @@ class NewBadgeTests(TestCase):
 
         # Should BE in new_badges
         pass
-        check_badges(self.user)
         check_badges(self.user)
         self.assertTrue(any(b.badge.slug == 'millennium-club' for b in new_badges))

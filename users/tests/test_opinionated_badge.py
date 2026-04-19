@@ -41,8 +41,7 @@ class OpinionatedBadgeTest(TestCase):
         )
 
         # Check badge awarded
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
-        check_badges(self.user)
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

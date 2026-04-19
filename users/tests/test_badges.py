@@ -56,8 +56,8 @@ class BadgeSystemTests(TestCase):
         )
 
         # Signal should trigger check_badges -> award badge
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.binge_badge).exists())
@@ -101,8 +101,8 @@ class BadgeSystemTests(TestCase):
         )
         # Signal runs check_badges automatically on create
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=night_owl_badge).exists())
@@ -153,8 +153,8 @@ class BadgeSystemTests(TestCase):
         )
 
         # Check badge awarded (signal should have triggered)
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
@@ -184,8 +184,8 @@ class BadgeSystemTests(TestCase):
             message='Hello'
         )
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
@@ -228,8 +228,8 @@ class BadgeSystemTests(TestCase):
             duration=100
         )
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
@@ -253,8 +253,8 @@ class BadgeSystemTests(TestCase):
         Subscription.objects.create(user=self.user, anime=anime_10)
 
         # Signal should trigger check_badges -> award badge
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=collector_badge).exists())
@@ -283,8 +283,8 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
@@ -319,8 +319,8 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
@@ -353,8 +353,8 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
@@ -426,8 +426,8 @@ class BadgeSystemTests(TestCase):
         )
 
         # Now badge should be awarded
-        cache.delete(f"user_{self.user.id}_badges_checked")
-        cache.delete(f"user_{self.user.id}_chat_badges_checked")
+        cache.delete(f'user_{self.user.id}_badges_checked')
+
         check_badges(self.user)
         check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
