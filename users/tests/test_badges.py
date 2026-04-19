@@ -57,9 +57,7 @@ class BadgeSystemTests(TestCase):
 
         # Signal should trigger check_badges -> award badge
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.binge_badge).exists())
 
     def test_supporter_badge(self):
@@ -102,9 +100,7 @@ class BadgeSystemTests(TestCase):
         # Signal runs check_badges automatically on create
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=night_owl_badge).exists())
 
     @patch('django.utils.timezone.now')
@@ -154,9 +150,7 @@ class BadgeSystemTests(TestCase):
 
         # Check badge awarded (signal should have triggered)
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
 
     def test_social_butterfly_badge(self):
@@ -185,9 +179,7 @@ class BadgeSystemTests(TestCase):
         )
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
 
     def test_early_bird_badge(self):
@@ -229,9 +221,7 @@ class BadgeSystemTests(TestCase):
         )
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=early_bird_badge).exists())
 
     def test_collector_badge(self):
@@ -254,9 +244,7 @@ class BadgeSystemTests(TestCase):
 
         # Signal should trigger check_badges -> award badge
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=collector_badge).exists())
 
     def test_season_completist_badge(self):
@@ -284,9 +272,7 @@ class BadgeSystemTests(TestCase):
         )
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
 
     def test_marathoner_badge(self):
@@ -320,9 +306,7 @@ class BadgeSystemTests(TestCase):
         )
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
 
     @patch('django.utils.timezone.now')
@@ -354,9 +338,7 @@ class BadgeSystemTests(TestCase):
         )
 
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
 
     @patch('django.utils.timezone.now')
@@ -427,9 +409,7 @@ class BadgeSystemTests(TestCase):
 
         # Now badge should be awarded
         cache.delete(f'user_{self.user.id}_badges_checked')
-
         check_badges(self.user)
-        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
 
     def test_genre_explorer_badge_duplicate_genre(self):

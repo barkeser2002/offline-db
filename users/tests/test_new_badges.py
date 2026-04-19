@@ -35,9 +35,7 @@ class NewBadgeTests(TestCase):
         WatchLog.objects.create(user=self.user, episode=episodes[11], duration=100)
 
         # Should have badge now
-        pass
 
-        check_badges(self.user)
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.marathon_badge).exists())
@@ -100,6 +98,5 @@ class NewBadgeTests(TestCase):
         strategy.check(self.user, awarded_slugs, all_badges, new_badges, cache=cache)
 
         # Should BE in new_badges
-        pass
         check_badges(self.user)
         self.assertTrue(any(b.badge.slug == 'millennium-club' for b in new_badges))
