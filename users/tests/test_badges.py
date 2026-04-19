@@ -55,6 +55,10 @@ class BadgeSystemTests(TestCase):
         )
 
         # Signal should trigger check_badges -> award badge
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.binge_badge).exists())
 
     def test_supporter_badge(self):
@@ -63,6 +67,9 @@ class BadgeSystemTests(TestCase):
 
         # check_badges needs to be called manually or via some trigger (e.g. payment success)
         # For now, let's call it manually as we hooked it to WatchLog, not User.save
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.supporter_badge).exists())
@@ -72,6 +79,9 @@ class BadgeSystemTests(TestCase):
         self.user.date_joined = timezone.now() - timedelta(days=400)
         self.user.save()
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.veteran_badge).exists())
 
@@ -142,6 +152,10 @@ class BadgeSystemTests(TestCase):
         )
 
         # Check badge awarded (signal should have triggered)
+        from django.core.cache import cache
+        from users.services import check_chat_badges
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
 
     def test_social_butterfly_badge(self):
@@ -169,6 +183,10 @@ class BadgeSystemTests(TestCase):
             message='Hello'
         )
 
+        from django.core.cache import cache
+        from users.services import check_chat_badges
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        check_chat_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
 
     def test_early_bird_badge(self):
@@ -256,6 +274,10 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
 
     def test_marathoner_badge(self):
@@ -288,6 +310,10 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
 
     @patch('django.utils.timezone.now')
@@ -318,6 +344,10 @@ class BadgeSystemTests(TestCase):
             duration=1200
         )
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
 
     @patch('django.utils.timezone.now')
@@ -387,6 +417,10 @@ class BadgeSystemTests(TestCase):
         )
 
         # Now badge should be awarded
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
 
     def test_genre_explorer_badge_duplicate_genre(self):

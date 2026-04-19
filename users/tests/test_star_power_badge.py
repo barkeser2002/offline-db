@@ -19,8 +19,15 @@ class TestStarPowerBadge(TestCase):
             anime = Anime.objects.create(title=f'Anime {i}', type='TV')
             Review.objects.create(user=self.user, anime=anime, rating=10, text='Perfect')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
     def test_star_power_badge_not_awarded_mixed_ratings(self):
@@ -32,6 +39,9 @@ class TestStarPowerBadge(TestCase):
         anime_fail = Anime.objects.create(title='Anime Fail', type='TV')
         Review.objects.create(user=self.user, anime=anime_fail, rating=9, text='Almost')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
@@ -42,5 +52,8 @@ class TestStarPowerBadge(TestCase):
             anime = Anime.objects.create(title=f'Anime {i}', type='TV')
             Review.objects.create(user=self.user, anime=anime, rating=10, text='Perfect')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

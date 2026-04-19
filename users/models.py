@@ -4,12 +4,16 @@ from django.utils.translation import gettext_lazy as _
 
 from django.core.validators import RegexValidator
 
+from django.utils.deconstruct import deconstructible
+
+@deconstructible
+class UsernameValidator(RegexValidator):
+    regex = r'^[\w-]+$'
+    message = _("Enter a valid username. This value may contain only letters, numbers, and _/- characters.")
+    flags = 0
+
 class User(AbstractUser):
-    username_validator = RegexValidator(
-        regex=r'^[\w-]+$',
-        message=_("Enter a valid username. This value may contain only letters, numbers, and _/- characters."),
-        code='invalid_username'
-    )
+    username_validator = UsernameValidator()
     username = models.CharField(
         _("username"),
         max_length=150,

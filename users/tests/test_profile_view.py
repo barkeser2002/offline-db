@@ -63,7 +63,7 @@ def test_profile_update_bio(django_user_model):
 
     # Update bio using PATCH
     data = {'bio': 'This is my new bio.'}
-    response = client.patch(url, data, format='json')
+    response = client.patch(url, data, format='json', secure=True)
     assert response.status_code == 200
     assert response.json()['bio'] == 'This is my new bio.'
 
@@ -83,7 +83,7 @@ def test_profile_update_bio_sanitization(django_user_model):
     # Attempt to inject XSS in bio
     malicious_bio = '<script>alert("xss")</script><b>Hello</b>'
     data = {'bio': malicious_bio}
-    response = client.patch(url, data, format='json')
+    response = client.patch(url, data, format='json', secure=True)
 
     assert response.status_code == 200
     # bleach.clean with strip=True should remove the tags entirely

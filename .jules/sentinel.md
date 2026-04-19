@@ -55,3 +55,11 @@
 **Vulnerability:** The application was missing several crucial HTTP security headers, including `Referrer-Policy`, `Permissions-Policy`, and a nonce-based `Content-Security-Policy`. This left the application vulnerable to cross-site scripting (XSS) via inline scripts, unintended referrer information leakage, and unauthorized access to device features like cameras and microphones.
 **Learning:** Adding robust security headers provides defense-in-depth against various client-side attacks.
 **Prevention:** Implemented a custom `SecurityHeadersMiddleware` to enforce `Referrer-Policy: strict-origin-when-cross-origin` and `Permissions-Policy: camera=(), microphone=()`. Updated `CSP_SCRIPT_SRC` and `CSP_INCLUDE_NONCE_IN` to require a nonce for inline scripts, mitigating XSS risks. Verified `SECURE_HSTS_SECONDS` is enabled in production.
+
+## 2026-03-24 - Profile Bio XSS & Validation
+**Vulnerability:** User-provided bio field in `User` model could contain unescaped HTML, leading to Stored XSS when rendered in profile view or other places.
+**Prevention:** Added explicit `bleach.clean(value, tags=[], strip=True)` logic in `UserProfileUpdateSerializer` to actively strip all HTML tags from the input on PATCH, preserving just the plain text.
+
+## 2026-03-24 - Model Validator Migrations
+**Vulnerability:** Missing validator functions (`validate_image_mimetype` and `UsernameValidator`) breaking database migrations.
+**Prevention:** Ensured the exact functions referenced in migration states are implemented. Also consolidated all migrations that declare `bio` on `User` into a single, clean migration to resolve `NodeNotFoundError`s.

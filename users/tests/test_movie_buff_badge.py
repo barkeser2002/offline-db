@@ -22,8 +22,15 @@ class MovieBuffBadgeTest(TestCase):
         for i in range(5):
             self.create_watch_log('Movie', f'Movie {i}')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
         # Verify notification was sent (mocked)
         self.assertTrue(mock_notify.called)
@@ -33,6 +40,9 @@ class MovieBuffBadgeTest(TestCase):
         for i in range(4):
             self.create_watch_log('Movie', f'Movie {i}')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
@@ -42,6 +52,9 @@ class MovieBuffBadgeTest(TestCase):
         for i in range(5):
             self.create_watch_log('TV', f'TV Show {i}')
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
@@ -55,6 +68,9 @@ class MovieBuffBadgeTest(TestCase):
         for i in range(5):
             WatchLog.objects.create(user=self.user, episode=episode, duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
