@@ -49,6 +49,10 @@
 ## 2025-03-09 - WatchTimeBadgeStrategy count optimization
 **Learning:** `WatchTimeBadgeStrategy` checks for `binge-watcher`, `marathon-runner`, `weekend-warrior`, and `speedster` badges were issuing `.distinct().count()` aggregation queries with JOINs on `WatchLog`. Since `.distinct().count()` skips memory and always hits the database, these queries were adding unnecessary database load.
 **Action:** Replaced these heavy database queries with `len(set(WatchLog.objects.filter(...).values_list('episode_id', flat=True)))`. This pattern avoids the expensive database-level `.distinct().count()` aggregation by executing a simpler select and evaluating uniqueness and size in Python memory, reducing database load per evaluation cycle.
+
+## 2026-03-20 - Optimized Encoder/Fansub Wallet Distribution
+**Learning:** The revenue distribution logic in `billing/tasks.py` performed individual `get_or_create` and `save` operations for `Wallet` objects inside loops for encoders and fansub group owners. This created an N+1 query bottleneck that scaled with the number of unique payment recipients.
+**Action:** Refactored the task to consolidate all earnings by `user_id` in memory. Implemented bulk database operations using `Wallet.objects.bulk_create` (with `ignore_conflicts=True`) for missing wallets and `Wallet.objects.bulk_update` for updating all balances in a single transaction. This reduces database overhead from O(N) to O(1) queries.
 ## 2026-03-05 - Bolt: Convert genre_savant episode_ids to subquery
 **Learning:** Fetching a large dataset of IDs into a Python list (`list(values_list("episode_id", flat=True))`) to perform in-memory aggregations or subquery lookups creates massive SQL queries and high memory overhead, especially for complex relationships like genre counts.
 **Action:** Replaced the in-memory list with an un-evaluated Django QuerySet subquery (`episode_qs = WatchLog.objects.filter(user=user).values("episode_id")`), and utilized `.annotate(count=Count("id", distinct=True))` to evaluate genre distributions purely at the database level without transferring records.
