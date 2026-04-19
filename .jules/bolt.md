@@ -76,3 +76,6 @@
 ## 2025-04-13 - [Optimize Otaku Badge logic with single aggregation query]
 **Learning:** The 'otaku' badge strategy was previously using two separate database queries and a Python-side loop to compare total vs. watched episodes per anime series. This pattern increases database round-trips and memory overhead as the number of anime series grows.
 **Action:** Consolidated the logic into a single database-level query using Django's `annotate()` with conditional `Count()` and `F()` expressions. This allows the database to perform the completion check directly, reducing the result set and improving execution speed.
+## 2026-04-19 - [Performance Improvement: Batch DB write and Async Network Requests]
+**Learning:** When making concurrent network requests, using asyncio.Semaphore is critical to restrict rate limit. Additionally, when writing to database inside transaction.atomic(), we should chunk the operations to preserve fault tolerance.
+**Action:** Optimized `sync_metadata.py` with chunked `transaction.atomic` database write and async API calls with semaphore.
