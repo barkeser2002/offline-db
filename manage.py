@@ -2,12 +2,11 @@
 """Django's command-line utility for administrative tasks."""
 import os
 import sys
-from dotenv import load_dotenv
-
-# 1. .env dosyasını yükle
-# Bu fonksiyon, dizindeki .env dosyasını bulur ve içindeki değerleri
-# os.environ sözlüğüne ekler.
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 def main():
     """Run administrative tasks."""
