@@ -40,7 +40,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # Billing API (Assuming it follows API structure)
-    # path('api/billing/', include('billing.urls')),
+    path('api/billing/', include('billing.urls')),
 
     # Swagger Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
