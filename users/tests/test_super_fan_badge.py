@@ -37,6 +37,9 @@ class TestSuperFanBadge:
         cache.delete(f'user_{user.id}_badges_checked')
         check_badges(user)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{user.id}_badges_checked')
+        check_badges(user)
         assert UserBadge.objects.filter(user=user, badge=super_fan_badge).exists()
 
     def test_does_not_award_if_incomplete(self, user, super_fan_badge, anime_setup):

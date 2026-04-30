@@ -26,6 +26,9 @@ class GenreSavantBadgeTest(TestCase):
         for i in range(49):
             WatchLog.objects.create(user=self.user, episode=self.episodes[i], duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())
 
@@ -35,5 +38,12 @@ class GenreSavantBadgeTest(TestCase):
         # Watch 50th episode
         WatchLog.objects.create(user=self.user, episode=self.episodes[49], duration=100)
 
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
+        check_badges(self.user)
+        from django.core.cache import cache
+        cache.delete(f'user_{self.user.id}_badges_checked')
+        from users.services import check_badges
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

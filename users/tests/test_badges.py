@@ -37,6 +37,9 @@ class BadgeSystemTests(TestCase):
             self.episodes.append(ep)
 
     def test_binge_watcher_badge(self):
+        from django.core.cache import cache
+        cache.clear()
+
         # Watch 4 episodes
         for i in range(4):
             WatchLog.objects.create(
@@ -44,6 +47,7 @@ class BadgeSystemTests(TestCase):
                 episode=self.episodes[i],
                 duration=1200
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Should not have badge yet
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=self.binge_badge).exists())
@@ -54,6 +58,7 @@ class BadgeSystemTests(TestCase):
             episode=self.episodes[4],
             duration=1200
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Signal should trigger check_badges -> award badge
         cache.delete(f'user_{self.user.id}_badges_checked')
@@ -128,25 +133,35 @@ class BadgeSystemTests(TestCase):
             defaults={'name': 'Commentator', 'description': 'Posted 50 chat messages'}
         )
 
+        from apps.watchparty.models import Room, Message
+        from django.core.cache import cache
+        cache.clear()
+
+        room = Room.objects.create(episode=self.episodes[0], host=self.user)
+
         # Create 49 messages
         for i in range(49):
-            ChatMessage.objects.create(
-                user=self.user,
-                username=self.user.username,
-                room_name='test_room',
-                message=f'Message {i}'
+            Message.objects.create(
+                sender=self.user,
+                room=room,
+                content=f'Message {i}'
             )
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        from users.services import check_chat_badges
+        check_chat_badges(self.user)
 
         # Check badge not awarded
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=commentator_badge).exists())
 
         # Create 50th message
-        ChatMessage.objects.create(
-            user=self.user,
-            username=self.user.username,
-            room_name='test_room',
-            message='Message 50'
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        Message.objects.create(
+            sender=self.user,
+            room=room,
+            content='Message 50'
         )
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        check_chat_badges(self.user)
 
         # Check badge awarded (signal should have triggered)
         cache.delete(f'user_{self.user.id}_badges_checked')
@@ -159,24 +174,34 @@ class BadgeSystemTests(TestCase):
             defaults={'name': 'Social Butterfly', 'description': 'Participated in 5 different chat rooms.'}
         )
 
+        from apps.watchparty.models import Room, Message
+        from django.core.cache import cache
+        from users.services import check_chat_badges
+        cache.clear()
+
         # Chat in 4 distinct rooms
         for i in range(4):
-            ChatMessage.objects.create(
-                user=self.user,
-                username=self.user.username,
-                room_name=f'room_{i}',
-                message='Hello'
+            room = Room.objects.create(episode=self.episodes[i], host=self.user)
+            Message.objects.create(
+                sender=self.user,
+                room=room,
+                content='Hello'
             )
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        check_chat_badges(self.user)
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=social_butterfly_badge).exists())
 
         # Chat in 5th distinct room
-        ChatMessage.objects.create(
-            user=self.user,
-            username=self.user.username,
-            room_name='room_final',
-            message='Hello'
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        room = Room.objects.create(episode=self.episodes[5], host=self.user)
+        Message.objects.create(
+            sender=self.user,
+            room=room,
+            content='Hello'
         )
+        cache.delete(f'user_{self.user.id}_chat_badges_checked')
+        check_chat_badges(self.user)
 
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
@@ -253,6 +278,10 @@ class BadgeSystemTests(TestCase):
             defaults={'name': 'Season Completist', 'description': 'Completed an entire season'}
         )
 
+        # Clear cache before test
+        from django.core.cache import cache
+        cache.clear()
+
         # We have self.season with 10 episodes (self.episodes)
         # Watch 9 episodes
         for i in range(9):
@@ -261,6 +290,7 @@ class BadgeSystemTests(TestCase):
                 episode=self.episodes[i],
                 duration=1200
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=season_completist_badge).exists())
 
@@ -270,6 +300,7 @@ class BadgeSystemTests(TestCase):
             episode=self.episodes[9],
             duration=1200
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
@@ -280,6 +311,9 @@ class BadgeSystemTests(TestCase):
             slug='marathoner',
             defaults={'name': 'Marathoner', 'description': 'Watched 50 episodes in total'}
         )
+
+        from django.core.cache import cache
+        cache.clear()
 
         # Create many episodes (we need at least 50 distinct episodes)
         # We already have 10 in setUp. We need 40 more.
@@ -295,6 +329,7 @@ class BadgeSystemTests(TestCase):
                 episode=many_episodes[i],
                 duration=1200
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=marathoner_badge).exists())
 
@@ -304,6 +339,7 @@ class BadgeSystemTests(TestCase):
             episode=many_episodes[49],
             duration=1200
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
@@ -320,6 +356,9 @@ class BadgeSystemTests(TestCase):
             defaults={'name': 'Weekend Warrior', 'description': 'Watched 5 episodes on a weekend'}
         )
 
+        from django.core.cache import cache
+        cache.clear()
+
         # Watch 4 episodes on Sunday
         for i in range(4):
             WatchLog.objects.create(
@@ -327,6 +366,7 @@ class BadgeSystemTests(TestCase):
                 episode=self.episodes[i],
                 duration=1200
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=weekend_badge).exists())
 
@@ -336,6 +376,7 @@ class BadgeSystemTests(TestCase):
             episode=self.episodes[4],
             duration=1200
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         cache.delete(f'user_{self.user.id}_badges_checked')
         check_badges(self.user)
@@ -369,6 +410,9 @@ class BadgeSystemTests(TestCase):
             defaults={'name': 'Genre Explorer', 'description': 'Watched anime from 5 different genres.'}
         )
 
+        from django.core.cache import cache
+        cache.clear()
+
         # Create 5 genres
         genres = []
         for i in range(5):
@@ -396,6 +440,7 @@ class BadgeSystemTests(TestCase):
                 episode=episodes[i],
                 duration=1200
             )
+            cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Verify user has 4 distinct genres watched
         self.assertFalse(UserBadge.objects.filter(user=self.user, badge=genre_explorer_badge).exists())
@@ -406,6 +451,7 @@ class BadgeSystemTests(TestCase):
             episode=episodes[4],
             duration=1200
         )
+        cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Now badge should be awarded
         cache.delete(f'user_{self.user.id}_badges_checked')

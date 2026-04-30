@@ -33,7 +33,9 @@ class TestCenturyClubBadge:
              patch('users.services.async_to_sync') as mock_async_to_sync:
             mock_async_to_sync.return_value = MagicMock()
 
-            check_badges(user)
+            from django.core.cache import cache
+        cache.delete(f'user_{user.id}_badges_checked')
+        check_badges(user)
 
         assert UserBadge.objects.filter(user=user, badge=century_club_badge).exists()
 
@@ -53,6 +55,8 @@ class TestCenturyClubBadge:
         with patch('users.services.get_channel_layer') as mock_channel_layer, \
              patch('users.services.async_to_sync') as mock_async_to_sync:
 
-            check_badges(user)
+            from django.core.cache import cache
+        cache.delete(f'user_{user.id}_badges_checked')
+        check_badges(user)
 
         assert not UserBadge.objects.filter(user=user, badge=century_club_badge).exists()

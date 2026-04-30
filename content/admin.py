@@ -7,6 +7,8 @@ import re
 import time
 from django.contrib.admin import ModelAdmin
 from .models import Anime, Season, Episode, FansubGroup, VideoFile, Subtitle
+from asgiref.sync import async_to_sync
+from scraper_module.services.jikan import jikan
 
 @admin.register(Anime)
 class AnimeAdmin(ModelAdmin):
@@ -60,24 +62,7 @@ class AnimeAdmin(ModelAdmin):
                     anime.save()
 
                 # Fetch Episodes
-                current_page = 1
-                all_episodes = []
-                while True:
-                    # Rate limit safety
-                    time.sleep(0.5)
-
-                    ep_resp = requests.get(f'https://api.jikan.moe/v4/anime/{mal_id}/episodes?page={current_page}', headers=headers)
-                    if ep_resp.status_code != 200:
-                        break
-
-                    ep_data = ep_resp.json()
-                    items = ep_data.get('data', [])
-                    all_episodes.extend(items)
-
-                    pagination = ep_data.get('pagination', {})
-                    if not pagination.get('has_next_page'):
-                        break
-                    current_page += 1
+                all_episodes = async_to_sync(jikan.get_anime_episodes)(int(mal_id))
 
                 if not all_episodes:
                      messages.warning(request, f"Anime '{title}' saved, but no episodes found.")

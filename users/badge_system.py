@@ -36,10 +36,18 @@ class ReviewBadgeStrategy(BadgeStrategy):
         if not needed:
             return
 
-        stats = Review.objects.filter(user=user).aggregate(
-            total=Count('id'),
-            perfect=Count('id', filter=Q(rating=10))
-        )
+        if cache is not None:
+            if 'review_stats' not in cache:
+                cache['review_stats'] = Review.objects.filter(user=user).aggregate(
+                    total=Count('id'),
+                    perfect=Count('id', filter=Q(rating=10))
+                )
+            stats = cache['review_stats']
+        else:
+            stats = Review.objects.filter(user=user).aggregate(
+                total=Count('id'),
+                perfect=Count('id', filter=Q(rating=10))
+            )
         total_reviews = stats['total'] or 0
         perfect_reviews = stats['perfect'] or 0
 
@@ -162,7 +170,13 @@ class AccountBadgeStrategy(BadgeStrategy):
 
         # 7. Collector: Subscribed to 10 different anime.
         if 'collector' not in awarded_slugs:
-            if Subscription.objects.filter(user=user).count() >= 10:
+            if cache is not None:
+                if 'subscription_count' not in cache:
+                    cache['subscription_count'] = Subscription.objects.filter(user=user).count()
+                sub_count = cache['subscription_count']
+            else:
+                sub_count = Subscription.objects.filter(user=user).count()
+            if sub_count >= 10:
                 self._award(user, 'collector', awarded_slugs, all_badges, new_badges)
 
 class ConsumptionBadgeStrategy(BadgeStrategy):
@@ -217,9 +231,12 @@ class ConsumptionBadgeStrategy(BadgeStrategy):
         if any(b not in awarded_slugs for b in type_badges):
             anime_qs = WatchLog.objects.filter(user=user).values('episode__season__anime_id')
 
-            type_counts_qs = Anime.objects.filter(
-                id__in=anime_qs
-            ).values('type').annotate(count=Count('id', distinct=True))
+            if cache is not None:
+                if 'type_counts' not in cache:
+                    cache['type_counts'] = list(Anime.objects.filter(id__in=anime_qs).values('type').annotate(count=Count('id', distinct=True)))
+                type_counts_qs = cache['type_counts']
+            else:
+                type_counts_qs = Anime.objects.filter(id__in=anime_qs).values('type').annotate(count=Count('id', distinct=True))
 
             type_counts = {item['type']: item['count'] for item in type_counts_qs}
 
@@ -395,23 +412,35 @@ class CommunityBadgeStrategy(BadgeStrategy):
 
         # 18. Content Creator: Uploaded 5 videos.
         if 'content-creator' not in awarded_slugs:
-            if VideoFile.objects.filter(uploader=user).count() >= 5:
+            if cache is not None:
+                if 'video_count' not in cache:
+                    cache['video_count'] = VideoFile.objects.filter(uploader=user).count()
+                video_count = cache['video_count']
+            else:
+                video_count = VideoFile.objects.filter(uploader=user).count()
+            if video_count >= 5:
                 self._award(user, 'content-creator', awarded_slugs, all_badges, new_badges)
 
 class ChatBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
         if 'commentator' not in awarded_slugs or 'social-butterfly' not in awarded_slugs or 'party-animal' not in awarded_slugs:
+            from apps.watchparty.models import Message
             if cache is not None:
                 if 'chat_stats' not in cache:
-                    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
-                    cache['chat_stats'] = list(stats)
-                    cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
-                room_names = [s['room_name'] for s in cache['chat_stats']]
+                    watchparty_room_ids = set(Message.objects.filter(sender=user).values_list('room_id', flat=True).distinct())
+                    legacy_room_names = set(ChatMessage.objects.filter(user=user).values_list('room_name', flat=True).distinct())
+                    cache['chat_stats'] = {
+                        'watchparty_room_ids': watchparty_room_ids,
+                        'legacy_room_names': legacy_room_names,
+                    }
+                    cache['total_msgs'] = Message.objects.filter(sender=user).count() + ChatMessage.objects.filter(user=user).count()
+                room_count = len(cache['chat_stats']['watchparty_room_ids']) + len(cache['chat_stats']['legacy_room_names'])
                 total_msgs = cache['total_msgs']
             else:
-                stats = list(ChatMessage.objects.filter(user=user).values('room_name').distinct())
-                room_names = [s['room_name'] for s in stats]
-                total_msgs = ChatMessage.objects.filter(user=user).count()
+                watchparty_room_ids = set(Message.objects.filter(sender=user).values_list('room_id', flat=True).distinct())
+                legacy_room_names = set(ChatMessage.objects.filter(user=user).values_list('room_name', flat=True).distinct())
+                room_count = len(watchparty_room_ids) + len(legacy_room_names)
+                total_msgs = Message.objects.filter(sender=user).count() + ChatMessage.objects.filter(user=user).count()
 
             # 5. Commentator: Posted 50 chat messages.
             if 'commentator' not in awarded_slugs:
@@ -420,13 +449,12 @@ class ChatBadgeStrategy(BadgeStrategy):
 
             # 6. Social Butterfly: Participated in 5 different chat rooms.
             if 'social-butterfly' not in awarded_slugs:
-                if len(room_names) >= 5:
+                if room_count >= 5:
                     self._award(user, 'social-butterfly', awarded_slugs, all_badges, new_badges)
 
             # 17. Party Animal: Participated in 5 different Watch Parties.
             if 'party-animal' not in awarded_slugs:
-                party_rooms = sum(1 for r in room_names if r.startswith('party_'))
-                if party_rooms >= 5:
+                if room_count >= 5:
                     self._award(user, 'party-animal', awarded_slugs, all_badges, new_badges)
 
 

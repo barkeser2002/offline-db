@@ -12,8 +12,10 @@ from content.views import AnimeViewSet, EpisodeViewSet, HomeViewSet
 from apps.watchparty.views import RoomViewSet
 from users.views import NotificationViewSet, UserBadgeViewSet, WatchLogViewSet, UserProfileAPIView, CustomTokenObtainPairView
 
+from rest_framework.routers import SimpleRouter
+
 # Setup DRF Router
-router = DefaultRouter()
+router = SimpleRouter()
 router.register(r'anime', AnimeViewSet)
 router.register(r'episodes', EpisodeViewSet)
 router.register(r'notifications', NotificationViewSet, basename='notification')
@@ -38,7 +40,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
     # Billing API (Assuming it follows API structure)
-    # path('api/billing/', include('billing.urls')),
+    path('api/billing/', include('billing.urls')),
 
     # Swagger Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
