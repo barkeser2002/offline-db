@@ -68,3 +68,4 @@
 ## 2026-03-13 - [Add index to Room is_active]
 **Learning:** The `Room` model is frequently filtered by `is_active=True` across the application. Adding an index to this boolean field can improve query performance.
 **Action:** Added `models.Index(fields=['is_active'])` to the `Room` model in `apps/watchparty/models.py` and generated the corresponding migration.
+- Optimized `scraper_module/adapters/anizle.py` to use a global `_anime_database_index` dictionary for O(1) lookups in `get_anime_episodes` and `get_anime_details`, significantly reducing time complexity from O(N) linear scans when querying the loaded database.
