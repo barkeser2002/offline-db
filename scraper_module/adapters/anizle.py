@@ -52,6 +52,7 @@ MAX_WORKERS = 8  # Paralel işlem sayısı
 
 # Global anime veritabanı (cache)
 _anime_database: List[Dict[str, Any]] = []
+_anime_database_index: Dict[str, Dict[str, Any]] = {}
 _database_loaded: bool = False
 
 # Global CF session
@@ -172,7 +173,7 @@ def load_anime_database(force_reload: bool = False) -> List[Dict[str, Any]]:
     - lastEpisode: list (son bölümler)
     - categories: list (kategoriler)
     """
-    global _anime_database, _database_loaded
+    global _anime_database, _database_loaded, _anime_database_index
 
     if _database_loaded and not force_reload:
         return _anime_database
@@ -190,6 +191,7 @@ def load_anime_database(force_reload: bool = False) -> List[Dict[str, Any]]:
 
         if isinstance(data, list):
             _anime_database = data
+            _anime_database_index = {anime.get("info_slug"): anime for anime in data if anime.get("info_slug")}
             _database_loaded = True
             return _anime_database
         else:
@@ -304,28 +306,28 @@ def get_anime_episodes(slug: str, timeout: int = 60) -> List[Tuple[str, str]]:
         Liste[Tuple[episode_slug, episode_title]] formatında bölümler
     """
     # Önce veritabanından dene
-    database = load_anime_database()
+    load_anime_database()
 
-    for anime in database:
-        if anime.get("info_slug") == slug:
-            episodes = anime.get("lastEpisode", [])
-            if episodes:
-                # Veritabanındaki son bölümler sınırlı olabilir
-                # Tam listeyi almak için sayfayı çekmemiz gerekebilir
-                result = []
-                for ep in episodes:
-                    ep_slug = ep.get("episode_slug", "")
-                    ep_title = ep.get("episode_title", "")
-                    if ep_slug and ep_title:
-                        result.append((ep_slug, ep_title))
+    anime = _anime_database_index.get(slug)
+    if anime:
+        episodes = anime.get("lastEpisode", [])
+        if episodes:
+            # Veritabanındaki son bölümler sınırlı olabilir
+            # Tam listeyi almak için sayfayı çekmemiz gerekebilir
+            result = []
+            for ep in episodes:
+                ep_slug = ep.get("episode_slug", "")
+                ep_title = ep.get("episode_title", "")
+                if ep_slug and ep_title:
+                    result.append((ep_slug, ep_title))
 
-                # Veritabanında sadece son birkaç bölüm var
-                # Tam liste için anime sayfasını çek
-                if len(result) > 0:
-                    full_episodes = _fetch_all_episodes_from_page(slug, timeout)
-                    if full_episodes:
-                        return full_episodes
-                    return result
+            # Veritabanında sadece son birkaç bölüm var
+            # Tam liste için anime sayfasını çek
+            if len(result) > 0:
+                full_episodes = _fetch_all_episodes_from_page(slug, timeout)
+                if full_episodes:
+                    return full_episodes
+                return result
 
     # Veritabanında bulunamadı, sayfadan çek
     return _fetch_all_episodes_from_page(slug, timeout)
@@ -860,11 +862,11 @@ def get_anime_details(slug: str) -> Optional[AnizleAnime]:
     Returns:
         AnizleAnime nesnesi veya None
     """
-    database = load_anime_database()
+    load_anime_database()
 
-    for anime in database:
-        if anime.get("info_slug") == slug:
-            return AnizleAnime.from_database(anime)
+    anime = _anime_database_index.get(slug)
+    if anime:
+        return AnizleAnime.from_database(anime)
 
     # Bulunamazsa basit nesne döndür
     return AnizleAnime(slug=slug, title=slug.replace("-", " ").title())
