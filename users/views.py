@@ -6,8 +6,9 @@ from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle, Anon
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.shortcuts import get_object_or_404
-from .models import Notification, UserBadge, WatchLog, Badge
-from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserProfileUpdateSerializer
+from .models import Notification, UserBadge, WatchLog, Badge, Follow, UserAnimeList, User
+from .serializers import NotificationSerializer, UserBadgeSerializer, WatchLogSerializer, UserProfileUpdateSerializer, FollowSerializer, UserAnimeListSerializer, ActivitySerializer
+from django.db.models import Q
 
 class LoginThrottle(AnonRateThrottle):
     scope = 'login'
@@ -144,3 +145,134 @@ class UserProfileAPIView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class IsOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        # For Follow, owner is the follower
+        if hasattr(obj, 'follower'):
+            return obj.follower == request.user
+        # For UserAnimeList, owner is the user
+        return obj.user == request.user
+
+class FollowViewSet(viewsets.ModelViewSet):
+    serializer_class = FollowSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        # You can see followers and following if you are the user
+        return Follow.objects.filter(Q(follower=user) | Q(following=user))
+
+    def create(self, request, *args, **kwargs):
+        following_id = request.data.get('following')
+        if not following_id:
+            return Response({"error": "following field is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if str(following_id) == str(request.user.id):
+            return Response({"error": "You cannot follow yourself."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Avoid IntegrityError by using get_or_create
+        follow, created = Follow.objects.get_or_create(follower=request.user, following_id=following_id)
+        if not created:
+            return Response({"error": "You are already following this user."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(follow)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'])
+    def unfollow(self, request):
+        following_id = request.data.get('following_id')
+        if not following_id:
+            return Response({"error": "following_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        deleted, _ = Follow.objects.filter(follower=request.user, following_id=following_id).delete()
+        if deleted:
+            return Response({"status": "unfollowed"}, status=status.HTTP_200_OK)
+        return Response({"error": "You are not following this user"}, status=status.HTTP_404_NOT_FOUND)
+
+class UserAnimeListViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAnimeListSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        # Default to the logged-in user's list
+        user_id = self.request.query_params.get('user_id', user.id)
+
+        if str(user_id) != str(user.id):
+            target_user = get_object_or_404(User, id=user_id)
+            if not target_user.is_public:
+                # If they are not public, you must be following them or it must be you
+                is_following = Follow.objects.filter(follower=user, following=target_user).exists()
+                if not is_following:
+                    return UserAnimeList.objects.none()
+
+        return UserAnimeList.objects.filter(user_id=user_id).order_by('-updated_at')
+
+    def create(self, request, *args, **kwargs):
+        anime_id = request.data.get('anime')
+        list_status = request.data.get('status', 'watchlist')
+        if not anime_id:
+            return Response({"error": "anime field is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        anime_list, created = UserAnimeList.objects.get_or_create(
+            user=request.user,
+            anime_id=anime_id,
+            defaults={'status': list_status}
+        )
+        if not created:
+            # Update status instead of erroring
+            anime_list.status = list_status
+            anime_list.save()
+            status_code = status.HTTP_200_OK
+        else:
+            status_code = status.HTTP_201_CREATED
+
+        serializer = self.get_serializer(anime_list)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class ActivityFeedViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        user = request.user
+
+        following_users = Follow.objects.filter(follower=user).values_list('following', flat=True)
+
+        # Badges awarded to followed users
+        badges = UserBadge.objects.filter(user__in=following_users).select_related('user', 'badge').order_by('-awarded_at')[:20]
+
+        # WatchLogs for followed users (only if public or following, well we are following them)
+        watches = WatchLog.objects.filter(user__in=following_users).select_related('user', 'episode__season__anime').order_by('-watched_at')[:20]
+
+        activities = []
+        for b in badges:
+            activities.append({
+                'activity_type': 'badge_earned',
+                'user': b.user,
+                'created_at': b.awarded_at,
+                'details': {
+                    'badge_name': b.badge.name,
+                    'badge_icon': b.badge.icon_url
+                }
+            })
+
+        for w in watches:
+            activities.append({
+                'activity_type': 'episode_watched',
+                'user': w.user,
+                'created_at': w.watched_at,
+                'details': {
+                    'anime_title': w.episode.season.anime.title,
+                    'episode_number': w.episode.number,
+                }
+            })
+
+        # Sort combined activities by created_at descending
+        activities.sort(key=lambda x: x['created_at'], reverse=True)
+
+        # Take the top 20
+        activities = activities[:20]
+
+        serializer = ActivitySerializer(activities, many=True)
+        return Response(serializer.data)

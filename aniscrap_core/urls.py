@@ -10,7 +10,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, Sp
 
 from content.views import AnimeViewSet, EpisodeViewSet, HomeViewSet
 from apps.watchparty.views import RoomViewSet
-from users.views import NotificationViewSet, UserBadgeViewSet, WatchLogViewSet, UserProfileAPIView, CustomTokenObtainPairView
+from users.views import NotificationViewSet, UserBadgeViewSet, WatchLogViewSet, UserProfileAPIView, CustomTokenObtainPairView, FollowViewSet, UserAnimeListViewSet, ActivityFeedViewSet
 
 from rest_framework.routers import SimpleRouter
 
@@ -22,6 +22,9 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'user-badges', UserBadgeViewSet, basename='user-badges')
 router.register(r'watch-history', WatchLogViewSet, basename='watch-history')
 router.register(r'watch-parties', RoomViewSet)
+router.register(r'follows', FollowViewSet, basename='follow')
+router.register(r'anime-lists', UserAnimeListViewSet, basename='anime-list')
+router.register(r'activity-feed', ActivityFeedViewSet, basename='activity-feed')
 
 # Create a separate router or manual path for ViewSet-as-view if needed, 
 # but HomeViewSet is simple enough to map manually or use router with basename.
