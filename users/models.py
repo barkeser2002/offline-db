@@ -27,6 +27,7 @@ class User(AbstractUser):
 
     is_premium = models.BooleanField(default=False, verbose_name=_("Premium Status"))
     bio = models.TextField(_("bio"), blank=True, max_length=500)
+    is_public = models.BooleanField(default=True, verbose_name=_("Public Profile"))
 
     def __str__(self):
         return self.username
@@ -92,3 +93,32 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification for {self.user.username}: {self.title}"
+
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
+    following = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('follower', 'following')
+
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"
+
+class UserAnimeList(models.Model):
+    STATUS_CHOICES = [
+        ('watchlist', 'Watchlist'),
+        ('completed', 'Completed'),
+        ('dropped', 'Dropped'),
+    ]
+    user = models.ForeignKey(User, related_name='anime_lists', on_delete=models.CASCADE)
+    anime = models.ForeignKey('content.Anime', related_name='user_lists', on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='watchlist')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'anime')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.anime.title} ({self.get_status_display()})"

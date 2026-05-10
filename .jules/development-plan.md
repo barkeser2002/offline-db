@@ -181,11 +181,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 3.5 Sosyal Özellikler
 **Yeni dosyalar**: `users/social.py`, migration'lar
-- [ ] Kullanıcı takip sistemi (Follow model: follower, following)
-- [ ] Aktivite akışı: takip ettiklerinin badge kazanımları, izlemeleri
-- [ ] Profil public/private seçeneği
-- [ ] Kullanıcı listeleri (watchlist, completed, dropped)
-- [ ] Liste paylaşma (public link ile)
+- [x] Kullanıcı takip sistemi (Follow model: follower, following)
+- [x] Aktivite akışı: takip ettiklerinin badge kazanımları, izlemeleri
+- [x] Profil public/private seçeneği
+- [x] Kullanıcı listeleri (watchlist, completed, dropped)
+- [x] Liste paylaşma (public link ile)
 
 ---
 
