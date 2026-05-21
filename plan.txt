@@ -1,0 +1,5 @@
+1. Install `django-pgbouncer` by modifying `requirements.txt`.
+2. Configure `django-pgbouncer` in `aniscrap_core/settings.py` for connection pooling.
+3. Update `.jules/development-plan.md` to mark connection pooling as complete.
+4. Run pre-commit checks.
+5. Submit the changes.
