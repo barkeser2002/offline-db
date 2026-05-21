@@ -114,7 +114,7 @@ Bu proje bir anime izleme platformudur:
 - [x] WatchLog modeline `db_index=True` ekle (user + watched_at combined index)
 - [x] Subscription modeline compound index (user, anime)
 - [x] Room modelinde `is_active` field için index
-- [ ] `django-pgbouncer` veya connection pooling kur (production için)
+- [x] `django-pgbouncer` veya connection pooling kur (production için)
 - [ ] Slow query logger ekle (≥100ms sorguları logla)
 
 ### 2.3 Kalan N+1 Sorgu Tespiti
