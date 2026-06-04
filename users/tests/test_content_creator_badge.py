@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from users.models import User, Badge, UserBadge
 from content.models import Anime, Season, Episode, VideoFile
@@ -47,8 +48,6 @@ class ContentCreatorBadgeTest(TestCase):
         cache.delete(f'user_{self.user.id}_badges_checked')
 
         # Verify badge awarded
-        from django.core.cache import cache
         cache.delete(f'user_{self.user.id}_badges_checked')
-        from users.services import check_badges
         check_badges(self.user)
         self.assertTrue(UserBadge.objects.filter(user=self.user, badge=self.badge).exists())

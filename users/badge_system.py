@@ -314,25 +314,17 @@ class CompletionBadgeStrategy(BadgeStrategy):
 
 class GenreBadgeStrategy(BadgeStrategy):
     def check(self, user, awarded_slugs, all_badges, new_badges, cache=None):
-        anime_ids = None
-
-        def get_anime_ids():
-            nonlocal anime_ids
-            if anime_ids is not None:
-                return anime_ids
-            if cache is not None:
-                if 'anime_ids' not in cache:
-                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-                anime_ids = cache['anime_ids']
-            else:
-                anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-            return anime_ids
 
         from collections import Counter
 
         # Optimization: Fetch genre ids once
         if 'genre-explorer' not in awarded_slugs or 'genre-master' not in awarded_slugs:
-            ids = get_anime_ids()
+            if cache is not None:
+                if 'anime_ids' not in cache:
+                    cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
+                ids = cache['anime_ids']
+            else:
+                ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
             if ids:
                 genre_ids = list(Anime.objects.filter(id__in=ids).values_list('genres__id', flat=True))
                 # Remove None if anime has no genre

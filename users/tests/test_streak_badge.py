@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from datetime import timedelta
@@ -31,9 +32,7 @@ class StreakBadgeTest(TestCase):
             WatchLog.objects.filter(pk=log.pk).update(watched_at=date)
 
         # Trigger check
-        from django.core.cache import cache
         cache.delete(f'user_{self.user.id}_badges_checked')
-        from users.services import check_badges
         check_badges(self.user)
 
         # Verify
@@ -59,9 +58,7 @@ class StreakBadgeTest(TestCase):
             )
             WatchLog.objects.filter(pk=log.pk).update(watched_at=date)
 
-        from django.core.cache import cache
         cache.delete(f'user_{self.user.id}_badges_checked')
-        from users.services import check_badges
         check_badges(self.user)
 
         self.assertFalse(
