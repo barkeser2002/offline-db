@@ -8,7 +8,7 @@ from unittest.mock import patch
 class MovieBuffBadgeTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username='moviebuff', password='password')
-        self.badge = Badge.objects.get(slug='movie-buff')
+        self.badge, _ = Badge.objects.get_or_create(slug='movie-buff', defaults={'name': 'Movie Buff', 'description': 'Watched 5 Movies.'})
 
     def create_watch_log(self, anime_type, anime_title):
         anime = Anime.objects.create(title=anime_title, type=anime_type)
