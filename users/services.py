@@ -72,9 +72,6 @@ def check_badges(user):
     strategy_cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
     strategy_cache['watched_dates_30'] = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
     strategy_cache['hosted_rooms'] = list(Room.objects.filter(host=user).values('max_participants'))
-    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
-    strategy_cache['chat_stats'] = list(stats)
-    strategy_cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
     new_badges = []
 
     for strategy in GENERAL_BADGE_STRATEGIES:
@@ -117,9 +114,6 @@ def check_chat_badges(user):
     strategy_cache['last_log'] = WatchLog.objects.filter(user=user).select_related('episode__season__anime').order_by('-watched_at').first()
     strategy_cache['watched_dates_30'] = set(WatchLog.objects.filter(user=user, watched_at__gte=start_datetime_30).values_list('watched_at__date', flat=True))
     strategy_cache['hosted_rooms'] = list(Room.objects.filter(host=user).values('max_participants'))
-    stats = ChatMessage.objects.filter(user=user).values('room_name').distinct()
-    strategy_cache['chat_stats'] = list(stats)
-    strategy_cache['total_msgs'] = ChatMessage.objects.filter(user=user).count()
     new_badges = []
 
     for strategy in CHAT_BADGE_STRATEGIES:

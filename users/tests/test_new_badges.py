@@ -12,8 +12,8 @@ class NewBadgeTests(TestCase):
         # Ensure badges exist (they should be seeded by migrations, but in tests migrations might not run fully if not configured,
         # usually Django tests run migrations. But to be safe/explicit if needed, we can rely on migrations having run)
         # We can fetch them to be sure.
-        self.marathon_badge = Badge.objects.get(slug='marathon-runner')
-        self.millennium_badge = Badge.objects.get(slug='millennium-club')
+        self.marathon_badge, _ = Badge.objects.get_or_create(slug='marathon-runner', defaults={'name': 'Marathon Runner'})
+        self.millennium_badge, _ = Badge.objects.get_or_create(slug='millennium-club', defaults={'name': 'Millennium Club'})
 
     def test_marathon_runner_badge(self):
         # Create 1 Anime, 1 Season, 15 Episodes

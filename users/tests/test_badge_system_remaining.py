@@ -90,6 +90,7 @@ class BadgeSystemRemainingTests(TestCase):
         strategy.check(self.user, set(), self.all_badges, new_badges, cache=None)
 
     def test_consistency_badge_strategy_cache_hit_daily_viewer(self):
+        self.all_badges['daily-viewer'] = Badge.objects.create(slug='daily-viewer', name='Daily Viewer')
         strategy = ConsistencyBadgeStrategy()
         new_badges = []
         import datetime
@@ -131,6 +132,7 @@ class BadgeSystemRemainingTests(TestCase):
         strategy.check(self.user, set(), self.all_badges, new_badges, cache=cache)
 
     def test_community_badge_strategy_party_host(self):
+        self.all_badges['party-host'] = Badge.objects.create(slug='party-host', name='Party Host')
         strategy = CommunityBadgeStrategy()
         new_badges = []
         episode = Episode.objects.create(season=Season.objects.create(anime=Anime.objects.create(title="B"), number=1), number=1)
@@ -164,6 +166,7 @@ class BadgeSystemRemainingTests(TestCase):
         strategy.check(self.user, set(), self.all_badges, new_badges, cache=cache)
 
     def test_daily_viewer_cache_miss(self):
+        self.all_badges['daily-viewer'] = Badge.objects.create(slug='daily-viewer', name='Daily Viewer')
         strategy = ConsistencyBadgeStrategy()
         new_badges = []
         import datetime
