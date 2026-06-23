@@ -65,6 +65,8 @@ def test_home_view_performance(django_assert_num_queries):
     # I'll set a limit that should fail if N+1 is present.
     # 26 queries vs 7 queries.
 
-    with django_assert_num_queries(7):
+    # After caching optimizations, the second request expects 0 queries.
+
+    with django_assert_num_queries(0):
          res = client.get(url)
          assert res.status_code == 200
