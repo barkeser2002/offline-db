@@ -34,6 +34,10 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    @method_decorator(cache_page(60 * 5, key_prefix='anime_detail'))
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
     queryset = Anime.objects.annotate(avg_rating=Avg('reviews__rating')).order_by('-created_at')
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'english_title', 'japanese_title']
@@ -83,6 +87,14 @@ class AnimeViewSet(viewsets.ReadOnlyModelViewSet):
     retrieve=extend_schema(summary="Retrieve episode details")
 )
 class EpisodeViewSet(viewsets.ReadOnlyModelViewSet):
+    @method_decorator(cache_page(60 * 5, key_prefix='episode_list'))
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @method_decorator(cache_page(60 * 5, key_prefix='episode_detail'))
+    def retrieve(self, request, *args, **kwargs):
+        return super().retrieve(request, *args, **kwargs)
+
     queryset = Episode.objects.all()
     serializer_class = EpisodeSerializer
     
