@@ -1,9 +1,30 @@
 import requests
 import random
+import time
+import logging
 from .models import SiteSettings
 from django.core.cache import cache
 from django.http import HttpResponseForbidden
 from functools import wraps
+
+logger = logging.getLogger(__name__)
+
+def slow_query_logger(execute, sql, params, many, context):
+    """
+    Database execute wrapper that logs queries taking longer than 100ms.
+    """
+    start = time.monotonic()
+    try:
+        return execute(sql, params, many, context)
+    finally:
+        duration = time.monotonic() - start
+        if duration >= 0.1:
+            logger.warning(
+                "Slow query detected (%.3fs): %s",
+                duration,
+                sql,
+                extra={'duration': duration, 'sql': sql}
+            )
 
 class DeepLTranslator:
     def __init__(self):

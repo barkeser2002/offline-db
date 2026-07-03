@@ -115,7 +115,7 @@ Bu proje bir anime izleme platformudur:
 - [x] Subscription modeline compound index (user, anime)
 - [x] Room modelinde `is_active` field için index
 - [x] `django-pgbouncer` veya connection pooling kur (production için)
-- [ ] Slow query logger ekle (≥100ms sorguları logla)
+- [x] Slow query logger ekle (≥100ms sorguları logla)
 
 ### 2.3 Kalan N+1 Sorgu Tespiti
 **Hedef**: tüm DRF viewset'ler
