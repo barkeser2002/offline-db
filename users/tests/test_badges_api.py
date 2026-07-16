@@ -11,7 +11,7 @@ class BadgeAPITests(APITestCase):
             name='Test Badge',
             description='A test badge'
         )
-        self.url = reverse('user-badge-list')
+        self.url = reverse('user-badges-list')
 
     def test_get_badges_authenticated(self):
         self.client.force_authenticate(user=self.user)
@@ -20,9 +20,9 @@ class BadgeAPITests(APITestCase):
 
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['badge']['slug'], 'test-badge')
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['badge']['slug'], 'test-badge')
 
     def test_get_badges_unauthenticated(self):
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
