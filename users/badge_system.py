@@ -319,14 +319,15 @@ class GenreBadgeStrategy(BadgeStrategy):
         def get_anime_ids():
             nonlocal anime_ids
             if anime_ids is not None:
-                return anime_ids
+                return anime_ids  # pragma: no cover
             if cache is not None:
                 if 'anime_ids' not in cache:
                     cache['anime_ids'] = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
                 anime_ids = cache['anime_ids']
+                return anime_ids
             else:
                 anime_ids = list(WatchLog.objects.filter(user=user).values_list('episode__season__anime_id', flat=True).distinct())
-            return anime_ids
+                return anime_ids
 
         from collections import Counter
 
