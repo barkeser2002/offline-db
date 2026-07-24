@@ -332,7 +332,7 @@ Bu proje bir anime izleme platformudur:
 - [ ] Full-text search: `GIN index` + `SearchVector` geç
 - [ ] Tüm `order_by` ifadelerini PostgreSQL uyumlu yap (case-sensitive dikkat)
 - [ ] Tüm datetime sorgularını `USE_TZ=True` ile test et
-- [ ] Connection pooling: PgBouncer kur
+- [x] Connection pooling: PgBouncer kur
 
 ---
 

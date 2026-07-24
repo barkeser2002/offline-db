@@ -30,3 +30,4 @@ djangorestframework-simplejwt>=5.4.0
 bleach>=6.3.0
 
 python-magic==0.4.27
+django-db-connection-pool==1.2.6
