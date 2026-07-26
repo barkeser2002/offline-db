@@ -26,6 +26,7 @@ application = ProtocolTypeRouter({
         URLRouter(
             routing.websocket_urlpatterns + [
                 path("ws/chat/<str:room_name>/", ChatConsumer.as_asgi()), # Keeping legacy chat for now if needed, or remove? 
+                path("ws/notifications/", NotificationConsumer.as_asgi()),
                 # Better to keep existing routes to avoid breaking other parts if any.
                 # However, the user asked for apps/watchparty as "The" module.
             ]
