@@ -363,3 +363,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+if DEBUG:
+    import logging
+    INSTALLED_APPS += [
+        'debug_toolbar',
+        'nplusone.ext.django',
+    ]
+    MIDDLEWARE = [
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+        'nplusone.ext.django.NPlusOneMiddleware',
+    ] + MIDDLEWARE
+    INTERNAL_IPS = [
+        "127.0.0.1",
+    ]
+    NPLUSONE_LOGGER = logging.getLogger('nplusone')
+    NPLUSONE_LOG_LEVEL = logging.WARN
