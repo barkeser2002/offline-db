@@ -33,3 +33,5 @@ python-magic==0.4.27
 django-db-connection-pool==1.2.6
 drf-spectacular
 yt-dlp
+django-debug-toolbar
+nplusone
