@@ -127,11 +127,11 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.4 Celery Task Optimizasyonları
 **Hedef dosyalar**: `content/tasks.py`, `users/badge_system.py`
-- [ ] Badge hesaplama task'ını Celery'e taşı (senkron değil asenkron)
-- [ ] Failed task retry stratejisi `max_retries=3, countdown=60)` ekle
-- [ ] Task result backend ayarla (Redis)
-- [ ] Flower dashboard kur (Celery monitoring)
-- [ ] Beat scheduler: periyodik badge re-evaluation task (günde 1 kez full re-check)
+- [x] Badge hesaplama task'ını Celery'e taşı (senkron değil asenkron)
+- [x] Failed task retry stratejisi `max_retries=3, countdown=60)` ekle
+- [x] Task result backend ayarla (Redis)
+- [x] Flower dashboard kur (Celery monitoring)
+- [x] Beat scheduler: periyodik badge re-evaluation task (günde 1 kez full re-check)
 
 ### 2.5 Frontend Performansı
 **Hedef**: `frontend/src/` tüm pages

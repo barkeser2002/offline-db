@@ -35,3 +35,4 @@ drf-spectacular
 yt-dlp
 django-debug-toolbar
 nplusone
+flower==2.0.1
