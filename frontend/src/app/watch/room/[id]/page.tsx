@@ -57,7 +57,6 @@ export default async function WatchPartyPage({ params }: WatchPartyPageProps) {
     return (
       <VideoPlayer
         episode={episodeDetail}
-        animeId={animeId}
         roomUuid={room.uuid}
         // currentUser will be handled by client side logic or context
       />
