@@ -231,12 +231,13 @@ export default async function AnimeDetail({
 function Avatar({ src, size, alt }: { src: string; size?: string; alt?: string }) {
   return (
     <div
-      className={`rounded-full overflow-hidden bg-white/10 flex-shrink-0 ${size === "md" ? "w-10 h-10" : "w-8 h-8"}`}
+      className={`relative rounded-full overflow-hidden bg-white/10 flex-shrink-0 ${size === "md" ? "w-10 h-10" : "w-8 h-8"}`}
     >
       {src ? (
-        <img
+        <Image
           src={src}
-          className="w-full h-full object-cover"
+          className="object-cover"
+          fill
           alt={alt ?? "Character avatar"}
         />
       ) : null}
