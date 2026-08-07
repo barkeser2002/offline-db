@@ -145,7 +145,7 @@ if USE_SQLITE:
 else:
     DATABASES = {
         "default": {
-            "ENGINE": "dj_db_conn_pool.backends.mysql",
+            "ENGINE": "dj_db_conn_pool.backends.postgresql",
             "NAME": os.getenv('DB_NAME', 'aniscrap'),
             "USER": os.getenv('DB_USER', 'root'),
             "PASSWORD": os.getenv('DB_PASSWORD', ''),
