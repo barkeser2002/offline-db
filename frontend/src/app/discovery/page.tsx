@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Input,
@@ -12,8 +12,11 @@ import {
   SelectItem,
   Slider,
   Tooltip,
+  Spinner,
 } from "@nextui-org/react";
 import Link from "next/link";
+import { useInView } from "react-intersection-observer";
+import { contentService, Anime } from "@/services/api";
 
 // Sample data
 const genres = [
@@ -33,81 +36,6 @@ const genres = [
 
 const years = Array.from({ length: 30 }, (_, i) => 2025 - i);
 
-const sampleAnimes = [
-  {
-    id: 1,
-    malId: 52991,
-    title: "Sousou no Frieren",
-    score: 9.29,
-    type: "TV",
-    episodes: 28,
-    genres: ["Adventure", "Drama", "Fantasy"],
-  },
-  {
-    id: 2,
-    malId: 1,
-    title: "Cowboy Bebop",
-    score: 8.75,
-    type: "TV",
-    episodes: 26,
-    genres: ["Action", "Adventure", "Sci-Fi"],
-  },
-  {
-    id: 3,
-    malId: 5114,
-    title: "Fullmetal Alchemist: Brotherhood",
-    score: 9.1,
-    type: "TV",
-    episodes: 64,
-    genres: ["Action", "Adventure", "Drama"],
-  },
-  {
-    id: 4,
-    malId: 1535,
-    title: "Death Note",
-    score: 8.62,
-    type: "TV",
-    episodes: 37,
-    genres: ["Mystery", "Supernatural"],
-  },
-  {
-    id: 5,
-    malId: 21,
-    title: "One Punch Man",
-    score: 8.5,
-    type: "TV",
-    episodes: 12,
-    genres: ["Action", "Comedy"],
-  },
-  {
-    id: 6,
-    malId: 16498,
-    title: "Attack on Titan",
-    score: 8.53,
-    type: "TV",
-    episodes: 25,
-    genres: ["Action", "Drama"],
-  },
-  {
-    id: 7,
-    malId: 30276,
-    title: "One Punch Man S2",
-    score: 7.45,
-    type: "TV",
-    episodes: 12,
-    genres: ["Action", "Comedy"],
-  },
-  {
-    id: 8,
-    malId: 20,
-    title: "Naruto",
-    score: 8.0,
-    type: "TV",
-    episodes: 220,
-    genres: ["Action", "Adventure"],
-  },
-];
-
 export default function DiscoveryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -115,18 +43,60 @@ export default function DiscoveryPage() {
   const [scoreRange, setScoreRange] = useState<number[]>([0, 10]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const filteredAnimes = sampleAnimes.filter((anime) => {
-    const matchesSearch = anime.title
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesGenre =
-      selectedGenres.length === 0 ||
-      selectedGenres.some((g) => anime.genres.includes(g));
-    const matchesScore =
-      anime.score >= scoreRange[0] && anime.score <= scoreRange[1];
-    return matchesSearch && matchesGenre && matchesScore;
+  const [animes, setAnimes] = useState<Anime[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const { ref, inView } = useInView({
+    threshold: 0,
   });
 
+  const fetchAnimes = useCallback(async (pageNum: number, isNewSearch: boolean = false) => {
+    try {
+      setLoading(true);
+      const params: Record<string, string | number> = {
+        page: pageNum,
+      };
+
+      if (searchQuery) params.search = searchQuery;
+      // if (selectedGenres.length > 0) params.genre = selectedGenres.join(',');
+
+      const response = await contentService.searchAnime(params);
+
+      const newAnimes = response.results || response;
+      const count = response.count || newAnimes.length;
+
+      setTotalCount(count);
+
+      if (isNewSearch) {
+        setAnimes(newAnimes);
+      } else {
+        setAnimes((prev) => [...prev, ...newAnimes]);
+      }
+
+      setHasMore(response.next !== null && newAnimes.length > 0);
+    } catch (error) {
+      console.error("Failed to fetch animes:", error);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+    fetchAnimes(1, true);
+  }, [searchQuery, fetchAnimes]);
+
+  useEffect(() => {
+    if (inView && hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchAnimes(nextPage);
+    }
+  }, [inView, hasMore, loading, page, fetchAnimes]);
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -287,7 +257,7 @@ export default function DiscoveryPage() {
               <p className="text-foreground/60">
                 Found{" "}
                 <span className="text-primary font-semibold">
-                  {filteredAnimes.length}
+                  {totalCount}
                 </span>{" "}
                 anime
               </p>
@@ -343,14 +313,14 @@ export default function DiscoveryPage() {
                   : "space-y-3"
               }
             >
-              {filteredAnimes.map((anime, index) => (
+              {(animes || []).map((anime, index) => (
                 <motion.div
                   key={anime.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Link href={`/anime/${anime.malId}`}>
+                  <Link href={`/anime/${anime.mal_id}`}>
                     {viewMode === "grid" ? (
                       <Card className="bg-surface border border-white/5 hover:border-primary/30 transition-all group">
                         <CardBody className="p-0">
@@ -385,7 +355,7 @@ export default function DiscoveryPage() {
                               {anime.title}
                             </h3>
                             <p className="text-xs text-foreground/50 mt-1">
-                              {anime.type} • {anime.episodes} ep
+                              {anime.type} • 0 ep
                             </p>
                           </div>
                         </CardBody>
@@ -402,7 +372,7 @@ export default function DiscoveryPage() {
                                 {anime.title}
                               </h3>
                               <p className="text-sm text-foreground/50 mt-1">
-                                {anime.type} • {anime.episodes} episodes
+                                {anime.type} • 0 episodes
                               </p>
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-yellow-400 text-sm font-semibold flex items-center gap-1">
@@ -415,16 +385,20 @@ export default function DiscoveryPage() {
                                   </svg>
                                   {anime.score}
                                 </span>
-                                {anime.genres.slice(0, 3).map((genre) => (
-                                  <Chip
-                                    key={genre}
-                                    size="sm"
-                                    variant="flat"
-                                    className="text-xs"
-                                  >
-                                    {genre}
-                                  </Chip>
-                                ))}
+                                {anime.genres.slice(0, 3).map((genre: { id?: number; name?: string } | string) => {
+                                  const genreId = typeof genre === 'object' ? genre.id : genre;
+                                  const genreName = typeof genre === 'object' ? genre.name : genre;
+                                  return (
+                                    <Chip
+                                      key={genreId}
+                                      size="sm"
+                                      variant="flat"
+                                      className="text-xs"
+                                    >
+                                      {genreName}
+                                    </Chip>
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
@@ -436,8 +410,22 @@ export default function DiscoveryPage() {
               ))}
             </div>
 
+
+            {/* Loading Spinner */}
+            {loading && (
+              <div className="flex justify-center py-8">
+                <Spinner size="lg" color="primary" />
+              </div>
+            )}
+
+            {/* Intersection Observer Target */}
+            {!loading && hasMore && (
+              <div ref={ref} className="h-10" />
+            )}
+
             {/* Empty State */}
-            {filteredAnimes.length === 0 && (
+
+            {totalCount === 0 && (
               <Card className="bg-surface border border-white/5">
                 <CardBody className="p-12 flex flex-col items-center text-center text-foreground/50">
                   <svg
