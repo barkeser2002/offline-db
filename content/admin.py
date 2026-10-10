@@ -1,14 +1,17 @@
-from django.contrib import admin
-from django.urls import path
-from django.shortcuts import render, redirect
-from django.contrib import messages
-import requests
 import re
 import time
-from django.contrib.admin import ModelAdmin
-from .models import Anime, Season, Episode, FansubGroup, VideoFile, Subtitle
+
+import requests
 from asgiref.sync import async_to_sync
+from django.contrib import admin
+from django.contrib import messages
+from django.contrib.admin import ModelAdmin
+from django.shortcuts import redirect, render
+from django.urls import path
+
 from scraper_module.services.jikan import jikan
+
+from .models import Anime, Episode, FansubGroup, Season, Subtitle, VideoFile
 
 @admin.register(Anime)
 class AnimeAdmin(ModelAdmin):
@@ -75,7 +78,11 @@ class AnimeAdmin(ModelAdmin):
                     defaults={'title': 'Season 1'}
                 )
 
-                count = 0
+                existing_episodes = set(
+                    Episode.objects.filter(season=season).values_list('number', flat=True)
+                )
+
+                new_episodes = []
                 for ep in all_episodes:
                     url = ep.get('url', '')
                     match = re.search(r'episode/(\d+)', url)
@@ -84,18 +91,25 @@ class AnimeAdmin(ModelAdmin):
                     else:
                         continue
 
+                    if number in existing_episodes:
+                        continue
+
                     ep_title = ep.get('title', f'Episode {number}')
 
-                    Episode.objects.get_or_create(
-                        season=season,
-                        number=number,
-                        defaults={
-                            'title': ep_title
-                        }
+                    new_episodes.append(
+                        Episode(
+                            season=season,
+                            number=number,
+                            title=ep_title
+                        )
                     )
-                    count += 1
+                    # Add to existing to avoid duplicates in the same payload
+                    existing_episodes.add(number)
 
-                messages.success(request, f"Successfully imported '{title}' with {count} episodes.")
+                if new_episodes:
+                    Episode.objects.bulk_create(new_episodes)
+
+                messages.success(request, f"Successfully imported '{title}' with {len(new_episodes)} new episodes.")
                 return redirect('admin:content_anime_changelist')
 
             except Exception as e:
