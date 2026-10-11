@@ -119,9 +119,9 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.3 Kalan N+1 Sorgu Tespiti
 **Hedef**: tüm DRF viewset'ler
-- [ ] `django-debug-toolbar` + `nplusone` kur (sadece development)
-- [ ] `billing/views.py` viewset'lerini incele
-- [ ] `scraper_module/views.py` incele
+- [x] `django-debug-toolbar` + `nplusone` kur (sadece development)
+- [x] `billing/views.py` viewset'lerini incele
+- [x] `scraper_module/views.py` incele
 - [x] GenreBadgeStrategy genre_savant: hâlâ list tabanlı → subquery'e geç
 - [x] Bildirim endpoint'lerinde N+1 kontrol et
 
@@ -135,7 +135,7 @@ Bu proje bir anime izleme platformudur:
 
 ### 2.5 Frontend Performansı
 **Hedef**: `frontend/src/` tüm pages
-- [ ] `next/image` kullan — tüm `<img>` taglarını `<Image>` ile değiştir
+- [x] `next/image` kullan — tüm `<img>` taglarını `<Image>` ile değiştir
 - [ ] Route-based code splitting doğrula (`loading.tsx` her route'a)
 - [ ] `React.memo` ve `useMemo` kritik bileşenlere (PartyPanel, AnimeCard)
 - [ ] API response pagination (infinite scroll için cursor pagination)
